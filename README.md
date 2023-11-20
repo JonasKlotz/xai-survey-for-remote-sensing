@@ -1,1 +1,0 @@
-# xai-survey-for-remote-sensing
