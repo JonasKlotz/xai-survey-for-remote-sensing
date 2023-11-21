@@ -3,7 +3,7 @@ from datetime import datetime
 import torch
 
 from data.zarr_handler import ZarrHandler
-from src.xai.xai_methods.deeplist_impl import DeepLiftImpl
+from src.xai.xai_methods.deeplift_impl import DeepLiftImpl
 from src.xai.xai_methods.gradcam_impl import GradCamImpl
 from src.xai.xai_methods.ig_impl import IntegratedGradientsImpl
 from src.xai.xai_methods.lime_impl import LimeImpl
