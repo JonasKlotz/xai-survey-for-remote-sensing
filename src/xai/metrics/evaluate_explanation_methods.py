@@ -8,7 +8,7 @@ from xai.metrics.metrics_manager import MetricsManager
 
 device_string = ("gpu" if torch.cuda.is_available() else "cpu")
 CONFIGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/config"
-
+LOGPATH = '/home/jonasklotz/Studys/MASTERS/XAI/logs'
 
 def evaluate_explanation_methods(
         explanations_config: dict,
@@ -56,8 +56,8 @@ def evaluate_explanation_methods(
     metrics_manager = MetricsManager(model=model,
                                      aggregate=True,
                                      device_string=device_string,
-                                     log=False,
-                                     log_dir=None)
+                                     log=True,
+                                     log_dir=LOGPATH)
 
     all_results = metrics_manager.evaluate_batch(x_batch=x_batch,
                                    y_batch=y_batch,

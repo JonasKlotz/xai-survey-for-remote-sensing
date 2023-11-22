@@ -1,9 +1,42 @@
 import numpy as np
 import quantus
+import torch
+
+from utility.csv_logger import CSVLogger
 
 
 class MetricsManager:
-    def __init__(self, model, aggregate=True, device_string=None, log=False, log_dir=None, image_shape=(1, 28, 28)):
+    def __init__(self,
+                 model: torch.nn.Module,
+                 aggregate=True,
+                 device_string=None,
+                 log=False,
+                 log_dir=None,
+                 image_shape=(1, 28, 28),
+                 sentinel_value=np.nan,
+                 softmax=True):
+        """
+        Metrics Manager for evaluating metrics
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            model to evaluate
+        aggregate : bool
+            whether to aggregate the results of the metrics
+        device_string : str
+            device string for the model
+        log : bool
+            whether to log the results
+        log_dir : str
+            directory where the log file should be stored
+        image_shape : tuple
+            shape of the images
+        sentinel_value : float
+            value to return if an error occurs
+        softmax : bool
+            true if the model outputs softmax probabilities
+        """
         self.model = model
         self.nr_runs = 10
         self.aggregate = aggregate
@@ -12,12 +45,22 @@ class MetricsManager:
         self.log = log
         self.log_dir = log_dir
         if self.log:
-            self.csv_logger = None  # .CSVLogger(self.log_dir)
+            self.csv_logger = CSVLogger(log_dir=self.log_dir)
 
         self.disable_warnings = True
 
+        self.channels = image_shape[0]
+        self.height = image_shape[1]
+        self.width = image_shape[2]
+
+        self.sentinel_value = sentinel_value
+        self.softmax = softmax
+
         self.categories = ['faithfulness', 'robustness', 'localization', 'complexity', 'randomization', 'axiomatic']
         # load metrics
+        self._load_metrics()
+
+    def _load_metrics(self):
         self._load_faithfulness_metrics()
         self._load_robustness_metrics()
         self._load_localization_metrics()
@@ -58,23 +101,23 @@ class MetricsManager:
 
         all_results.update(faithfulness_result)
 
-        robustness_result = self._evaluate_category(self.robustness_metrics,
-                                                    x_batch=x_batch,
-                                                    y_batch=y_batch,
-                                                    a_batch=a_batch,
-                                                    s_batch=s_batch
-                                                    )
-
-        all_results.update(robustness_result)
-
-        localization_result = self._evaluate_category(self.localization_metrics,
-                                                      x_batch=x_batch,
-                                                      y_batch=y_batch,
-                                                      a_batch=a_batch,
-                                                      s_batch=s_batch
-                                                      )
-
-        all_results.update(localization_result)
+        # robustness_result = self._evaluate_category(self.robustness_metrics,
+        #                                             x_batch=x_batch,
+        #                                             y_batch=y_batch,
+        #                                             a_batch=a_batch,
+        #                                             s_batch=s_batch
+        #                                             )
+        #
+        # all_results.update(robustness_result)
+        #
+        # localization_result = self._evaluate_category(self.localization_metrics,
+        #                                               x_batch=x_batch,
+        #                                               y_batch=y_batch,
+        #                                               a_batch=a_batch,
+        #                                               s_batch=s_batch
+        #                                               )
+        #
+        # all_results.update(localization_result)
 
         if self.log:
             self.csv_logger.update(all_results)
@@ -87,23 +130,23 @@ class MetricsManager:
                            y_batch: np.ndarray,
                            a_batch: np.ndarray,
                            s_batch: np.ndarray = None):
-        result = {}
+        results = {}
         for key in metrics.keys():
             try:
-                result[key] = metrics[key](model=self.model,
-                                           x_batch=x_batch,
-                                           y_batch=y_batch,
-                                           a_batch=a_batch,
-                                           s_batch=s_batch,
-                                           device=self.device_string,
-                                           softmax=True
-                                           )
+                results[key] = metrics[key](model=self.model,
+                                            x_batch=x_batch,
+                                            y_batch=y_batch,
+                                            a_batch=a_batch,
+                                            s_batch=s_batch,
+                                            device=self.device_string,
+                                            softmax=True
+                                            )
             except Exception as e:
                 print(f"Error while evaluating {key}: {e}")
-                result[key] = None
-            print(f"{key}: {result[key]}")
+                results[key] = self.sentinel_value
+            print(f"{key}: {results[key]}")
 
-        return result
+        return results
 
     def _load_faithfulness_metrics(self):
         ff_args = {'return_aggregate': self.aggregate,
@@ -184,6 +227,7 @@ class MetricsManager:
                            'disable_warnings': self.disable_warnings,
                            'display_progressbar': False,
                            }
+
         # todo fix explanation method parameter for robustness metrics
         self.robustness_metrics = {
             'local_lipschitz_estimate': quantus.LocalLipschitzEstimate(
@@ -246,7 +290,6 @@ class MetricsManager:
         }
 
     def _load_complexity_metrics(self):
-
         pass
 
     def _load_randomization_metrics(self):
