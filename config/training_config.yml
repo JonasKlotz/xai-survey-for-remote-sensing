@@ -1,0 +1,6 @@
+use: True
+model_name: 'resnet'
+layer_number: 50
+max_epochs: 10
+
+dataset_name: 'mnist'

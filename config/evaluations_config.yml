@@ -1,0 +1,9 @@
+modelname: 'resnet'
+dataset_name: 'mnist'
+visualize: True
+explanation_methods:
+  - 'lime'
+  - 'integrated_gradients'
+  - 'gradcam'
+  - 'lrp'
+  - 'deeplift'
