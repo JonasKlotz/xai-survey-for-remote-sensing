@@ -3,8 +3,18 @@ from torch import optim
 import tqdm
 
 
-def surrogate_training(blackbox, surrogate, train_loader, val_loader, test_loader, device, epochs=10, lr=0.001,
-                       loss_fn=F.nll_loss, optimizer_fn=optim.Adam):
+def surrogate_training(
+    blackbox,
+    surrogate,
+    train_loader,
+    val_loader,
+    test_loader,
+    device,
+    epochs=10,
+    lr=0.001,
+    loss_fn=F.nll_loss,
+    optimizer_fn=optim.Adam,
+):
     """
     Train a surrogate model on the blackbox
     :param loss_fn:  loss function

@@ -15,27 +15,39 @@ class LimeImpl(Explanation):
     def __init__(self, model):
         super().__init__(model)
 
-        self.similarity_func = get_exp_kernel_similarity_function('euclidean', kernel_width=1000)
+        self.similarity_func = get_exp_kernel_similarity_function(
+            "euclidean", kernel_width=1000
+        )
         self.interpretabel_model = SkLearnLinearRegression()
 
         self.attributor = Lime(
             model,
             interpretable_model=self.interpretabel_model,  # build-in wrapped sklearn Linear Regression
-            similarity_func=self.similarity_func
+            similarity_func=self.similarity_func,
         )
 
-    def explain(self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None):
-        segments = slic_from_tensor(image_tensor, plot=False, save_path=None, title="", n_segments=200,
-                                    sigma=5)
+    def explain(
+        self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
+    ):
+        segments = slic_from_tensor(
+            image_tensor, plot=False, save_path=None, title="", n_segments=200, sigma=5
+        )
 
-        attrs = self.attributor.attribute(image_tensor,
-                                          target=target,
-                                          feature_mask=segments)
+        attrs = self.attributor.attribute(
+            image_tensor, target=target, feature_mask=segments
+        )
         return attrs
 
 
-def slic_from_tensor(img_tensor: torch.Tensor, plot=True, save_path=None, title="", n_segments=200, sigma=5):
-    """ Superpixel segmentation using SLIC algorithm
+def slic_from_tensor(
+    img_tensor: torch.Tensor,
+    plot=True,
+    save_path=None,
+    title="",
+    n_segments=200,
+    sigma=5,
+):
+    """Superpixel segmentation using SLIC algorithm
 
 
     Parameters

@@ -2,7 +2,12 @@ from typing import Union
 
 import torch
 from captum.attr import LRP
-from captum.attr._utils.lrp_rules import EpsilonRule, GammaRule, IdentityRule, Alpha1_Beta0_Rule
+from captum.attr._utils.lrp_rules import (
+    EpsilonRule,
+    GammaRule,
+    IdentityRule,
+    Alpha1_Beta0_Rule,
+)
 
 from src.xai.xai_methods.explanation import Explanation
 
@@ -16,9 +21,10 @@ class LRPImpl(Explanation):
 
         self.attributor = LRP(model)
 
-    def explain(self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None):
-        attrs = self.attributor.attribute(image_tensor,
-                                          target=target)
+    def explain(
+        self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
+    ):
+        attrs = self.attributor.attribute(image_tensor, target=target)
         return attrs
 
     def _rule_resnet(self, model):

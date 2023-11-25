@@ -14,12 +14,16 @@ from src.xai.xai_methods.deeplift_impl import DeepLiftImpl
 
 
 class LightningResnet(LightningModule):
-    def __init__(self, resnet_layers=18,
-                 input_channels=3, num_classes=10,
-                 lr=0.001,
-                 batch_size=32,
-                 freeze=True,
-                 loss=F.nll_loss):
+    def __init__(
+        self,
+        resnet_layers=18,
+        input_channels=3,
+        num_classes=10,
+        lr=0.001,
+        batch_size=32,
+        freeze=True,
+        loss=F.nll_loss,
+    ):
         super(LightningResnet, self).__init__()
         self.save_hyperparameters()
 
@@ -65,15 +69,14 @@ class LightningResnet(LightningModule):
         output = self.model(x_batch)
         logits = F.log_softmax(output, dim=1)
 
-
         preds = torch.argmax(logits, dim=1)
         explanation_method = DeepLiftImpl(self.model)
         a_batch = explanation_method.explain_batch(x_batch, preds)
 
         rrr_loss = torch.linalg.norm(s_batch * a_batch)
         loss = self.loss(logits, y_batch) + rrr_loss
-        #todo are the gradients changed when the explanation is calculated? then we need to forward pass again
-        self.log("rrr_loss",rrr_loss)
+        # todo are the gradients changed when the explanation is calculated? then we need to forward pass again
+        self.log("rrr_loss", rrr_loss)
         self.log("train_loss", loss)
         return loss
 

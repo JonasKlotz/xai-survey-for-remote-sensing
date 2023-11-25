@@ -3,12 +3,14 @@ import numpy as np
 from skimage import feature, transform
 from foolbox.utils import samples
 
-def plot_heatmap(heatmap, original, ax, cmap='RdBu_r',
-                 percentile=99, dilation=0.5, alpha=0.25):
+
+def plot_heatmap(
+    heatmap, original, ax, cmap="RdBu_r", percentile=99, dilation=0.5, alpha=0.25
+):
     """
-    Plots the heatmap on top of the original image 
+    Plots the heatmap on top of the original image
     (which is shown by most important edges).
-    
+
     Parameters
     ----------
     heatmap : Numpy Array of shape [X, X]
@@ -27,7 +29,7 @@ def plot_heatmap(heatmap, original, ax, cmap='RdBu_r',
         thus the image overlay.
     alpha : float in [0, 1]
         Opacity of the overlay image.
-    
+
     """
     if len(heatmap.shape) == 3:
         heatmap = np.mean(heatmap, 0)
@@ -37,14 +39,21 @@ def plot_heatmap(heatmap, original, ax, cmap='RdBu_r',
     yy = np.arange(0.0, heatmap.shape[0], dy)
     xmin, xmax, ymin, ymax = np.amin(xx), np.amax(xx), np.amin(yy), np.amax(yy)
     extent = xmin, xmax, ymin, ymax
-    cmap_original = plt.get_cmap('Greys_r')
+    cmap_original = plt.get_cmap("Greys_r")
     cmap_original.set_bad(alpha=0)
     overlay = None
     if original is not None:
         # Compute edges (to overlay to heatmaps later)
-        original_greyscale = original if len(original.shape) == 2 else np.mean(original, axis=-1)
-        in_image_upscaled = transform.rescale(original_greyscale, dilation, mode='constant',
-                                              multichannel=False, anti_aliasing=True)
+        original_greyscale = (
+            original if len(original.shape) == 2 else np.mean(original, axis=-1)
+        )
+        in_image_upscaled = transform.rescale(
+            original_greyscale,
+            dilation,
+            mode="constant",
+            multichannel=False,
+            anti_aliasing=True,
+        )
         edges = feature.canny(in_image_upscaled).astype(float)
         edges[edges < 0.5] = np.nan
         edges[:5, :] = np.nan
@@ -56,9 +65,22 @@ def plot_heatmap(heatmap, original, ax, cmap='RdBu_r',
     abs_max = np.percentile(np.abs(heatmap), percentile)
     abs_min = abs_max
 
-    ax.imshow(heatmap, extent=extent, interpolation='none', cmap=cmap, vmin=-abs_min, vmax=abs_max)
+    ax.imshow(
+        heatmap,
+        extent=extent,
+        interpolation="none",
+        cmap=cmap,
+        vmin=-abs_min,
+        vmax=abs_max,
+    )
     if overlay is not None:
-        ax.imshow(overlay, extent=extent, interpolation='none', cmap=cmap_original, alpha=alpha)
+        ax.imshow(
+            overlay,
+            extent=extent,
+            interpolation="none",
+            cmap=cmap_original,
+            alpha=alpha,
+        )
 
 
 def generate_heatmap_pytorch(model, image, target, patchsize):
@@ -66,7 +88,7 @@ def generate_heatmap_pytorch(model, image, target, patchsize):
     Generates high-resolution heatmap for a BagNet by decomposing the
     image into all possible patches and by computing the logits for
     each patch.
-    
+
     Parameters
     ----------
     model : Pytorch Model
@@ -77,7 +99,7 @@ def generate_heatmap_pytorch(model, image, target, patchsize):
         Class for which the heatmap is computed.
     patchsize : int
         The size of the receptive field of the given BagNet.
-    
+
     """
     import torch
 
@@ -85,8 +107,11 @@ def generate_heatmap_pytorch(model, image, target, patchsize):
         # pad with zeros
         _, c, x, y = image.shape
         padded_image = np.zeros((c, x + patchsize - 1, y + patchsize - 1))
-        padded_image[:, (patchsize - 1) // 2:(patchsize - 1) // 2 + x, (patchsize - 1) // 2:(patchsize - 1) // 2 + y] = \
-            image[0]
+        padded_image[
+            :,
+            (patchsize - 1) // 2 : (patchsize - 1) // 2 + x,
+            (patchsize - 1) // 2 : (patchsize - 1) // 2 + y,
+        ] = image[0]
         image = padded_image[None].astype(np.float32)
 
         # turn to torch tensor
@@ -111,11 +136,21 @@ def generate_heatmap_pytorch(model, image, target, patchsize):
         return logits.reshape((224, 224))
 
 
-def get_fool_sample(dataset='imagenet', index=1, batchsize=1, shape=(224, 224),
-                    data_format='channels_first'):
+def get_fool_sample(
+    dataset="imagenet",
+    index=1,
+    batchsize=1,
+    shape=(224, 224),
+    data_format="channels_first",
+):
 
-    sample, label = samples(dataset=dataset, index=index, batchsize=batchsize, shape=shape,
-                            data_format=data_format)
+    sample, label = samples(
+        dataset=dataset,
+        index=index,
+        batchsize=batchsize,
+        shape=shape,
+        data_format=data_format,
+    )
     return sample, label
 
 
@@ -140,15 +175,15 @@ def visualize_heatmap(original, heatmap, save_path=None):
     original_image = original[0].transpose([1, 2, 0])
 
     ax = plt.subplot(121)
-    ax.set_title('original')
-    plt.imshow(original_image / 255.)
-    plt.axis('off')
+    ax.set_title("original")
+    plt.imshow(original_image / 255.0)
+    plt.axis("off")
 
     ax = plt.subplot(122)
-    ax.set_title('heatmap')
-    plot_heatmap(heatmap, original_image, ax, dilation=0.5, percentile=99, alpha=.25)
-    plt.axis('off')
+    ax.set_title("heatmap")
+    plot_heatmap(heatmap, original_image, ax, dilation=0.5, percentile=99, alpha=0.25)
+    plt.axis("off")
 
     plt.show()
     if save_path is not None:
-        fig.savefig(save_path, bbox_inches='tight', pad_inches=0)
+        fig.savefig(save_path, bbox_inches="tight", pad_inches=0)

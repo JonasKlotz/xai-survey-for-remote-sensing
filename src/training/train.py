@@ -20,19 +20,22 @@ def get_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def train(model_name='resnet',
-          layer_number=18,
-          max_epochs=10,
-          dataset_name='mnist',
-          kwargs=None
-          ):
+def train(
+    model_name="resnet",
+    layer_number=18,
+    max_epochs=10,
+    dataset_name="mnist",
+    kwargs=None,
+):
     # load datamodule
     data_module = load_data_module(dataset_name)
     rrr_loss = RightForRightReasonsLoss(lambda_=1)
     # load model
-    model = LightningResnet(num_classes=data_module.num_classes,
-                            input_channels=data_module.dims[0],
-                            resnet_layers=layer_number)
+    model = LightningResnet(
+        num_classes=data_module.num_classes,
+        input_channels=data_module.dims[0],
+        resnet_layers=layer_number,
+    )
     # init trainer
     trainer = Trainer(
         max_epochs=max_epochs,

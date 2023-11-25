@@ -1,7 +1,7 @@
 from typing import Union
 
 import torch
-from captum.attr import  DeepLift
+from captum.attr import DeepLift
 
 from src.xai.xai_methods.explanation import Explanation
 
@@ -14,7 +14,8 @@ class DeepLiftImpl(Explanation):
 
         self.attributor = DeepLift(model)
 
-    def explain(self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None):
-        attrs = self.attributor.attribute(image_tensor,
-                                          target=target)
+    def explain(
+        self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
+    ):
+        attrs = self.attributor.attribute(image_tensor, target=target)
         return attrs

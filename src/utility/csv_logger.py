@@ -4,14 +4,15 @@ from typing import List
 
 
 class CSVLogger:
-
-    def __init__(self,
-                 log_dir: str,
-                 filename: str = 'metrics',
-                 append: bool = False,
-                 column_names: List[str] = None,
-                 separator: str = ";"):
-        """ CSV Logger for logging metrics to a csv file.
+    def __init__(
+        self,
+        log_dir: str,
+        filename: str = "metrics",
+        append: bool = False,
+        column_names: List[str] = None,
+        separator: str = ";",
+    ):
+        """CSV Logger for logging metrics to a csv file.
 
         Parameters
         ----------
@@ -37,7 +38,9 @@ class CSVLogger:
         self._init_log_file()
 
     def _init_log_file(self):
-        complete_filename = f"{self.filename}_{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
+        complete_filename = (
+            f"{self.filename}_{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
+        )
         self.log_file_path = os.path.join(self.log_dir, complete_filename)
 
         if not self.append and self.column_names is not None:
@@ -51,7 +54,7 @@ class CSVLogger:
         return self.separator.join(self.column_names) + "\n"
 
     def update(self, row: dict):
-        """ Append a row to the csv file
+        """Append a row to the csv file
 
         Creates a new csv file if it does not exist yet.
 
@@ -83,4 +86,3 @@ class CSVLogger:
 
     def _get_row_as_string(self, row: dict):
         return self.separator.join([str(row[key]) for key in self.column_names]) + "\n"
-        

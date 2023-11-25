@@ -14,7 +14,11 @@ import timm
 
 from torchmetrics.functional import accuracy
 from pytorch_lightning import LightningModule, Trainer, seed_everything
-from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import (
+    LearningRateMonitor,
+    EarlyStopping,
+    ModelCheckpoint,
+)
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.loggers import CSVLogger
 from torchmetrics.functional import accuracy
@@ -24,12 +28,12 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 dir_path = ""
 
-__all__ = ['bagnet9', 'bagnet17', 'bagnet33']
+__all__ = ["bagnet9", "bagnet17", "bagnet33"]
 
 model_urls = {
-    'bagnet9': 'https://bitbucket.org/wielandbrendel/bag-of-feature-pretrained-models/raw/249e8fa82c0913623a807d9d35eeab9da7dcc2a8/bagnet8-34f4ccd2.pth.tar',
-    'bagnet17': 'https://bitbucket.org/wielandbrendel/bag-of-feature-pretrained-models/raw/249e8fa82c0913623a807d9d35eeab9da7dcc2a8/bagnet16-105524de.pth.tar',
-    'bagnet33': 'https://bitbucket.org/wielandbrendel/bag-of-feature-pretrained-models/raw/249e8fa82c0913623a807d9d35eeab9da7dcc2a8/bagnet32-2ddd53ed.pth.tar',
+    "bagnet9": "https://bitbucket.org/wielandbrendel/bag-of-feature-pretrained-models/raw/249e8fa82c0913623a807d9d35eeab9da7dcc2a8/bagnet8-34f4ccd2.pth.tar",
+    "bagnet17": "https://bitbucket.org/wielandbrendel/bag-of-feature-pretrained-models/raw/249e8fa82c0913623a807d9d35eeab9da7dcc2a8/bagnet16-105524de.pth.tar",
+    "bagnet33": "https://bitbucket.org/wielandbrendel/bag-of-feature-pretrained-models/raw/249e8fa82c0913623a807d9d35eeab9da7dcc2a8/bagnet32-2ddd53ed.pth.tar",
 }
 
 
@@ -41,8 +45,14 @@ class Bottleneck(nn.Module):
         # print('Creating bottleneck with kernel size {} and stride {} with padding {}'.format(kernel_size, stride, (kernel_size - 1) // 2))
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=kernel_size, stride=stride,
-                               padding=0, bias=False)  # changed padding from (kernel_size - 1) // 2
+        self.conv2 = nn.Conv2d(
+            planes,
+            planes,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=0,
+            bias=False,
+        )  # changed padding from (kernel_size - 1) // 2
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
@@ -78,20 +88,48 @@ class Bottleneck(nn.Module):
 
 
 class BagNet(nn.Module):
-
-    def __init__(self, block, layers, strides=[1, 2, 2, 2], kernel3=[0, 0, 0, 0], num_classes=1000, avg_pool=True):
+    def __init__(
+        self,
+        block,
+        layers,
+        strides=[1, 2, 2, 2],
+        kernel3=[0, 0, 0, 0],
+        num_classes=1000,
+        avg_pool=True,
+    ):
         self.inplanes = 64
         super(BagNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=1, stride=1, padding=0,
-                               bias=False)
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0,
-                               bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=1, stride=1, padding=0, bias=False)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0, bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=0.001)
         self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(block, 64, layers[0], stride=strides[0], kernel3=kernel3[0], prefix='layer1')
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=strides[1], kernel3=kernel3[1], prefix='layer2')
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=strides[2], kernel3=kernel3[2], prefix='layer3')
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=strides[3], kernel3=kernel3[3], prefix='layer4')
+        self.layer1 = self._make_layer(
+            block, 64, layers[0], stride=strides[0], kernel3=kernel3[0], prefix="layer1"
+        )
+        self.layer2 = self._make_layer(
+            block,
+            128,
+            layers[1],
+            stride=strides[1],
+            kernel3=kernel3[1],
+            prefix="layer2",
+        )
+        self.layer3 = self._make_layer(
+            block,
+            256,
+            layers[2],
+            stride=strides[2],
+            kernel3=kernel3[2],
+            prefix="layer3",
+        )
+        self.layer4 = self._make_layer(
+            block,
+            512,
+            layers[3],
+            stride=strides[3],
+            kernel3=kernel3[3],
+            prefix="layer4",
+        )
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         self.avg_pool = avg_pool
@@ -100,23 +138,30 @@ class BagNet(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
+                m.weight.data.normal_(0, math.sqrt(2.0 / n))
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def _make_layer(self, block, planes, blocks, stride=1, kernel3=0, prefix=''):
+    def _make_layer(self, block, planes, blocks, stride=1, kernel3=0, prefix=""):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
         layers = []
         kernel = 1 if kernel3 == 0 else 3
-        layers.append(block(self.inplanes, planes, stride, downsample, kernel_size=kernel))
+        layers.append(
+            block(self.inplanes, planes, stride, downsample, kernel_size=kernel)
+        )
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             kernel = 1 if kernel3 <= i else 3
@@ -152,15 +197,19 @@ def bagnet33(pretrained=False, strides=[2, 2, 2, 1], **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = BagNet(Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 1, 1], **kwargs)
+    model = BagNet(
+        Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 1, 1], **kwargs
+    )
 
     if torch.cuda.is_available():
-        map_location = torch.device('cuda')
+        map_location = torch.device("cuda")
     else:
-        map_location = torch.device('cpu')
+        map_location = torch.device("cpu")
 
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['bagnet33'], map_location=map_location))
+        model.load_state_dict(
+            model_zoo.load_url(model_urls["bagnet33"], map_location=map_location)
+        )
     return model
 
 
@@ -170,14 +219,18 @@ def bagnet17(pretrained=False, strides=[2, 2, 2, 1], **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = BagNet(Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 1, 0], **kwargs)
+    model = BagNet(
+        Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 1, 0], **kwargs
+    )
     if torch.cuda.is_available():
-        map_location = torch.device('cuda')
+        map_location = torch.device("cuda")
     else:
-        map_location = torch.device('cpu')
+        map_location = torch.device("cpu")
 
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['bagnet17'], map_location=map_location))
+        model.load_state_dict(
+            model_zoo.load_url(model_urls["bagnet17"], map_location=map_location)
+        )
     return model
 
 
@@ -187,13 +240,17 @@ def bagnet9(pretrained=False, strides=[2, 2, 2, 1], **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = BagNet(Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 0, 0], **kwargs)
+    model = BagNet(
+        Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 0, 0], **kwargs
+    )
     if torch.cuda.is_available():
-        map_location = torch.device('cuda')
+        map_location = torch.device("cuda")
     else:
-        map_location = torch.device('cpu')
+        map_location = torch.device("cpu")
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['bagnet9'], map_location=map_location))
+        model.load_state_dict(
+            model_zoo.load_url(model_urls["bagnet9"], map_location=map_location)
+        )
     return model
 
 
@@ -210,7 +267,9 @@ def get_bagnet(bagnet_layers, pretrained=True, num_classes=1000, num_channels=3)
     if num_classes != 1000:
         model.fc = nn.Linear(512 * model.block.expansion, num_classes)
     if num_channels != 3:
-        model.conv1 = nn.Conv2d(num_channels, 64, kernel_size=1, stride=1, padding=0, bias=False)
+        model.conv1 = nn.Conv2d(
+            num_channels, 64, kernel_size=1, stride=1, padding=0, bias=False
+        )
     return model
 
 
@@ -306,9 +365,7 @@ class SurrogateModel(LightningModule):
         loss = self.loss(logits, blackbox_logits)
 
         preds = torch.argmax(logits, dim=1)
-        acc = accuracy(
-            preds, y, task="multiclass", num_classes=10
-        )
+        acc = accuracy(preds, y, task="multiclass", num_classes=10)
 
         if stage:
             self.log(f"{stage}_loss", loss, prog_bar=True)
@@ -332,7 +389,7 @@ class SurrogateModel(LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     bagnet = get_bagnet(bagnet_layers=9, num_classes=10, num_channels=13)
     resnet = get_resnet()
     model = SurrogateModel(resnet, bagnet)
@@ -340,7 +397,9 @@ if __name__ == '__main__':
     in_tests = "PYTEST_CURRENT_TEST" in os.environ
     root = os.path.join(tempfile.gettempdir(), "deepglobe")
     print(root)
-    datamodule = EuroSATDataModule(root=root, batch_size=64, num_workers=4, download=True)
+    datamodule = EuroSATDataModule(
+        root=root, batch_size=64, num_workers=4, download=True
+    )
 
     experiment_dir = os.path.join(tempfile.gettempdir(), "deepglobe_results")
 
@@ -348,7 +407,9 @@ if __name__ == '__main__':
         monitor="val_loss", dirpath=experiment_dir, save_top_k=1, save_last=True
     )
 
-    early_stopping_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=10)
+    early_stopping_callback = EarlyStopping(
+        monitor="val_loss", min_delta=0.00, patience=10
+    )
 
     csv_logger = CSVLogger(save_dir=experiment_dir, name="pretrained_weights_logs")
 

@@ -15,20 +15,22 @@ _explanation_methods = {
     "integrated_gradients": IntegratedGradientsImpl,
     "lime": LimeImpl,
     "lrp": LRPImpl,
-    "deeplift": DeepLiftImpl
+    "deeplift": DeepLiftImpl,
 }
 
 
 class ExplanationsManager:
-
-    def __init__(self, explanations_config: dict,
-                 model: torch.nn.Module,
-                 datetime_appendix: bool = True):
+    def __init__(
+        self,
+        explanations_config: dict,
+        model: torch.nn.Module,
+        datetime_appendix: bool = True,
+    ):
         self.explanations_config = explanations_config
         self.explanations = {}
         self.explanations_zarr_handler = {}
         self.model = model
-        self.visualize = explanations_config['visualize']
+        self.visualize = explanations_config["visualize"]
 
         if datetime_appendix:
             self.datetime_appendix = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -36,19 +38,23 @@ class ExplanationsManager:
         self._init_explanations()
 
     def _init_explanations(self):
-        for explanation_name in self.explanations_config['explanation_methods']:
+        for explanation_name in self.explanations_config["explanation_methods"]:
             self._init_explanation(explanation_name)
 
     def _init_explanation(self, explanation_name: str):
-        self.explanations[explanation_name] = _explanation_methods[explanation_name](model=self.model)
-        self.explanations_zarr_handler[explanation_name] = (
-            ZarrHandler(name=f"a_batch_{explanation_name}",
-                        folder_name=f"batches_{self.datetime_appendix}")
+        self.explanations[explanation_name] = _explanation_methods[explanation_name](
+            model=self.model
         )
-        self.x_batch_handler = ZarrHandler(name="x_batch",
-                                           folder_name=f"batches_{self.datetime_appendix}")
-        self.y_batch_handler = ZarrHandler(name="y_batch",
-                                             folder_name=f"batches_{self.datetime_appendix}")
+        self.explanations_zarr_handler[explanation_name] = ZarrHandler(
+            name=f"a_batch_{explanation_name}",
+            folder_name=f"batches_{self.datetime_appendix}",
+        )
+        self.x_batch_handler = ZarrHandler(
+            name="x_batch", folder_name=f"batches_{self.datetime_appendix}"
+        )
+        self.y_batch_handler = ZarrHandler(
+            name="y_batch", folder_name=f"batches_{self.datetime_appendix}"
+        )
 
     def explain_batch(self, image_batch: torch.Tensor, target_batch: torch.Tensor):
         """Explain a batch of images and save it to zarr
@@ -98,6 +104,9 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
     explanation_method = _explanation_methods[explanation_method_name]
     explanation = explanation_method(model)
     # todo differentiate between batch and single
-    attrs = explanation.explain_batch(tensor_batch=inputs, target_batch=targets).detach().numpy()
+    attrs = (
+        explanation.explain_batch(tensor_batch=inputs, target_batch=targets)
+        .detach()
+        .numpy()
+    )
     return attrs
-

@@ -16,7 +16,8 @@ class GradCamImpl(Explanation):
         # todo layer customizen
         self.attributor = GuidedGradCam(model, layer)
 
-    def explain(self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None):
-        attrs = self.attributor.attribute(image_tensor,
-                                          target=target)
+    def explain(
+        self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
+    ):
+        attrs = self.attributor.attribute(image_tensor, target=target)
         return attrs

@@ -30,7 +30,13 @@ class RightForRightReasonsLoss(torch.nn.Module):
         self.loss = loss
         self.lambda_ = lambda_
 
-    def forward(self, x_batch: torch.Tensor, y_batch: torch.Tensor, s_batch: torch.Tensor, explanation_method):
+    def forward(
+        self,
+        x_batch: torch.Tensor,
+        y_batch: torch.Tensor,
+        s_batch: torch.Tensor,
+        explanation_method,
+    ):
         """
 
         Parameters

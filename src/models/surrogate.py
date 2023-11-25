@@ -14,7 +14,11 @@ import timm
 
 from torchmetrics.functional import accuracy
 from pytorch_lightning import LightningModule, Trainer, seed_everything
-from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import (
+    LearningRateMonitor,
+    EarlyStopping,
+    ModelCheckpoint,
+)
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.loggers import CSVLogger
 from torchmetrics.functional import accuracy
@@ -55,9 +59,7 @@ class SurrogateModel(LightningModule):
         loss = self.loss(logits, blackbox_logits)
 
         preds = torch.argmax(logits, dim=1)
-        acc = accuracy(
-            preds, y, task="multiclass", num_classes=10
-        )
+        acc = accuracy(preds, y, task="multiclass", num_classes=10)
 
         if stage:
             self.log(f"{stage}_loss", loss, prog_bar=True)

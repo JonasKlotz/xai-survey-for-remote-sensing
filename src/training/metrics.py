@@ -20,7 +20,7 @@ def create_logger(log_dir_path, logging_level=10):
 
     logger = logging.getLogger("pytorch_logger")
     logger.setLevel(logging_level)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     os.makedirs(log_dir_path, exist_ok=True)
     output_file_handler = logging.FileHandler(os.path.join(log_dir_path, "run.log"))
     output_file_handler.setFormatter(formatter)
@@ -58,10 +58,14 @@ def calculate_metrics(y_true, y_pred, threshold=0.5):
     """
     y_pred_threshed = (y_pred > threshold).astype(torch.long)
     acc = round(accuracy_score(y_true=y_true, y_pred=y_pred), 3)
-    mif1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average='micro'), 3)
-    maf1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average='macro'), 3)
-    miMAP = round(average_precision_score(y_true=y_true, y_score=y_pred, average='micro'), 3)
-    maMAP = round(average_precision_score(y_true=y_true, y_score=y_pred, average='macro'), 3)
+    mif1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average="micro"), 3)
+    maf1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average="macro"), 3)
+    miMAP = round(
+        average_precision_score(y_true=y_true, y_score=y_pred, average="micro"), 3
+    )
+    maMAP = round(
+        average_precision_score(y_true=y_true, y_score=y_pred, average="macro"), 3
+    )
     return mif1, maf1, miMAP, maMAP, acc
 
 
@@ -69,9 +73,25 @@ class CSV_logger:
     """
     Class for logging metrics to a csv file
     """
-    metric_names = ["epoch", "train_miAP", "train_maAP", "train_miF1", "train_maF1", "train_loss",
-                    "valid_miAP", "valid_maAP", "valid_miF1", "valid_maF1", "valid_loss",
-                    "test_miAP", "test_maAP", "test_miF1", "test_maF1", "test_loss"]
+
+    metric_names = [
+        "epoch",
+        "train_miAP",
+        "train_maAP",
+        "train_miF1",
+        "train_maF1",
+        "train_loss",
+        "valid_miAP",
+        "valid_maAP",
+        "valid_miF1",
+        "valid_maF1",
+        "valid_loss",
+        "test_miAP",
+        "test_maAP",
+        "test_miF1",
+        "test_maF1",
+        "test_loss",
+    ]
 
     def __init__(self, file_name, dir_name, metric_names=None):
         try:
@@ -81,19 +101,19 @@ class CSV_logger:
         if metric_names:
             self.metric_names = metric_names
 
-        self.file_path = os.path.join(dir_name, f'{file_name}.csv')
+        self.file_path = os.path.join(dir_name, f"{file_name}.csv")
         csv_header = s = ",".join(self.metric_names)
-        with open(self.file_path, 'a') as csv_file:
+        with open(self.file_path, "a") as csv_file:
             csv_file.write(csv_header)
-            csv_file.write('\n')
+            csv_file.write("\n")
 
     @staticmethod
     def get_metric_names(metric_names):
         return metric_names
 
     def write_csv(self, metrics, new_line=False):
-        with open(self.file_path, 'a') as csv_file:
+        with open(self.file_path, "a") as csv_file:
             for m in metrics:
-                csv_file.write(str(m) + ',')
+                csv_file.write(str(m) + ",")
             if new_line:
-                csv_file.write('\n')
+                csv_file.write("\n")

@@ -16,15 +16,15 @@ def write_tiff(directory, matrix, metadata):
     kwargs = metadata
     kwargs.update(dtype=rasterio.float32, count=1)
     try:
-        with rasterio.open(directory, 'w', **kwargs) as dst:
+        with rasterio.open(directory, "w", **kwargs) as dst:
             dst.write_band(1, matrix.astype(rasterio.float32))
-            print('\n File was created successfully.\n%s' % file_name)
+            print("\n File was created successfully.\n%s" % file_name)
     except:
         raise Exception("Error in exporting dataset to .tif!")
 
 
 def read_tif(path):
-    """ Read a tif file
+    """Read a tif file
 
     :param path:  path to the tif file
     :return: np array of the image and the metadata
@@ -44,11 +44,8 @@ def get_loader_for_datamodule(data_module: LightningDataModule):
     data_module.setup()
 
     loaders = {
-        'train': data_module.train_dataloader(),
-        'val': data_module.val_dataloader(),
-        'test': data_module.test_dataloader()
+        "train": data_module.train_dataloader(),
+        "val": data_module.val_dataloader(),
+        "test": data_module.test_dataloader(),
     }
     return loaders
-
-
-

@@ -42,7 +42,7 @@ model_urls = {
 
 
 def conv3x3(
-        in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
+    in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
 ) -> nn.Conv2d:
     """3x3 convolution with padding"""
     return nn.Conv2d(
@@ -66,15 +66,15 @@ class BasicBlock(nn.Module):
     expansion: int = 1
 
     def __init__(
-            self,
-            inplanes: int,
-            planes: int,
-            stride: int = 1,
-            downsample: Optional[nn.Module] = None,
-            groups: int = 1,
-            base_width: int = 64,
-            dilation: int = 1,
-            norm_layer: Optional[Callable[..., nn.Module]] = None,
+        self,
+        inplanes: int,
+        planes: int,
+        stride: int = 1,
+        downsample: Optional[nn.Module] = None,
+        groups: int = 1,
+        base_width: int = 64,
+        dilation: int = 1,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
     ) -> None:
         super(BasicBlock, self).__init__()
         if norm_layer is None:
@@ -122,15 +122,15 @@ class Bottleneck(nn.Module):
     expansion: int = 4
 
     def __init__(
-            self,
-            inplanes: int,
-            planes: int,
-            stride: int = 1,
-            downsample: Optional[nn.Module] = None,
-            groups: int = 1,
-            base_width: int = 64,
-            dilation: int = 1,
-            norm_layer: Optional[Callable[..., nn.Module]] = None,
+        self,
+        inplanes: int,
+        planes: int,
+        stride: int = 1,
+        downsample: Optional[nn.Module] = None,
+        groups: int = 1,
+        base_width: int = 64,
+        dilation: int = 1,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
     ) -> None:
         super(Bottleneck, self).__init__()
         if norm_layer is None:
@@ -174,15 +174,15 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(
-            self,
-            block: Type[Union[BasicBlock, Bottleneck]],
-            layers: List[int],
-            num_classes: int = 1000,
-            zero_init_residual: bool = False,
-            groups: int = 1,
-            width_per_group: int = 64,
-            replace_stride_with_dilation: Optional[List[bool]] = None,
-            norm_layer: Optional[Callable[..., nn.Module]] = None,
+        self,
+        block: Type[Union[BasicBlock, Bottleneck]],
+        layers: List[int],
+        num_classes: int = 1000,
+        zero_init_residual: bool = False,
+        groups: int = 1,
+        width_per_group: int = 64,
+        replace_stride_with_dilation: Optional[List[bool]] = None,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
     ) -> None:
         super(ResNet, self).__init__()
         if norm_layer is None:
@@ -239,12 +239,12 @@ class ResNet(nn.Module):
                     nn.init.constant_(m.bn2.weight, 0)  # type: ignore[arg-type]
 
     def _make_layer(
-            self,
-            block: Type[Union[BasicBlock, Bottleneck]],
-            planes: int,
-            blocks: int,
-            stride: int = 1,
-            dilate: bool = False,
+        self,
+        block: Type[Union[BasicBlock, Bottleneck]],
+        planes: int,
+        blocks: int,
+        stride: int = 1,
+        dilate: bool = False,
     ) -> nn.Sequential:
         norm_layer = self._norm_layer
         downsample = None
@@ -309,14 +309,14 @@ class ResNet(nn.Module):
 
 
 def _resnet(
-        arch: str,
-        block: Type[Union[BasicBlock, Bottleneck]],
-        layers: List[int],
-        pretrained: bool,
-        progress: bool,
-        num_classes: int = 1000,
-        num_channels: int = 3,
-        **kwargs: Any
+    arch: str,
+    block: Type[Union[BasicBlock, Bottleneck]],
+    layers: List[int],
+    pretrained: bool,
+    progress: bool,
+    num_classes: int = 1000,
+    num_channels: int = 3,
+    **kwargs: Any
 ) -> ResNet:
     model = ResNet(block, layers, **kwargs)
 
@@ -330,7 +330,9 @@ def _resnet(
 
     # replace first layer if num_channels is not 3
     if num_channels != 3:
-        model.conv1 = nn.Conv2d(num_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        model.conv1 = nn.Conv2d(
+            num_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
+        )
 
     return model
 
@@ -395,7 +397,7 @@ def resnet152(pretrained: bool = False, progress: bool = True, **kwargs: Any) ->
 
 
 def resnext50_32x4d(
-        pretrained: bool = False, progress: bool = True, **kwargs: Any
+    pretrained: bool = False, progress: bool = True, **kwargs: Any
 ) -> ResNet:
     r"""ResNeXt-50 32x4d model from
     `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_.
@@ -412,7 +414,7 @@ def resnext50_32x4d(
 
 
 def resnext101_32x8d(
-        pretrained: bool = False, progress: bool = True, **kwargs: Any
+    pretrained: bool = False, progress: bool = True, **kwargs: Any
 ) -> ResNet:
     r"""ResNeXt-101 32x8d model from
     `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_.
@@ -429,7 +431,7 @@ def resnext101_32x8d(
 
 
 def wide_resnet50_2(
-        pretrained: bool = False, progress: bool = True, **kwargs: Any
+    pretrained: bool = False, progress: bool = True, **kwargs: Any
 ) -> ResNet:
     r"""Wide ResNet-50-2 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1605.07146.pdf>`_.
@@ -450,7 +452,7 @@ def wide_resnet50_2(
 
 
 def wide_resnet101_2(
-        pretrained: bool = False, progress: bool = True, **kwargs: Any
+    pretrained: bool = False, progress: bool = True, **kwargs: Any
 ) -> ResNet:
     r"""Wide ResNet-101-2 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1605.07146.pdf>`_.

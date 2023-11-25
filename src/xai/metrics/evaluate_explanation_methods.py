@@ -7,14 +7,13 @@ from xai.generate_explanations import generate_explanations
 from xai.metrics.metrics_manager import MetricsManager
 from xai.xai_methods.deeplift_impl import DeepLiftImpl
 
-device_string = ("gpu" if torch.cuda.is_available() else "cpu")
+device_string = "gpu" if torch.cuda.is_available() else "cpu"
 CONFIGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/config"
-LOGPATH = '/home/jonasklotz/Studys/MASTERS/XAI/logs'
+LOGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/logs"
 
 
 def evaluate_explanation_methods(
-        explanations_config: dict,
-        load_precomputed: bool = True
+    explanations_config: dict, load_precomputed: bool = True
 ):
     """
     Evaluate Explanation Methods
@@ -25,10 +24,10 @@ def evaluate_explanation_methods(
 
     all_zarrs = load_most_recent_batches()
 
-    x_batch = all_zarrs['x_batch']
-    y_batch = all_zarrs['y_batch']
+    x_batch = all_zarrs["x_batch"]
+    y_batch = all_zarrs["y_batch"]
     # test batch
-    a_batch = all_zarrs['a_batch_deeplift']
+    a_batch = all_zarrs["a_batch_deeplift"]
 
     # convert zarr to numpy
     x_batch = x_batch[:]
@@ -42,31 +41,38 @@ def evaluate_explanation_methods(
     s_batch[s_batch <= 0] = 0
     s_batch[s_batch > 0] = 1
 
-    print(f"x_batch shape: {x_batch.shape} \n"
-          f"y_batch shape: {y_batch.shape}\n"
-          f"a_batch shape: {a_batch.shape}")
+    print(
+        f"x_batch shape: {x_batch.shape} \n"
+        f"y_batch shape: {y_batch.shape}\n"
+        f"a_batch shape: {a_batch.shape}"
+    )
 
     data_module = load_data_module(explanations_config["dataset_name"])
     # load model
     # todo: get model function must be improved
-    model = LightningResnet(num_classes=data_module.num_classes, input_channels=data_module.dims[0])
+    model = LightningResnet(
+        num_classes=data_module.num_classes, input_channels=data_module.dims[0]
+    )
     model_path = f"/home/jonasklotz/Studys/MASTERS/XAI/models/resnet18_{explanations_config['dataset_name']}.pt"
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
     explanation = DeepLiftImpl(model)
-    metrics_manager = MetricsManager(model=model,
-                                     explanation=explanation,
-                                     aggregate=True,
-                                     device_string=device_string,
-                                     log=True,
-                                     log_dir=LOGPATH)
+    metrics_manager = MetricsManager(
+        model=model,
+        explanation=explanation,
+        aggregate=True,
+        device_string=device_string,
+        log=True,
+        log_dir=LOGPATH,
+    )
 
-    all_results = metrics_manager.evaluate_batch(x_batch=x_batch,
-                                                 y_batch=y_batch,
-                                                 a_batch=a_batch,
-                                                 s_batch=s_batch,
-                                                 )
+    all_results = metrics_manager.evaluate_batch(
+        x_batch=x_batch,
+        y_batch=y_batch,
+        a_batch=a_batch,
+        s_batch=s_batch,
+    )
 
     print(all_results)
 
@@ -75,10 +81,10 @@ def main():
     from main import parse_config
 
     configs = parse_config(CONFIGPATH)
-    general_config = configs['general']
+    general_config = configs["general"]
 
-    evaluate_explanation_methods(configs['evaluations'])
+    evaluate_explanation_methods(configs["evaluations"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
