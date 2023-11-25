@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import numpy as np
 import torch
 
 from data.zarr_handler import ZarrHandler
@@ -64,3 +65,39 @@ class ExplanationsManager:
                 explanation.visualize(batch_attrs[0], image_batch[0])
             # save it to zarr
             self.explanations_zarr_handler[explanation_name].append(batch_attrs)
+
+
+def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
+    """
+    Wrapper for explanation methods.
+
+    Parameters
+    ----------
+    model: torch.nn.Module
+        The model to explain.
+    inputs: torch.Tensor
+        The input to explain.
+    targets: torch.Tensor
+        The target to explain.
+    explain_func_kwargs: dict
+        Keyword arguments for the explanation method.
+
+    Returns
+    -------
+    attrs: torch.Tensor
+        The attributions of the explanation method.
+    """
+    # if numpy array convert to tensor
+    if isinstance(inputs, np.ndarray):
+        inputs = torch.from_numpy(inputs).float()
+    if isinstance(targets, np.ndarray):
+        targets = torch.from_numpy(targets)
+    model = model.float()
+
+    explanation_method_name = explain_func_kwargs.pop("explanation_method_name")
+    explanation_method = _explanation_methods[explanation_method_name]
+    explanation = explanation_method(model)
+    # todo differentiate between batch and single
+    attrs = explanation.explain_batch(tensor_batch=inputs, target_batch=targets).detach().numpy()
+    return attrs
+

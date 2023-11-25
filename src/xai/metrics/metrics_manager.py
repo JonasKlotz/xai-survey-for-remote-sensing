@@ -3,11 +3,13 @@ import quantus
 import torch
 
 from utility.csv_logger import CSVLogger
+from xai.xai_methods.explanation_manager import explanation_wrapper
 
 
 class MetricsManager:
     def __init__(self,
                  model: torch.nn.Module,
+                 explanation:callable,
                  aggregate=True,
                  device_string=None,
                  log=False,
@@ -58,11 +60,14 @@ class MetricsManager:
 
         self.categories = ['faithfulness', 'robustness', 'localization', 'complexity', 'randomization', 'axiomatic']
 
+
+        self.explain_func = explanation_wrapper
+        self.explain_func_kwargs = {'explanation_method_name': explanation.attribution_name,}
+
         self.general_args = {'return_aggregate': self.aggregate,
                              'disable_warnings': self.disable_warnings,
                              'display_progressbar': False,
                              }
-
         # load metrics
         self._load_metrics()
 
@@ -107,23 +112,50 @@ class MetricsManager:
 
         all_results.update(faithfulness_result)
 
-        # robustness_result = self._evaluate_category(self.robustness_metrics,
-        #                                             x_batch=x_batch,
-        #                                             y_batch=y_batch,
-        #                                             a_batch=a_batch,
-        #                                             s_batch=s_batch
-        #                                             )
-        #
-        # all_results.update(robustness_result)
-        #
-        # localization_result = self._evaluate_category(self.localization_metrics,
-        #                                               x_batch=x_batch,
-        #                                               y_batch=y_batch,
-        #                                               a_batch=a_batch,
-        #                                               s_batch=s_batch
-        #                                               )
-        #
-        # all_results.update(localization_result)
+        robustness_result = self._evaluate_category(self.robustness_metrics,
+                                                    x_batch=x_batch,
+                                                    y_batch=y_batch,
+                                                    a_batch=a_batch,
+                                                    s_batch=s_batch
+                                                    )
+
+        all_results.update(robustness_result)
+
+        localization_result = self._evaluate_category(self.localization_metrics,
+                                                      x_batch=x_batch,
+                                                      y_batch=y_batch,
+                                                      a_batch=a_batch,
+                                                      s_batch=s_batch
+                                                      )
+
+        all_results.update(localization_result)
+
+        complexity_result = self._evaluate_category(self.complexity_metrics,
+                                                    x_batch=x_batch,
+                                                    y_batch=y_batch,
+                                                    a_batch=a_batch,
+                                                    s_batch=s_batch
+                                                    )
+
+        all_results.update(complexity_result)
+
+        randomization_result = self._evaluate_category(self.randomization_metrics,
+                                                         x_batch=x_batch,
+                                                         y_batch=y_batch,
+                                                         a_batch=a_batch,
+                                                         s_batch=s_batch
+                                                         )
+
+        all_results.update(randomization_result)
+
+        axiomatic_result = self._evaluate_category(self.axiomatic_metrics,
+                                                            x_batch=x_batch,
+                                                            y_batch=y_batch,
+                                                            a_batch=a_batch,
+                                                            s_batch=s_batch
+                                                            )
+
+        all_results.update(axiomatic_result)
 
         if self.log:
             self.csv_logger.update(all_results)
@@ -138,22 +170,32 @@ class MetricsManager:
                            s_batch: np.ndarray = None):
         results = {}
         for key in metrics.keys():
-            try:
-                results[key] = metrics[key](model=self.model,
-                                            x_batch=x_batch,
-                                            y_batch=y_batch,
-                                            a_batch=a_batch,
-                                            s_batch=s_batch,
-                                            device=self.device_string,
-                                            softmax=True
-                                            )
-
-                if key == 'selectivity':
-                    mean_it = np.mean(results[key])
-            except Exception as e:
-                print(f"Error while evaluating {key}: {e}")
-                results[key] = self.sentinel_value
-            print(f"{key}: {results[key]}")
+            results[key] = metrics[key](model=self.model,
+                                        x_batch=x_batch,
+                                        y_batch=y_batch,
+                                        a_batch=a_batch,
+                                        s_batch=s_batch,
+                                        device=self.device_string,
+                                        softmax=True,
+                                        explain_func=self.explain_func,
+                                        explain_func_kwargs=self.explain_func_kwargs
+                                        )
+            # try:
+            #     results[key] = metrics[key](model=self.model,
+            #                                 x_batch=x_batch,
+            #                                 y_batch=y_batch,
+            #                                 a_batch=a_batch,
+            #                                 s_batch=s_batch,
+            #                                 device=self.device_string,
+            #                                 softmax=True
+            #                                 )
+            #
+            #     if key == 'selectivity':
+            #         mean_it = np.mean(results[key])
+            # except Exception as e:
+            #     print(f"Error while evaluating {key}: {e}")
+            #     results[key] = self.sentinel_value
+            # print(f"{key}: {results[key]}")
 
         return results
 
@@ -163,7 +205,6 @@ class MetricsManager:
             'faithfulness_corr': quantus.FaithfulnessCorrelation(
                 nr_runs=self.nr_runs,
                 subset_size=224,
-                perturb_func=None,
                 **self.general_args
 
             ),
@@ -227,10 +268,6 @@ class MetricsManager:
         }
 
     def _load_robustness_metrics(self):
-        self.general_args = {'return_aggregate': self.aggregate,
-                             'disable_warnings': self.disable_warnings,
-                             'display_progressbar': False,
-                             }
 
         # todo fix explanation method parameter for robustness metrics
         self.robustness_metrics = {
@@ -238,10 +275,6 @@ class MetricsManager:
                 nr_samples=10,
                 perturb_std=0.2,
                 perturb_mean=0.0,
-                norm_numerator=quantus.distance_euclidean,
-                norm_denominator=quantus.distance_euclidean,
-                perturb_func=quantus.gaussian_noise,
-                similarity_func=quantus.lipschitz_constant,
                 **self.general_args
             ),
             'max_sensitivity': quantus.MaxSensitivity(
@@ -259,7 +292,7 @@ class MetricsManager:
                 **self.general_args
             ),
             'continuity': quantus.Continuity(
-                patch_size=56,
+                patch_size=7,
                 nr_steps=10,
                 perturb_baseline="uniform",
                 similarity_func=quantus.correlation_spearman,
@@ -295,7 +328,7 @@ class MetricsManager:
 
     def _load_randomization_metrics(self):
         self.randomization_metrics = {
-            'model_parameter_randomisation': quantus.ModelParameterRandomisation(
+            'model_parameter_randomisation': quantus.MPRT(
                 layer_order="bottom_up",
                 similarity_func=quantus.correlation_spearman,
                 **self.general_args

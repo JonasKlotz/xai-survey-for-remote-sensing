@@ -1,4 +1,4 @@
-import json
+import yaml
 import os
 
 import torch
@@ -22,7 +22,7 @@ from src.xai.xai_methods.lrp_impl import LRPImpl
 
 # import datamodule
 from src.data.get_data_modules import get_mnist_data_module, load_data_module
-from xai.xai_methods.explanation_manager import ExplanationsManager
+from src.xai.xai_methods.explanation_manager import ExplanationsManager
 
 
 def load_test_imagenet_image( idx_to_labels, image_tensor):
@@ -94,101 +94,12 @@ def generate_explanations(explanations_config:dict):
 
 
 if __name__ == '__main__':
-    # resnet = resnet18(weights=ResNet18_Weights.DEFAULT)
-    # resnet = resnet.eval()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default='/home/jonasklotz/Studys/MASTERS/XAI/config/explanations_config.yml')
 
-    data_module = get_mnist_data_module()
-    loaders = get_loader_for_datamodule(data_module)
-    test_loader = loaders['test']
+    args = parser.parse_args()
+    with open(args.config) as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
 
-    cifar_path = "/home/jonasklotz/Studys/MASTERS/XAI/models/resnet18_cifar.pt"
-
-    resnet = LightningResnet(input_channels=1, num_classes=10)
-    resnet.load_state_dict(torch.load(cifar_path))
-
-    images, labels = next(iter(test_loader))
-
-    output = resnet(images)
-    output_probs = F.softmax(output, dim=1)
-    prediction_score, pred_label_idx = torch.topk(output_probs, 1)
-    print(f"Prediction: {prediction_score.squeeze()}, Label: {pred_label_idx.squeeze()}")
-
-    pred_label_idx.squeeze_()
-
-
-    # Lime = LimeImpl(resnet)
-    # attrs = Lime.explain(image_tensor, target=pred_label_idx)
-    # Lime.visualize(attrs, image_tensor)
-    #
-    # GradCam = GradCamImpl(resnet)
-    # attrs = GradCam.explain(image_tensor, target=pred_label_idx)
-    # GradCam.visualize(attrs, image_tensor)
-
-    # LRP = LRPImpl(resnet)
-    # attrs = LRP.explain(image_tensor, target=pred_label_idx)
-    # LRP.visualize(attrs, image_tensor)
-
-    # IG = IntegratedGradientsImpl(resnet)
-    # attrs = IG.explain(image_tensor, target=pred_label_idx)
-    # IG.visualize(attrs, image_tensor)
-
-
-
-PATH_DATASETS = "/home/jonasklotz/Studys/MASTERS/XAI/data"
-BATCH_SIZE = 256 if torch.cuda.is_available() else 64
-NUM_WORKERS = int(os.cpu_count() / 2)
-
-def create_model():
-    resnet = resnet18(weights=ResNet18_Weights.DEFAULT)
-    resnet = resnet.eval()
-    resnet.conv1 = nn.Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
-    resnet.maxpool = nn.Identity()
-    return resnet
-
-
-
-
-
-# if __name__ == '__main__':
-#     train_transforms = torchvision.transforms.Compose(
-#         [
-#             torchvision.transforms.RandomCrop(32, padding=4),
-#             torchvision.transforms.RandomHorizontalFlip(),
-#             torchvision.transforms.ToTensor(),
-#             cifar10_normalization(),
-#         ]
-#     )
-#
-#     test_transforms = torchvision.transforms.Compose(
-#         [
-#             torchvision.transforms.ToTensor(),
-#             cifar10_normalization(),
-#         ]
-#     )
-#
-#     cifar10_dm = CIFAR10DataModule(
-#         data_dir=PATH_DATASETS,
-#         batch_size=BATCH_SIZE,
-#         num_workers=NUM_WORKERS,
-#         train_transforms=train_transforms,
-#         test_transforms=test_transforms,
-#         val_transforms=test_transforms,
-#     )
-#
-#     resnet = create_model()
-#
-#     cifar10_dm.prepare_data()
-#     cifar10_dm.setup()
-#     test_loader = cifar10_dm.test_dataloader()
-#
-#     IG = IntegratedGradientsImpl(resnet)
-#
-#     for batch in test_loader:
-#         for image, label in zip(batch[0], batch[1]):
-#             image = image.unsqueeze(0)
-#             attrs = IG.explain(image, target=label)
-#             IG.visualize(attrs, image)
-#             break
-#
-#
-
+    generate_explanations(config)

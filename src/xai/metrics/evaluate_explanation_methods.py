@@ -3,12 +3,14 @@ import torch
 from data.get_data_modules import load_data_module
 from data.zarr_handler import load_most_recent_batches
 from models.lightningresnet import LightningResnet
-from xai.explain import generate_explanations
+from xai.generate_explanations import generate_explanations
 from xai.metrics.metrics_manager import MetricsManager
+from xai.xai_methods.deeplift_impl import DeepLiftImpl
 
 device_string = ("gpu" if torch.cuda.is_available() else "cpu")
 CONFIGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/config"
 LOGPATH = '/home/jonasklotz/Studys/MASTERS/XAI/logs'
+
 
 def evaluate_explanation_methods(
         explanations_config: dict,
@@ -40,7 +42,6 @@ def evaluate_explanation_methods(
     s_batch[s_batch <= 0] = 0
     s_batch[s_batch > 0] = 1
 
-
     print(f"x_batch shape: {x_batch.shape} \n"
           f"y_batch shape: {y_batch.shape}\n"
           f"a_batch shape: {a_batch.shape}")
@@ -53,17 +54,19 @@ def evaluate_explanation_methods(
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
+    explanation = DeepLiftImpl(model)
     metrics_manager = MetricsManager(model=model,
+                                     explanation=explanation,
                                      aggregate=True,
                                      device_string=device_string,
                                      log=True,
                                      log_dir=LOGPATH)
 
     all_results = metrics_manager.evaluate_batch(x_batch=x_batch,
-                                   y_batch=y_batch,
-                                   a_batch=a_batch,
-                                   s_batch=s_batch,
-                                   )
+                                                 y_batch=y_batch,
+                                                 a_batch=a_batch,
+                                                 s_batch=s_batch,
+                                                 )
 
     print(all_results)
 

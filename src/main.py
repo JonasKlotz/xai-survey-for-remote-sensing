@@ -2,7 +2,7 @@ import os
 import yaml
 
 from src.training.train import train
-from src.xai.explain import generate_explanations
+from src.xai.generate_explanations import generate_explanations
 from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods
 
 CONFIGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/config"

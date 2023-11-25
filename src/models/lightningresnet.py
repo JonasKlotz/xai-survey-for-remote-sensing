@@ -7,8 +7,10 @@ from pytorch_lightning import LightningModule
 from torch import Tensor
 from torch.utils.model_zoo import load_url as load_state_dict_from_url
 from torchmetrics.functional import accuracy
-from models.interpretable_resnet import get_resnet
-from xai.xai_methods.deeplift_impl import DeepLiftImpl
+
+
+from src.models.interpretable_resnet import get_resnet
+from src.xai.xai_methods.deeplift_impl import DeepLiftImpl
 
 
 class LightningResnet(LightningModule):
@@ -51,7 +53,7 @@ class LightningResnet(LightningModule):
     def forward(self, x):
         out = self.model(x)
         logits = F.log_softmax(out, dim=1)
-        return logits, out
+        return logits
 
     def training_step(self, batch, batch_idx):
         x_batch, y_batch = batch
@@ -60,7 +62,10 @@ class LightningResnet(LightningModule):
         s_batch[x_batch <= 0] = 1
         s_batch[x_batch > 0] = 0
 
-        logits, output = self(x_batch)
+        output = self.model(x_batch)
+        logits = F.log_softmax(output, dim=1)
+
+
         preds = torch.argmax(logits, dim=1)
         explanation_method = DeepLiftImpl(self.model)
         a_batch = explanation_method.explain_batch(x_batch, preds)
