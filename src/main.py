@@ -26,7 +26,7 @@ def main():
     general_config = configs['general']
 
     if general_config['training']:
-        train(configs['training'])
+        train(**configs['training'])
 
     if general_config['explanations']:
         generate_explanations(configs['explanations'])
