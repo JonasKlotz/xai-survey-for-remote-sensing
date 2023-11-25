@@ -57,6 +57,12 @@ class MetricsManager:
         self.softmax = softmax
 
         self.categories = ['faithfulness', 'robustness', 'localization', 'complexity', 'randomization', 'axiomatic']
+
+        self.general_args = {'return_aggregate': self.aggregate,
+                             'disable_warnings': self.disable_warnings,
+                             'display_progressbar': False,
+                             }
+
         # load metrics
         self._load_metrics()
 
@@ -141,6 +147,9 @@ class MetricsManager:
                                             device=self.device_string,
                                             softmax=True
                                             )
+
+                if key == 'selectivity':
+                    mean_it = np.mean(results[key])
             except Exception as e:
                 print(f"Error while evaluating {key}: {e}")
                 results[key] = self.sentinel_value
@@ -149,84 +158,79 @@ class MetricsManager:
         return results
 
     def _load_faithfulness_metrics(self):
-        ff_args = {'return_aggregate': self.aggregate,
-                   'disable_warnings': self.disable_warnings,
-                   'display_progressbar': False,
-                   }
-
         self.faithfulness_metrics = {
 
             'faithfulness_corr': quantus.FaithfulnessCorrelation(
                 nr_runs=self.nr_runs,
                 subset_size=224,
                 perturb_func=None,
-                **ff_args
+                **self.general_args
 
             ),
             'faithfulness_estimate': quantus.FaithfulnessEstimate(
                 features_in_step=28,
-                **ff_args
+                **self.general_args
             ),
 
             'monotonicity': quantus.Monotonicity(
                 features_in_step=28,
-                **ff_args
+                **self.general_args
             ),
 
             'monotonicity_correlation': quantus.MonotonicityCorrelation(
                 nr_samples=10,
                 features_in_step=28,
-                **ff_args
+                **self.general_args
             ),
 
             'pixel_flipping': quantus.PixelFlipping(
                 features_in_step=28,
-                **ff_args
+                **self.general_args
             ),
 
             'region_perturb': quantus.RegionPerturbation(
                 patch_size=4,
                 regions_evaluation=10,
                 normalise=True,
-                **ff_args
+                **self.general_args
             ),
             'selectivity': quantus.Selectivity(
                 patch_size=4,
-                **ff_args
+                **self.general_args
             ),
             'sensitivity_n': quantus.SensitivityN(
                 features_in_step=28,
                 n_max_percentage=0.8,
-                **ff_args
+                **self.general_args
             ),
             'irof': quantus.IROF(
                 segmentation_method="slic",
                 perturb_baseline="mean",
-                **ff_args
+                **self.general_args
             ),
             'infidelity': quantus.Infidelity(
                 perturb_baseline="uniform",
                 n_perturb_samples=5,
                 perturb_patch_sizes=[4],
-                **ff_args
+                **self.general_args
             ),
             'road': quantus.ROAD(
                 noise=0.01,
                 perturb_func=quantus.noisy_linear_imputation,
                 percentages=list(range(1, 50, 2)),
-                **ff_args
+                **self.general_args
             ),
             'sufficiency': quantus.Sufficiency(
                 threshold=0.6,
-                **ff_args
+                **self.general_args
             )
         }
 
     def _load_robustness_metrics(self):
-        robustness_args = {'return_aggregate': self.aggregate,
-                           'disable_warnings': self.disable_warnings,
-                           'display_progressbar': False,
-                           }
+        self.general_args = {'return_aggregate': self.aggregate,
+                             'disable_warnings': self.disable_warnings,
+                             'display_progressbar': False,
+                             }
 
         # todo fix explanation method parameter for robustness metrics
         self.robustness_metrics = {
@@ -238,62 +242,86 @@ class MetricsManager:
                 norm_denominator=quantus.distance_euclidean,
                 perturb_func=quantus.gaussian_noise,
                 similarity_func=quantus.lipschitz_constant,
-                **robustness_args
+                **self.general_args
             ),
             'max_sensitivity': quantus.MaxSensitivity(
                 nr_samples=10,
                 lower_bound=0.2,
                 perturb_func=quantus.uniform_noise,
                 similarity_func=quantus.difference,
-                **robustness_args
+                **self.general_args
             ),
             'average_sensitivity': quantus.AvgSensitivity(
                 nr_samples=10,
                 lower_bound=0.2,
                 perturb_func=quantus.uniform_noise,
                 similarity_func=quantus.difference,
-                **robustness_args
+                **self.general_args
             ),
             'continuity': quantus.Continuity(
                 patch_size=56,
                 nr_steps=10,
                 perturb_baseline="uniform",
                 similarity_func=quantus.correlation_spearman,
-                **robustness_args
+                **self.general_args
             ),
             'consistency': quantus.Consistency(
-                **robustness_args
+                **self.general_args
             ),
             'relative_input_stability': quantus.RelativeInputStability(
                 nr_samples=5,
-                **robustness_args),
+                **self.general_args),
             'relative_output_stability': quantus.RelativeOutputStability(
                 nr_samples=5,
-                **robustness_args),
+                **self.general_args),
             'relative_representation_stability': quantus.RelativeRepresentationStability(
                 nr_samples=5,
-                **robustness_args),
+                **self.general_args),
         }
 
     def _load_localization_metrics(self):
-        localization_args = {'return_aggregate': self.aggregate,
+        self.general_args = {'return_aggregate': self.aggregate,
                              'disable_warnings': self.disable_warnings,
                              'display_progressbar': True,
                              }
         self.localization_metrics = {
-            'pointing_game': quantus.PointingGame(**localization_args),
-            'attribution_localisation': quantus.AttributionLocalisation(**localization_args),
-            'top_k_intersection': quantus.TopKIntersection(**localization_args),
-            'relevance_rank_accuracy': quantus.RelevanceRankAccuracy(**localization_args),
-            'relevance_mass_accuracy': quantus.RelevanceMassAccuracy(**localization_args),
-            'auc': quantus.AUC(**localization_args),
+            'pointing_game': quantus.PointingGame(**self.general_args),
+            'attribution_localisation': quantus.AttributionLocalisation(**self.general_args),
+            'top_k_intersection': quantus.TopKIntersection(**self.general_args),
+            'relevance_rank_accuracy': quantus.RelevanceRankAccuracy(**self.general_args),
+            'relevance_mass_accuracy': quantus.RelevanceMassAccuracy(**self.general_args),
+            'auc': quantus.AUC(**self.general_args),
+        }
+
+    def _load_randomization_metrics(self):
+        self.randomization_metrics = {
+            'model_parameter_randomisation': quantus.ModelParameterRandomisation(
+                layer_order="bottom_up",
+                similarity_func=quantus.correlation_spearman,
+                **self.general_args
+            ),
+            'random_logits': quantus.RandomLogit(
+                num_classes=1000,
+                similarity_func=quantus.ssim,
+                **self.general_args
+            ),
         }
 
     def _load_complexity_metrics(self):
-        pass
-
-    def _load_randomization_metrics(self):
-        pass
+        self.complexity_metrics = {
+            'sparseness': quantus.Sparseness(**self.general_args),
+            'complexity': quantus.Complexity(**self.general_args),
+            'effective_complexity': quantus.EffectiveComplexity(**self.general_args),
+        }
 
     def _load_axiomatic_metrics(self):
-        pass
+        self.axiomatic_metrics = {
+            'completeness': quantus.Completeness(**self.general_args),
+            'non_sensitivity': quantus.NonSensitivity(abs=True,
+                                                      eps=1e-5,
+                                                      n_samples=10,
+                                                      perturb_baseline="black",
+                                                      perturb_func=quantus.baseline_replacement_by_indices,
+                                                      **self.general_args),
+            'input_invariance': quantus.InputInvariance(**self.general_args),
+        }

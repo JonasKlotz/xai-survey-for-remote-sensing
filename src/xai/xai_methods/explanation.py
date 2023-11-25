@@ -17,6 +17,7 @@ class Explanation:
         pass
 
     def explain_batch(self, batch_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None):
+        #todo vectorize
         # create output tensor without channels batchsize x 1 x height x width
         all_attrs = torch.zeros_like(batch_tensor[:, 0:1, :, :])
         for i in range(batch_tensor.shape[0]):

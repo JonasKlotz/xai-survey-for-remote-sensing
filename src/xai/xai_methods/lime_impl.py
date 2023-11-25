@@ -34,10 +34,24 @@ class LimeImpl(Explanation):
         return attrs
 
 
-def slic_from_tensor(img_tensor, plot=True, save_path=None, title="", n_segments=200, sigma=5):
-    """ Apply SLIC to a tensor
+def slic_from_tensor(img_tensor: torch.Tensor, plot=True, save_path=None, title="", n_segments=200, sigma=5):
+    """ Superpixel segmentation using SLIC algorithm
+
+
+    Parameters
+    ----------
+    img_tensor : torch.Tensor
+    plot : bool
+    save_path : str
+    title : str
+    n_segments : int
+    sigma : int
+
+    Returns
+    -------
 
     """
+
     if len(img_tensor.shape) == 4:
         img_tensor = img_tensor.squeeze(0)
     img = img_tensor.permute(1, 2, 0).to(torch.double).numpy()
@@ -45,17 +59,21 @@ def slic_from_tensor(img_tensor, plot=True, save_path=None, title="", n_segments
     segments = slic(img, start_label=0, n_segments=n_segments, sigma=sigma)
 
     if plot:
-        # show the output of SLIC
-        fig = plt.figure(f"{title} Superpixels -- {n_segments} segments")
-        ax = fig.add_subplot(1, 1, 1)
-        # convert tensor to numpy
-        ax.imshow(mark_boundaries(img, segments))
-        plt.axis("off")
-        # show the plots
-        if save_path is not None:
-            plt.savefig(save_path)
-        plt.show()
+        _plot_slic(img, n_segments, save_path, segments, title)
 
     segments = torch.from_numpy(segments)
 
     return segments
+
+
+def _plot_slic(img, n_segments, save_path, segments, title):
+    # show the output of SLIC
+    fig = plt.figure(f"{title} Superpixels -- {n_segments} segments")
+    ax = fig.add_subplot(1, 1, 1)
+    # convert tensor to numpy
+    ax.imshow(mark_boundaries(img, segments))
+    plt.axis("off")
+    # show the plots
+    if save_path is not None:
+        plt.savefig(save_path)
+    plt.show()
