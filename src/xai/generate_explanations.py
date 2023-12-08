@@ -7,6 +7,7 @@ from PIL import Image
 from torchvision import transforms
 
 from data.data_utils import get_loader_for_datamodule
+from models.get_models import get_model
 from models.lightningresnet import LightningResnet
 
 from src.data.get_data_modules import load_data_module
@@ -38,10 +39,8 @@ def generate_explanations(explanations_config: dict):
     test_loader = loaders["test"]
 
     # load model
-    # todo: get model
-    model = LightningResnet(
-        num_classes=data_module.num_classes, input_channels=data_module.dims[0]
-    )
+    model = get_model(explanations_config, num_classes=data_module.num_classes, input_channels=data_module.dims[0], pretrained=True)
+
 
     model_name = f"resnet18_{explanations_config['dataset_name']}.pt"
     model_path = os.path.join(explanations_config["models_path"], model_name)

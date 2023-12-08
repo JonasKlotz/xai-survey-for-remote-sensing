@@ -24,14 +24,8 @@ from src.data.tom_data.constants import (
 )
 from src.data.tom_data.dataset import (
     Ben19Dataset,
-    TreeSatAIDataset,
     DeepGlobeDataset,
     EuroSATDataset,
-    So2SatDataset,
-    FMoWDataset,
-    SeCoDataset,
-    S4ADataset,
-    Ben19CloudsDataset
 )
 
 

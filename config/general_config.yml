@@ -1,4 +1,31 @@
-training: False
-explanations: True
-evaluations: True
+---
+# Description: General configuration file for the project
+training: True
+explanations: False
+evaluations: False
+
+# General parameters
+model_name: 'resnet'
+layer_number: 18
+dataset_name: 'mnist'
+
+# Explanation parameters
+explanation_methods:
+  - 'lime'
+  - 'integrated_gradients'
+  - 'gradcam'
+  - 'lrp'
+  - 'deeplift'
+
+
+# Training parameters
+max_epochs: 10
+batch_size: 64
+learning_rate: 0.001
+momentum: 0.9
+weight_decay: 0.0005
+optimizer: 'sgd'
+scheduler: 'step'
+
+
 

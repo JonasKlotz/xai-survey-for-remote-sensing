@@ -18,7 +18,7 @@ def parse_config(config_path):
     # read all files in config_path
     file_names = os.listdir(config_path)
     configs = {}
-
+    # load all yaml files
     for file_name in file_names:
         if file_name.endswith(".yaml") or file_name.endswith(".yml"):
             with open(os.path.join(config_path, file_name)) as file:
@@ -49,14 +49,14 @@ def main():
     general_config = configs["general"]
 
     if general_config["training"]:
-        train(**configs["training"])
+        train(general_config)
 
     if general_config["explanations"]:
-        generate_explanations(configs["explanations"])
+        generate_explanations(general_config)
         # for expl in general_config['explanations
 
     if general_config["evaluations"]:
-        evaluate_explanation_methods(configs["evaluations"])
+        evaluate_explanation_methods(general_config)
 
 
 if __name__ == "__main__":
