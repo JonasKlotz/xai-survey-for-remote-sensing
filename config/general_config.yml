@@ -1,26 +1,35 @@
 ---
 # Description: General configuration file for the project
-training: True
+training: False
 explanations: True
-evaluations: True
+evaluations: False
 visualize: False
 
 # General parameters
 model_name: 'resnet'
 layer_number: 18
-dataset_name: 'mnist'
+dataset_name: 'deepglobe'
 
 # Explanation parameters
 explanation_methods:
-  - 'lime'
+#  - 'lime'
+  - 'lrp'
   - 'integrated_gradients'
   - 'gradcam'
-  - 'lrp'
   - 'deeplift'
 
+# Dataset parameters
+data:
+  lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/patches.lmdb"
+  labels_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/labels.parquet"
+  train_csv: "/media/storagecube/jonasklotz/deepGlobe/splits/deepglobe_version1_train.csv"
+  test_csv: "/media/storagecube/jonasklotz/deepGlobe/splits/deepglobe_version1_test.csv"
+  batch_size: 64
+  num_workers: 10
+  pin_memory: True
 
 # Training parameters
-max_epochs: 10
+max_epochs: 50
 batch_size: 64
 learning_rate: 0.001
 momentum: 0.9

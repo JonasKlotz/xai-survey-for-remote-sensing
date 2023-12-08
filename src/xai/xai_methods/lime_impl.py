@@ -16,13 +16,13 @@ class LimeImpl(Explanation):
         super().__init__(model)
 
         self.similarity_func = get_exp_kernel_similarity_function(
-            "euclidean", kernel_width=1000
+            "euclidean", kernel_width=10
         )
-        self.interpretabel_model = SkLearnLinearRegression()
+        self.interpretable_model = SkLearnLinearRegression()
 
         self.attributor = Lime(
             model,
-            interpretable_model=self.interpretabel_model,  # build-in wrapped sklearn Linear Regression
+            interpretable_model=self.interpretable_model,  # build-in wrapped sklearn Linear Regression
             similarity_func=self.similarity_func,
         )
 
@@ -30,7 +30,7 @@ class LimeImpl(Explanation):
         self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
     ):
         segments = slic_from_tensor(
-            image_tensor, plot=False, save_path=None, title="", n_segments=200, sigma=5
+            image_tensor, plot=False, save_path=None, title="", n_segments=50, sigma=5
         )
 
         attrs = self.attributor.attribute(
@@ -44,7 +44,7 @@ def slic_from_tensor(
     plot=True,
     save_path=None,
     title="",
-    n_segments=200,
+    n_segments=50,
     sigma=5,
 ):
     """Superpixel segmentation using SLIC algorithm
@@ -61,6 +61,8 @@ def slic_from_tensor(
 
     Returns
     -------
+    segments : torch.Tensor
+        The segments of the image
 
     """
 

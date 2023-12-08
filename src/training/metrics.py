@@ -54,18 +54,19 @@ class MetricTracker(object):
 
 def calculate_metrics(y_true, y_pred, threshold=0.5):
     """
-    Calculate  both micro and macro for F1 and mAP score
+    Calculate both micro and macro for F1 and mAP score
     """
-    y_pred_threshed = (y_pred > threshold).astype(torch.long)
-    acc = round(accuracy_score(y_true=y_true, y_pred=y_pred), 3)
-    mif1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average="micro"), 3)
-    maf1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average="macro"), 3)
-    miMAP = round(
-        average_precision_score(y_true=y_true, y_score=y_pred, average="micro"), 3
-    )
-    maMAP = round(
-        average_precision_score(y_true=y_true, y_score=y_pred, average="macro"), 3
-    )
+    y_pred_threshed = (y_pred > threshold).long()
+
+    y_true = y_true.cpu().numpy()
+    y_pred_threshed = y_pred_threshed.cpu().numpy()
+    y_pred = y_pred.cpu().numpy()
+
+    acc = round(accuracy_score(y_true=y_true, y_pred=y_pred_threshed), 3)
+    mif1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average="micro", zero_division=0), 3)
+    maf1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average="macro", zero_division=0), 3)
+    miMAP = round(average_precision_score(y_true=y_true, y_score=y_pred, average="micro"), 3)
+    maMAP = round(average_precision_score(y_true=y_true, y_score=y_pred, average="macro"), 3)
     return mif1, maf1, miMAP, maMAP, acc
 
 

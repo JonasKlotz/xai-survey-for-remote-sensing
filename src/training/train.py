@@ -4,8 +4,11 @@ from datetime import datetime
 import torch
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
+from torchvision import transforms
 
 from data.get_data_modules import load_data_module
+from data.tom_data.datamodule import DeepGlobeDataModule
+from data.tom_data.transformations_impl import TransformationsImpl
 from models.get_models import get_model
 
 from utility.cluster_logging import logger
@@ -18,7 +21,12 @@ def train(
         cfg: dict,
 ):
     # load datamodule
-    data_module = load_data_module(cfg["dataset_name"])
+    data_module = load_data_module(cfg)
+    logger.debug(f"Loaded data module {data_module}")
+    # setup data module
+
+    #
+    # data_module = DeepGlobeDataModule(cfg, transforms_train, transforms_train)
     # load model
     model = get_model(cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0])
     logger.debug("Start Training")

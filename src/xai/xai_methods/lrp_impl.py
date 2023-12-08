@@ -20,6 +20,7 @@ class LRPImpl(Explanation):
         self._rule_resnet(model)
 
         self.attributor = LRP(model)
+        self.layers = []
 
     def explain(
         self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
@@ -29,11 +30,19 @@ class LRPImpl(Explanation):
 
     def _rule_resnet(self, model):
         num_layers = len(model._modules.keys())
+        self._set_layers_rules(model)
 
         for i, layer in enumerate(model._modules.keys()):
             if i < num_layers / 3:
-                model._modules[layer].lrp_rule = GammaRule()
+                model._modules[layer].lrprule = GammaRule()
             elif i < 2 * num_layers / 3:
-                model._modules[layer].lrp_rule = EpsilonRule()
+                model._modules[layer].rule = EpsilonRule()
             else:
-                model._modules[layer].lrp_rule = EpsilonRule(0)
+                model._modules[layer].rule = EpsilonRule(0)
+
+    def _set_layers_rules(self, model) -> None:
+        for layer in model.children():
+            if len(list(layer.children())) == 0:
+                layer.rule = IdentityRule()
+            else:
+                self._set_layers_rules(layer)

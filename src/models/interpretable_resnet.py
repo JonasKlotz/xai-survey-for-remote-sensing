@@ -2,16 +2,17 @@ from typing import Type, Any, Callable, Union, List, Optional
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from pytorch_lightning import LightningModule
 from torch import Tensor
 from torch.utils.model_zoo import load_url as load_state_dict_from_url
-from torchmetrics.functional import accuracy
 
 """
     No Re-used ReLU's in BasicBlock and BottleNeck. Local Imports modified for direct imports.
     Otherwise Captum does not work.
     TorchVision.models.resnet src modified from https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
+    
+    see https://github.com/pytorch/captum/issues/378
+    
+    NO in place operations for RelU's in BasicBlock and BottleNeck
 
 """
 
@@ -86,8 +87,8 @@ class BasicBlock(nn.Module):
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.relu2 = nn.ReLU(inplace=True)
+        self.relu1 = nn.ReLU(inplace=False)
+        self.relu2 = nn.ReLU(inplace=False)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = norm_layer(planes)
         self.downsample = downsample
@@ -143,9 +144,9 @@ class Bottleneck(nn.Module):
         self.bn2 = norm_layer(width)
         self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.relu2 = nn.ReLU(inplace=True)
-        self.relu3 = nn.ReLU(inplace=True)
+        self.relu1 = nn.ReLU(inplace=False)
+        self.relu2 = nn.ReLU(inplace=False)
+        self.relu3 = nn.ReLU(inplace=False)
         self.downsample = downsample
         self.stride = stride
 
@@ -206,7 +207,7 @@ class ResNet(nn.Module):
             3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False
         )
         self.bn1 = norm_layer(self.inplanes)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU(inplace=False)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(

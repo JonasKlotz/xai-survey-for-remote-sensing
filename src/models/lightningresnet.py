@@ -2,30 +2,32 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
-from torchmetrics.functional import accuracy
+
+from torchmetrics import AveragePrecision, Accuracy, F1Score, Precision, Recall, ConfusionMatrix
 
 from src.models.interpretable_resnet import get_resnet
 from src.xai.xai_methods.deeplift_impl import DeepLiftImpl
+from training.metrics import calculate_metrics
+from utility.cluster_logging import logger
 
 
 class LightningResnet(LightningModule):
     def __init__(
-        self,
-        resnet_layers=18,
-        input_channels=3,
-        num_classes=10,
-        lr=0.001,
-        batch_size=32,
-        freeze=True,
-        loss=F.nll_loss,
+            self,
+            resnet_layers=18,
+            input_channels=3,
+            num_classes=10,
+            lr=0.001,
+            batch_size=32,
+            freeze=False,
+            loss=nn.BCEWithLogitsLoss(),
     ):
         super(LightningResnet, self).__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['loss'])
 
         self.model = get_resnet(resnet_layers)
         self.loss = loss
 
-        trained_kernel = self.model.conv1.weight
         # replace the first conv layer
         self.model.conv1 = nn.Conv2d(
             input_channels,
@@ -35,64 +37,56 @@ class LightningResnet(LightningModule):
             padding=(1, 1),
             bias=False,
         )
-        if input_channels == 1:
-            self.model.conv1.weight = nn.Parameter(
-                trained_kernel.mean(dim=1, keepdim=True)
-            )
-        elif input_channels >= 3:
-            pass
-            # self.model.conv1.weight = nn.Parameter(trained_kernel[:, :3])
-
-        if freeze:
-            for param in self.model.parameters():
-                param.requires_grad = False
-
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
 
+        self.f1_score_macro = F1Score(task='multilabel', average='macro', threshold=0.5, num_labels=num_classes)
+        self.f1_score_micro = F1Score(task='multilabel', average='micro', threshold=0.5, num_labels=num_classes)
+        self.average_precision_macro = AveragePrecision(task='multilabel', average='macro', num_labels=num_classes)
+        self.accuracy = Accuracy(task='multilabel',threshold=0.5,  num_labels=num_classes)
+
     def forward(self, x):
-        out = self.model(x)
-        logits = F.log_softmax(out, dim=1)
-        return logits
+        return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        x_batch, y_batch = batch
-        # generate s batch from x_batch by thresholding everything <=0 to 0 and everything >0 to 1
-        s_batch = x_batch.clone()
-        s_batch[x_batch <= 0] = 1
-        s_batch[x_batch > 0] = 0
+        # for deepglobe:
+        images, labels, _ = batch
 
-        output = self.model(x_batch)
-        logits = F.log_softmax(output, dim=1)
-
-        preds = torch.argmax(logits, dim=1)
-        rrr_loss = False
-        if rrr_loss:
-            explanation_method = DeepLiftImpl(self.model)
-            a_batch = explanation_method.explain_batch(x_batch, preds)
-
-            rrr_loss = torch.linalg.norm(s_batch * a_batch)
-            loss = self.loss(logits, y_batch) + rrr_loss
-            # todo are the gradients changed when the explanation is calculated? then we need to forward pass again
-            self.log("rrr_loss", rrr_loss)
-        else:
-            loss = self.loss(logits, y_batch)
-        self.log("train_loss", loss)
+        y_hat = self.model(images)
+        loss = self.loss(y_hat, labels)
+        self.log("train_loss", loss, prog_bar=True)
         return loss
+
+    def predict(self, batch):
+        images, target, idx = batch
+
+        y_hat = self.model(images)
+        #todo find if name logits is right, sigmoid is normalization
+        logits = torch.sigmoid(y_hat)
+        return logits, y_hat
+
 
     def evaluate(self, batch, stage=None):
         # for deepglobe:
         # x = batch["image"]
         # y = batch["mask"]
-        x, y = batch
-        logits = self(x)
-        loss = F.nll_loss(logits, y)
-        preds = torch.argmax(logits, dim=1)
-        acc = accuracy(
-            preds, y, task="multiclass", num_classes=self.hparams.num_classes
-        )
+        # for tom:
+        images, target, idx = batch
 
+        logits, y_hat = self.predict(batch)
+
+        loss = self.loss(y_hat, target)
+
+
+        target = target.long()
+        maf1 = self.f1_score_macro(logits, target)
+        mif1 = self.f1_score_micro(logits, target)
+        maMAP = self.average_precision_macro(logits, target)
+        acc = self.accuracy(logits, target)
         if stage:
             self.log(f"{stage}_loss", loss, prog_bar=True)
+            self.log(f"{stage}_maf1", maf1, prog_bar=True)
+            self.log(f"{stage}_mif1", mif1, prog_bar=True)
+            self.log(f"{stage}_maMAP", maMAP, prog_bar=True)
             self.log(f"{stage}_acc", acc, prog_bar=True)
 
     def validation_step(self, batch, batch_idx):
@@ -108,7 +102,6 @@ class LightningResnet(LightningModule):
             momentum=0.9,
             weight_decay=5e-4,
         )
-        steps_per_epoch = 45000 // self.hparams.batch_size
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1)
 
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}

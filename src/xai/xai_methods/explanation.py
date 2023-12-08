@@ -9,8 +9,10 @@ from captum.attr import visualization as viz
 class Explanation:
     attribution_name = "Explanation"
 
-    def __init__(self, model):
+    def __init__(self, model, multi_label: bool = True, num_classes: int = 6):
         self.model = model
+        self.multi_label = multi_label
+        self.num_classes = num_classes
 
     def __call__(self, *args, **kwargs):
         return self.explain(*args, **kwargs)
@@ -35,18 +37,29 @@ class Explanation:
         pass
 
     def explain_batch(
-        self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None
+            self, tensor_batch: torch.Tensor, target_batch: torch.Tensor = None
     ):
+        """Explain a batch of images
+
+        Parameters
+        ----------
+        tensor_batch: torch.Tensor
+            The batch of images to explain as tensor of shape (batchsize, channels, height, width)
+        target_batch: torch.Tensor
+            The batch of targets to explain
+
+        Returns
+        -------
+        all_attrs: torch.Tensor
+            The attributions of the explanation method for the whole batch.
+        """
+
         # todo vectorize
         # create output tensor without channels batchsize x 1 x height x width
-        all_attrs = torch.zeros_like(tensor_batch[:, 0:1, :, :])
-        for i in range(tensor_batch.shape[0]):
-            image_tensor = tensor_batch[i : i + 1]
-            target = target_batch[i]
-            attrs = self.explain(image_tensor, target)
-            all_attrs[i] = attrs
+        if self.multi_label:
+            return self._handle_mlc_explanation(tensor_batch, target_batch)
 
-        return all_attrs
+        return self._handle_slc_explanation(tensor_batch, target_batch)
 
     def visualize(self, attrs: torch.Tensor, image_tensor: torch.Tensor):
         if len(attrs.shape) == 4:
@@ -78,3 +91,43 @@ class Explanation:
             attrs = attrs_batch[i]
             image = image_batch[i]
             self.visualize(attrs, image)
+
+    def _handle_mlc_explanation(self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None):
+        batchsize, _, height, width = tensor_batch.shape
+
+        # create output tensor without channels (classes * batchsize) x 1 x height x width
+        all_attrs = torch.zeros((batchsize, self.num_classes, 1, height, width))
+        for batch_index in range(batchsize):
+            image_tensor = tensor_batch[batch_index: batch_index + 1]
+            # print(f"image_tensor shape: {image_tensor.shape}")
+            # print(f"target_batch shape: {target_batch.shape}")
+            for label_index in range(len(target_batch[batch_index])):
+                target = target_batch[batch_index][label_index]
+                #print(f"target: {target}")
+                # we only want to explain the labels that are present in the image
+                if target == 0:
+                    continue
+
+                attrs = self.explain(image_tensor, torch.tensor(label_index).unsqueeze(0))
+                #print(f"attrs shape: {attrs.shape}")
+                # if attrs is 3 channel sum over channels
+                # todo: be careful with this, channels might differ use asserts
+                if len(attrs.shape) == 4 and attrs.shape[1] == 3:
+                    attrs = attrs.sum(dim=1, keepdim=True)
+                all_attrs[batch_index, label_index] = attrs
+        return all_attrs
+
+    def _handle_slc_explanation(self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None):
+        batchsize, channels, height, width = tensor_batch.shape
+
+        all_attrs = torch.zeros((batchsize, 1, height, width))
+        for i in range(batchsize):
+            image_tensor = tensor_batch[i: i + 1]
+            target = target_batch[i]
+            attrs = self.explain(image_tensor, target)
+            all_attrs[i] = attrs
+
+        return all_attrs
+
+    def _assert_shapes(self):
+        pass

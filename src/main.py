@@ -6,14 +6,19 @@ sys.path.append(project_root)
 print(f"Added {project_root} to path.")
 CONFIGPATH = os.path.join(project_root, "config")
 
-from utility.cluster_logging import logger
-
 import yaml
+import pytorch_lightning as pl
 
 from src.training.train import train
 from src.xai.generate_explanations import generate_explanations
 from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods
+from utility.cluster_logging import logger
 
+# Fix all seeds with lightning
+pl.seed_everything(42)
+import torch.multiprocessing
+
+torch.multiprocessing.set_sharing_strategy('file_system')  # handle too many open files error
 
 
 def parse_config(config_path):
@@ -51,6 +56,7 @@ def main():
     configs = parse_config(CONFIGPATH)
     general_config = configs["general"]
 
+    logger.debug(f"General config: {general_config}")
     if general_config["training"]:
         train(general_config)
 

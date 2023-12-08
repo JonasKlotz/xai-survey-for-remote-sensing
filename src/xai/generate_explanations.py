@@ -34,25 +34,21 @@ def load_test_imagenet_image(idx_to_labels, image_tensor):
 def generate_explanations(cfg: dict):
     logger.debug("In generate_explanations")
     # load datamodule
-    data_module = load_data_module(cfg["dataset_name"])
-    loaders = get_loader_for_datamodule(data_module)
-    test_loader = loaders["test"]
+    data_module = load_data_module(cfg)
+    test_loader = get_loader_for_datamodule(data_module)
 
     # load model
     model = get_model(cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0], pretrained=True)
 
-    model_name = f"resnet18_{cfg['dataset_name']}.pt"
-    model_path = os.path.join(cfg["models_path"], model_name)
-    model.load_state_dict(torch.load(model_path))
+    batch = next(iter(test_loader))
 
-    images, labels = next(iter(test_loader))
-
-    output = model(images)
-    output_probs = F.softmax(output, dim=1)
-    label_idx = output_probs.argmax(dim=1)
+    logits, _ = model.predict(batch)
+    threshold = 0.5
+    preds = (logits > threshold).long()
+    images, _, _ = batch
 
     explanation_manager = ExplanationsManager(cfg, model)
-    explanation_manager.explain_batch(images, label_idx)
+    explanation_manager.explain_batch(images, preds)
 
 
 

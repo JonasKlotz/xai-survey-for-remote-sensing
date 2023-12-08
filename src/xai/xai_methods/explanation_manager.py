@@ -23,15 +23,15 @@ _explanation_methods = {
 class ExplanationsManager:
     def __init__(
         self,
-        explanations_config: dict,
+        cfg: dict,
         model: torch.nn.Module,
         datetime_appendix: bool = True,
     ):
-        self.explanations_config = explanations_config
+        self.explanations_config = cfg
         self.explanations = {}
         self.explanations_zarr_handler = {}
         self.model = model
-        self.visualize = explanations_config["visualize"]
+        self.visualize = cfg["visualize"]
 
         if datetime_appendix:
             self.datetime_appendix = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -72,6 +72,7 @@ class ExplanationsManager:
         self.x_batch_handler.append(image_batch)
         self.y_batch_handler.append(target_batch)
         for explanation_name, explanation in self.explanations.items():
+            logger.info(f"Explain batch for {explanation_name}")
             batch_attrs = explanation.explain_batch(image_batch, target_batch)
             if self.visualize:
                 explanation.visualize(batch_attrs[0], image_batch[0])

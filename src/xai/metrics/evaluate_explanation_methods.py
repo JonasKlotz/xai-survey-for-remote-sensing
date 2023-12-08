@@ -49,7 +49,7 @@ def evaluate_explanation_methods(
         f"a_batch shape: {a_batch.shape}"
     )
 
-    data_module = load_data_module(cfg["dataset_name"])
+    data_module = load_data_module(cfg)
     # load model
     model = get_model(cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0])
 

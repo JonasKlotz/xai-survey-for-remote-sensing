@@ -1,3 +1,4 @@
+import os.path
 import pickle
 
 import lmdb
@@ -7,7 +8,10 @@ from bigearthnet_patch_interface.s2_interface import BigEarthNet_S2_Patch
 from skimage.transform import resize
 from torch.utils.data import Dataset
 
-from constants import (
+from utility.cluster_logging import logger
+
+
+from src.data.tom_data.constants import (
     BEN19_NAME2IDX,
     DEEPGLOBE_NAME2IDX,
     EUROSAT_NAME2IDX,
@@ -31,8 +35,11 @@ class BaseDataset(Dataset):
         self.transform = transform
         self.temporal_views = self.read_temporal_views(temporal_views_path)
 
-    def read_csv(self, csv_data):
-        return pd.read_csv(csv_data, header=None).to_numpy()[:, 0]
+    def read_csv(self, csv_path):
+        # if file exists, read it
+        if os.path.isfile(csv_path):
+            return pd.read_csv(csv_path, header=None).to_numpy()[:, 0]
+        raise FileNotFoundError(f"CSV file not found at {csv_path}.")
 
     def read_labels(self, meta_data_path, patch_names):
         df = pd.read_parquet(meta_data_path)
@@ -69,7 +76,6 @@ class BaseDataset(Dataset):
         patch = pickle.loads(byteflow)
         label = self.labels[idx]
         patch = self.transform(patch) if self.transform is not None else patch
-
         return patch, label, idx
 
     def __len__(self):
