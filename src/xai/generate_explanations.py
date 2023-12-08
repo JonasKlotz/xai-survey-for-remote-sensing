@@ -8,10 +8,9 @@ from torchvision import transforms
 
 from data.data_utils import get_loader_for_datamodule
 from models.get_models import get_model
-from models.lightningresnet import LightningResnet
-
 from src.data.get_data_modules import load_data_module
 from src.xai.xai_methods.explanation_manager import ExplanationsManager
+from utility.cluster_logging import logger
 
 
 def load_test_imagenet_image(idx_to_labels, image_tensor):
@@ -32,18 +31,18 @@ def load_test_imagenet_image(idx_to_labels, image_tensor):
     image_tensor = image_tensor.unsqueeze(0)
 
 
-def generate_explanations(explanations_config: dict):
+def generate_explanations(cfg: dict):
+    logger.debug("In generate_explanations")
     # load datamodule
-    data_module = load_data_module(explanations_config["dataset_name"])
+    data_module = load_data_module(cfg["dataset_name"])
     loaders = get_loader_for_datamodule(data_module)
     test_loader = loaders["test"]
 
     # load model
-    model = get_model(explanations_config, num_classes=data_module.num_classes, input_channels=data_module.dims[0], pretrained=True)
+    model = get_model(cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0], pretrained=True)
 
-
-    model_name = f"resnet18_{explanations_config['dataset_name']}.pt"
-    model_path = os.path.join(explanations_config["models_path"], model_name)
+    model_name = f"resnet18_{cfg['dataset_name']}.pt"
+    model_path = os.path.join(cfg["models_path"], model_name)
     model.load_state_dict(torch.load(model_path))
 
     images, labels = next(iter(test_loader))
@@ -52,7 +51,7 @@ def generate_explanations(explanations_config: dict):
     output_probs = F.softmax(output, dim=1)
     label_idx = output_probs.argmax(dim=1)
 
-    explanation_manager = ExplanationsManager(explanations_config, model)
+    explanation_manager = ExplanationsManager(cfg, model)
     explanation_manager.explain_batch(images, label_idx)
 
 

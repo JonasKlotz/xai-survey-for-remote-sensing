@@ -9,6 +9,7 @@ from src.xai.xai_methods.gradcam_impl import GradCamImpl
 from src.xai.xai_methods.ig_impl import IntegratedGradientsImpl
 from src.xai.xai_methods.lime_impl import LimeImpl
 from src.xai.xai_methods.lrp_impl import LRPImpl
+from utility.cluster_logging import logger
 
 _explanation_methods = {
     "gradcam": GradCamImpl,
@@ -46,17 +47,17 @@ class ExplanationsManager:
             model=self.model
         )
         self.explanations_zarr_handler[explanation_name] = ZarrHandler(
-            results_dir=self.explanations_config["results_dir"],
+            results_dir=self.explanations_config["results_path"],
             name=f"a_batch_{explanation_name}",
             folder_name=f"batches_{self.datetime_appendix}",
         )
         self.x_batch_handler = ZarrHandler(
-            results_dir=self.explanations_config["results_dir"],
+            results_dir=self.explanations_config["results_path"],
             name="x_batch",
             folder_name=f"batches_{self.datetime_appendix}"
         )
         self.y_batch_handler = ZarrHandler(
-            results_dir=self.explanations_config["results_dir"],
+            results_dir=self.explanations_config["results_path"],
             name="y_batch",
             folder_name=f"batches_{self.datetime_appendix}"
         )

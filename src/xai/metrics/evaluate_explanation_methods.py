@@ -1,29 +1,30 @@
-import os
-
 import torch
 import yaml
 
 from data.get_data_modules import load_data_module
 from data.zarr_handler import load_most_recent_batches
-from models.lightningresnet import LightningResnet
+from models.get_models import get_model
 from xai.generate_explanations import generate_explanations
 from xai.metrics.metrics_manager import MetricsManager
 from xai.xai_methods.deeplift_impl import DeepLiftImpl
+from utility.cluster_logging import logger
 
-device_string = "gpu" if torch.cuda.is_available() else "cpu"
+
+device_string = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def evaluate_explanation_methods(
-    explanations_config: dict, load_precomputed: bool = True
+    cfg: dict, load_precomputed: bool = True
 ):
     """
     Evaluate Explanation Methods
 
     """
     if not load_precomputed:
-        generate_explanations(explanations_config)
+        generate_explanations(cfg)
 
-    all_zarrs = load_most_recent_batches(results_dir=explanations_config["results_dir"])
+    logger.debug("Loading batches as zarr")
+    all_zarrs = load_most_recent_batches(results_dir=cfg["results_path"])
 
     x_batch = all_zarrs["x_batch"]
     y_batch = all_zarrs["y_batch"]
@@ -42,22 +43,16 @@ def evaluate_explanation_methods(
     s_batch[s_batch <= 0] = 0
     s_batch[s_batch > 0] = 1
 
-    print(
+    logger.debug(
         f"x_batch shape: {x_batch.shape} \n"
         f"y_batch shape: {y_batch.shape}\n"
         f"a_batch shape: {a_batch.shape}"
     )
 
-    data_module = load_data_module(explanations_config["dataset_name"])
+    data_module = load_data_module(cfg["dataset_name"])
     # load model
-    # todo: get model function must be improved
-    model = LightningResnet(
-        num_classes=data_module.num_classes, input_channels=data_module.dims[0]
-    )
+    model = get_model(cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0])
 
-    model_name= f"resnet18_{explanations_config['dataset_name']}.pt"
-    model_path = os.path.join(explanations_config["model_dir"], model_name)
-    model.load_state_dict(torch.load(model_path))
     model.eval()
 
     explanation = DeepLiftImpl(model)
@@ -67,7 +62,7 @@ def evaluate_explanation_methods(
         aggregate=True,
         device_string=device_string,
         log=True,
-        log_dir=explanations_config["log_dir"],
+        log_dir=cfg["models_path"],
     )
 
     all_results = metrics_manager.evaluate_batch(
@@ -77,7 +72,7 @@ def evaluate_explanation_methods(
         s_batch=s_batch,
     )
 
-    print(all_results)
+    logger.debug(all_results)
 
 
 

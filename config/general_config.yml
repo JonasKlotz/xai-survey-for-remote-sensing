@@ -1,8 +1,9 @@
 ---
 # Description: General configuration file for the project
 training: True
-explanations: False
-evaluations: False
+explanations: True
+evaluations: True
+visualize: False
 
 # General parameters
 model_name: 'resnet'

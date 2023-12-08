@@ -6,6 +6,8 @@ sys.path.append(project_root)
 print(f"Added {project_root} to path.")
 CONFIGPATH = os.path.join(project_root, "config")
 
+from utility.cluster_logging import logger
+
 import yaml
 
 from src.training.train import train
@@ -45,6 +47,7 @@ def add_important_paths_to_cfg(configs: dict, project_root: str):
 
 
 def main():
+    logger.debug("In main")
     configs = parse_config(CONFIGPATH)
     general_config = configs["general"]
 

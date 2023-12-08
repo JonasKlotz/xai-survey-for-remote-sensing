@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 import torch
 from pytorch_lightning import Trainer
@@ -6,21 +7,21 @@ from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
 from data.get_data_modules import load_data_module
 from models.get_models import get_model
-from models.lightningresnet import LightningResnet
-from training.rrr_loss import RightForRightReasonsLoss
-from xai.xai_methods.gradcam_impl import GradCamImpl
+
+from utility.cluster_logging import logger
+
 
 # Note - you must have torchvision installed for this example
 
 
 def train(
-    cfg: dict,
+        cfg: dict,
 ):
     # load datamodule
     data_module = load_data_module(cfg["dataset_name"])
     # load model
     model = get_model(cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0])
-
+    logger.debug("Start Training")
     # init trainer
     trainer = Trainer(
         max_epochs=cfg['max_epochs'],
@@ -30,6 +31,12 @@ def train(
     )
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
     trainer.fit(model, data_module)
-    model_name = f"{cfg['model_name']}18_{cfg['dataset_name']}1.pt"
-    model_path = os.path.join(cfg['model_dir_path'], model_name)
+
+    save_model(cfg, model)
+
+
+def save_model(cfg: dict, model: torch.nn.Module):
+    model_name = f"{cfg['model_name']}{cfg['layer_number']}_{cfg['dataset_name']}.pt"
+    model_path = os.path.join(cfg["models_path"], model_name)
     torch.save(model.state_dict(), model_path)
+    logger.debug(f"Saved model to {model_path}")
