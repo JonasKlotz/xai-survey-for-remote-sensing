@@ -77,11 +77,11 @@ def evaluate_explanation_methods(
     print(all_results)
 
 
+
 def main():
     from main import parse_config
 
     configs = parse_config(CONFIGPATH)
-    general_config = configs["general"]
 
     evaluate_explanation_methods(configs["evaluations"])
 

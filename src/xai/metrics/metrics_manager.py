@@ -79,7 +79,6 @@ class MetricsManager:
             "return_aggregate": self.aggregate,
             "disable_warnings": self.disable_warnings,
             "display_progressbar": False,
-            "aggregate_func": aggregation_function,
         }
         # load metrics
         self._load_metrics()
@@ -212,12 +211,17 @@ class MetricsManager:
             "region_perturb": quantus.RegionPerturbation(
                 patch_size=4, regions_evaluation=10, normalise=True, **self.general_args
             ),
-            "selectivity": quantus.Selectivity(patch_size=4, **self.general_args),
+            "selectivity": quantus.Selectivity(patch_size=4,
+                                               **self.general_args),
             "sensitivity_n": quantus.SensitivityN(
-                features_in_step=28, n_max_percentage=0.8, **self.general_args
+                features_in_step=28,
+                n_max_percentage=0.8,
+                **self.general_args
             ),
             "irof": quantus.IROF(
-                segmentation_method="slic", perturb_baseline="mean", **self.general_args
+                segmentation_method="slic",
+                perturb_baseline="mean",
+                **self.general_args
             ),
             "infidelity": quantus.Infidelity(
                 perturb_baseline="uniform",
@@ -238,7 +242,10 @@ class MetricsManager:
         """Load all robustness metrics"""
         self.robustness_metrics = {
             "local_lipschitz_estimate": quantus.LocalLipschitzEstimate(
-                nr_samples=10, perturb_std=0.2, perturb_mean=0.0, **self.general_args
+                nr_samples=10,
+                perturb_std=0.2,
+                perturb_mean=0.0,
+                **self.general_args
             ),
             "max_sensitivity": quantus.MaxSensitivity(
                 nr_samples=10,
@@ -297,10 +304,11 @@ class MetricsManager:
             "model_parameter_randomisation": quantus.MPRT(
                 layer_order="bottom_up",
                 similarity_func=quantus.correlation_spearman,
+                return_average_correlation=True,
                 **self.general_args,
             ),
             "random_logits": quantus.RandomLogit(
-                num_classes=1000, similarity_func=quantus.ssim, **self.general_args
+                num_classes=10, similarity_func=quantus.ssim, **self.general_args
             ),
         }
 
@@ -317,8 +325,6 @@ class MetricsManager:
         self.axiomatic_metrics = {
             "completeness": quantus.Completeness(**self.general_args),
             "non_sensitivity": quantus.NonSensitivity(
-                abs=True,
-                eps=1e-5,
                 n_samples=10,
                 perturb_baseline="black",
                 perturb_func=quantus.baseline_replacement_by_indices,
@@ -326,3 +332,4 @@ class MetricsManager:
             ),
             "input_invariance": quantus.InputInvariance(**self.general_args),
         }
+

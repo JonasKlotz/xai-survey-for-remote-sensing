@@ -18,6 +18,7 @@ def aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
     """
     if isinstance(input_, list) or isinstance(input_, np.ndarray):
         aggregated = np.mean(input_)
+
     elif isinstance(input_, dict):
         aggregated = 0
         for key, value in input_.items():
