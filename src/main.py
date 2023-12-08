@@ -1,4 +1,11 @@
 import os
+import sys
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+print(f"Added {project_root} to path.")
+
+
+
 import yaml
 
 from src.training.train import train
@@ -6,6 +13,7 @@ from src.xai.generate_explanations import generate_explanations
 from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods
 
 CONFIGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/config"
+
 
 
 def parse_config(config_path):
