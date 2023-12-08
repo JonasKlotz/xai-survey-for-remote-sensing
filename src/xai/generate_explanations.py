@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn.functional as F
 import yaml
@@ -42,7 +44,7 @@ def generate_explanations(explanations_config: dict):
     )
 
     model_name = f"resnet18_{explanations_config['dataset_name']}.pt"
-    model_path = os.path.join(explanations_config["model_dir"], model_name)
+    model_path = os.path.join(explanations_config["models_path"], model_name)
     model.load_state_dict(torch.load(model_path))
 
     images, labels = next(iter(test_loader))
@@ -54,29 +56,6 @@ def generate_explanations(explanations_config: dict):
     explanation_manager = ExplanationsManager(explanations_config, model)
     explanation_manager.explain_batch(images, label_idx)
 
-    # Lime = LimeImpl(model)
-    # attrs_batch = Lime.explain_batch(images, target=label_idx)
-    # lime_zarr = ZarrHandler(name='lime_attribution_batch')
-    # lime_zarr.append(attrs_batch)
-    # print(lime_zarr.shape)
-    #
-    # print(lime_zarr.shape)
-    # # Lime.visualize_batch(attrs_batch, images)
-    # Lime.visualize(attrs_batch[0], images[0])
-    #
-    #
-    # layer = model.model.layer4[1].conv2
-    # GradCam = GradCamImpl(model, layer)
-    # attrs_batch = GradCam.explain(images, target=label_idx)
-    # GradCam.visualize(attrs_batch[0], images[0])
-    #
-    # LRP = LRPImpl(model)
-    # attrs_batch = LRP.explain(images, target=label_idx)
-    # LRP.visualize(attrs_batch[0], images[0])
-    #
-    # IG = IntegratedGradientsImpl(model)
-    # attrs_batch = IG.explain(images, target=label_idx)
-    # IG.visualize(attrs_batch[0], images[0])
 
 
 if __name__ == "__main__":

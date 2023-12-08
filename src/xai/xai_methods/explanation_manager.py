@@ -46,14 +46,19 @@ class ExplanationsManager:
             model=self.model
         )
         self.explanations_zarr_handler[explanation_name] = ZarrHandler(
+            results_dir=self.explanations_config["results_dir"],
             name=f"a_batch_{explanation_name}",
             folder_name=f"batches_{self.datetime_appendix}",
         )
         self.x_batch_handler = ZarrHandler(
-            name="x_batch", folder_name=f"batches_{self.datetime_appendix}"
+            results_dir=self.explanations_config["results_dir"],
+            name="x_batch",
+            folder_name=f"batches_{self.datetime_appendix}"
         )
         self.y_batch_handler = ZarrHandler(
-            name="y_batch", folder_name=f"batches_{self.datetime_appendix}"
+            results_dir=self.explanations_config["results_dir"],
+            name="y_batch",
+            folder_name=f"batches_{self.datetime_appendix}"
         )
 
     def explain_batch(self, image_batch: torch.Tensor, target_batch: torch.Tensor):
