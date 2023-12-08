@@ -12,7 +12,6 @@ from models.lightningresnet import LightningResnet
 from data.data_utils import read_tif
 from visualization.plot import quant_norm_data, plot_rgb
 
-PROJECT_DIR = "/home/jonasklotz/Studys/MASTERS/XAI_PLAYGROUND"
 
 
 def load_image_from_datamodule(datamodule, index=None):

@@ -1,16 +1,10 @@
 import os
 
-from models.lightningresnet import LightningResnet
 import torch
-from pytorch_lightning import LightningDataModule, Trainer
-from pytorch_lightning.callbacks.progress import TQDMProgressBar
+from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
-from pl_bolts.datamodules import CIFAR10DataModule, CityscapesDataModule
-
-# Note - you must have torchvision installed for this example
 from torchvision.datasets import MNIST
-
 
 DATA_PATH = os.path.join(os.getcwd(), "..", "..", "data")
 BATCH_SIZE = 256 if torch.cuda.is_available() else 64
@@ -20,7 +14,7 @@ NUM_WORKERS = 4 if torch.cuda.is_available() else 0
 # exemplary data module
 class MNISTDataModule(LightningDataModule):
     def __init__(
-        self, data_dir: str = DATA_PATH, num_workers=NUM_WORKERS, batch_size=BATCH_SIZE
+            self, data_dir: str = DATA_PATH, num_workers=NUM_WORKERS, batch_size=BATCH_SIZE
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -68,7 +62,6 @@ class MNISTDataModule(LightningDataModule):
         return DataLoader(
             self.mnist_test, batch_size=self.batch_size, num_workers=self.num_workers
         )
-
 
 #
 # if __name__ == "__main__":

@@ -25,11 +25,11 @@ def train(
     layer_number=18,
     max_epochs=10,
     dataset_name="mnist",
-    kwargs=None,
+    model_dir_path="models",
+    **kwargs,
 ):
     # load datamodule
     data_module = load_data_module(dataset_name)
-    rrr_loss = RightForRightReasonsLoss(lambda_=1)
     # load model
     model = LightningResnet(
         num_classes=data_module.num_classes,
@@ -46,7 +46,7 @@ def train(
     # Pass the datamodule as arg to trainer.fit to override model hooks :)
     trainer.fit(model, data_module)
     model_name = f"{model_name}18_{dataset_name}1.pt"
-    model_path = "/home/jonasklotz/Studys/MASTERS/XAI/models/" + model_name
+    model_path = os.path.join(model_dir_path, model_name)
     torch.save(model.state_dict(), model_path)
 
 

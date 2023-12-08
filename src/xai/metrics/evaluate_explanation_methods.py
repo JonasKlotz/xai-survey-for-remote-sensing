@@ -1,4 +1,7 @@
+import os
+
 import torch
+import yaml
 
 from data.get_data_modules import load_data_module
 from data.zarr_handler import load_most_recent_batches
@@ -8,8 +11,6 @@ from xai.metrics.metrics_manager import MetricsManager
 from xai.xai_methods.deeplift_impl import DeepLiftImpl
 
 device_string = "gpu" if torch.cuda.is_available() else "cpu"
-CONFIGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/config"
-LOGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/logs"
 
 
 def evaluate_explanation_methods(
@@ -22,7 +23,7 @@ def evaluate_explanation_methods(
     if not load_precomputed:
         generate_explanations(explanations_config)
 
-    all_zarrs = load_most_recent_batches()
+    all_zarrs = load_most_recent_batches(results_dir=explanations_config["results_dir"])
 
     x_batch = all_zarrs["x_batch"]
     y_batch = all_zarrs["y_batch"]
@@ -53,7 +54,9 @@ def evaluate_explanation_methods(
     model = LightningResnet(
         num_classes=data_module.num_classes, input_channels=data_module.dims[0]
     )
-    model_path = f"/home/jonasklotz/Studys/MASTERS/XAI/models/resnet18_{explanations_config['dataset_name']}.pt"
+
+    model_name= f"resnet18_{explanations_config['dataset_name']}.pt"
+    model_path = os.path.join(explanations_config["model_dir"], model_name)
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
@@ -64,7 +67,7 @@ def evaluate_explanation_methods(
         aggregate=True,
         device_string=device_string,
         log=True,
-        log_dir=LOGPATH,
+        log_dir=explanations_config["log_dir"],
     )
 
     all_results = metrics_manager.evaluate_batch(
@@ -79,11 +82,20 @@ def evaluate_explanation_methods(
 
 
 def main():
-    from main import parse_config
+    import argparse
 
-    configs = parse_config(CONFIGPATH)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config/explanations_config.yml",
+    )
 
-    evaluate_explanation_methods(configs["evaluations"])
+    args = parser.parse_args()
+    with open(args.config) as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+
+    evaluate_explanation_methods(config["evaluations"])
 
 
 if __name__ == "__main__":

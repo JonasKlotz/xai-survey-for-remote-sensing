@@ -5,14 +5,13 @@ import numpy as np
 import torch
 import zarr
 
-zarr_path = "/home/jonasklotz/Studys/MASTERS/XAI/results/zarr_batches/"
 
 
 class ZarrHandler:
     def __init__(
         self,
         name: str,
-        results_dir: str = zarr_path,
+        results_dir: str,
         chunks: tuple = None,
         folder_name: str = None,
     ):
@@ -48,7 +47,7 @@ class ZarrHandler:
         return self.zarr.shape
 
 
-def load_most_recent_batches(results_dir: str = zarr_path):
+def load_most_recent_batches(results_dir: str):
     # get all folders in results_dir
     folders = os.listdir(results_dir)
     # filter for folders starting with a_batch

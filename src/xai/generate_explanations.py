@@ -1,27 +1,13 @@
-import yaml
-import os
-
 import torch
 import torch.nn.functional as F
-import torchvision
-from matplotlib import pyplot as plt
-from pl_bolts.datamodules import CIFAR10DataModule
-from pl_bolts.transforms.dataset_normalizations import cifar10_normalization
-
+import yaml
 from PIL import Image
-from torch import nn
 from torchvision import transforms
-from torchvision.models import resnet18, ResNet18_Weights
 
 from data.data_utils import get_loader_for_datamodule
 from models.lightningresnet import LightningResnet
-from src.xai.xai_methods.gradcam_impl import GradCamImpl
-from src.xai.xai_methods.ig_impl import IntegratedGradientsImpl
-from src.xai.xai_methods.lime_impl import LimeImpl
-from src.xai.xai_methods.lrp_impl import LRPImpl
 
-# import datamodule
-from src.data.get_data_modules import get_mnist_data_module, load_data_module
+from src.data.get_data_modules import load_data_module
 from src.xai.xai_methods.explanation_manager import ExplanationsManager
 
 
@@ -54,7 +40,9 @@ def generate_explanations(explanations_config: dict):
     model = LightningResnet(
         num_classes=data_module.num_classes, input_channels=data_module.dims[0]
     )
-    model_path = f"/home/jonasklotz/Studys/MASTERS/XAI/models/resnet18_{explanations_config['dataset_name']}.pt"
+
+    model_name = f"resnet18_{explanations_config['dataset_name']}.pt"
+    model_path = os.path.join(explanations_config["model_dir"], model_name)
     model.load_state_dict(torch.load(model_path))
 
     images, labels = next(iter(test_loader))
@@ -98,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config",
         type=str,
-        default="/home/jonasklotz/Studys/MASTERS/XAI/config/explanations_config.yml",
+        default="config/explanations_config.yml",
     )
 
     args = parser.parse_args()

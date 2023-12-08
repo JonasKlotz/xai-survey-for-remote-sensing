@@ -1,13 +1,8 @@
-from typing import Type, Any, Callable, Union, List, Optional
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
-from torch import Tensor
-from torch.utils.model_zoo import load_url as load_state_dict_from_url
 from torchmetrics.functional import accuracy
-
 
 from src.models.interpretable_resnet import get_resnet
 from src.xai.xai_methods.deeplift_impl import DeepLiftImpl
@@ -70,13 +65,17 @@ class LightningResnet(LightningModule):
         logits = F.log_softmax(output, dim=1)
 
         preds = torch.argmax(logits, dim=1)
-        explanation_method = DeepLiftImpl(self.model)
-        a_batch = explanation_method.explain_batch(x_batch, preds)
+        rrr_loss = False
+        if rrr_loss:
+            explanation_method = DeepLiftImpl(self.model)
+            a_batch = explanation_method.explain_batch(x_batch, preds)
 
-        rrr_loss = torch.linalg.norm(s_batch * a_batch)
-        loss = self.loss(logits, y_batch) + rrr_loss
-        # todo are the gradients changed when the explanation is calculated? then we need to forward pass again
-        self.log("rrr_loss", rrr_loss)
+            rrr_loss = torch.linalg.norm(s_batch * a_batch)
+            loss = self.loss(logits, y_batch) + rrr_loss
+            # todo are the gradients changed when the explanation is calculated? then we need to forward pass again
+            self.log("rrr_loss", rrr_loss)
+        else:
+            loss = self.loss(logits, y_batch)
         self.log("train_loss", loss)
         return loss
 
@@ -85,7 +84,7 @@ class LightningResnet(LightningModule):
         # x = batch["image"]
         # y = batch["mask"]
         x, y = batch
-        logits, _ = self(x)
+        logits = self(x)
         loss = F.nll_loss(logits, y)
         preds = torch.argmax(logits, dim=1)
         acc = accuracy(

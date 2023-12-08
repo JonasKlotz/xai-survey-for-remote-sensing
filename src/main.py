@@ -1,18 +1,16 @@
 import os
 import sys
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 print(f"Added {project_root} to path.")
-
-
+CONFIGPATH = os.path.join(project_root, "config")
 
 import yaml
 
 from src.training.train import train
 from src.xai.generate_explanations import generate_explanations
 from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods
-
-CONFIGPATH = "/home/jonasklotz/Studys/MASTERS/XAI/config"
 
 
 
@@ -26,6 +24,22 @@ def parse_config(config_path):
             with open(os.path.join(config_path, file_name)) as file:
                 loaded_cfg = yaml.load(file, Loader=yaml.FullLoader)
                 configs[file_name[:-11]] = loaded_cfg
+
+    configs = add_important_paths_to_cfg(configs, project_root)
+    return configs
+
+
+def add_important_paths_to_cfg(configs: dict, project_root: str):
+    data_path = os.path.join(project_root, 'data')
+    models_path = os.path.join(project_root, 'models')
+    log_path = os.path.join(project_root, 'logs')
+    results_path = os.path.join(project_root, 'results')
+
+    for cfg in configs.values():
+        cfg['data_path'] = data_path
+        cfg['models_path'] = models_path
+        cfg['log_path'] = log_path
+        cfg['results_path'] = results_path
 
     return configs
 
