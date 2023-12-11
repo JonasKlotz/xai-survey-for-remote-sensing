@@ -1,5 +1,6 @@
 import copy
 import os
+from abc import abstractmethod
 
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
@@ -30,8 +31,15 @@ class DataModule(pl.LightningDataModule):
         self.transform_tr = transform_tr
         self.transform_te = transform_te
 
+    @abstractmethod
     def get_dataset(
-        self, lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        self,
+        lmdb_path,
+        csv_path,
+        labels_path,
+        transform,
+        temporal_views_path=None,
+        segmentations_lmdb_path=None,
     ):
         raise NotImplementedError
 
@@ -41,25 +49,34 @@ class DataModule(pl.LightningDataModule):
         #     self.transform_val = self.transform_te
 
         self.trainset_tr = self.get_dataset(
-            lmdb_path=self.cfg["data"]["lmdb_path"],
+            lmdb_path=self.cfg["data"]["images_lmdb_path"],
             csv_path=self.cfg["data"]["train_csv"],
             labels_path=self.cfg["data"]["labels_path"],
             temporal_views_path=self.cfg["data"].get("temporal_views_path", None),
             transform=self.transform_tr,
+            segmentations_lmdb_path=self.cfg["data"].get(
+                "segmentations_lmdb_path", None
+            ),
         )
         self.valset = self.get_dataset(
-            lmdb_path=self.cfg["data"]["lmdb_path"],
+            lmdb_path=self.cfg["data"]["images_lmdb_path"],
             csv_path=self.cfg["data"]["train_csv"],
             labels_path=self.cfg["data"]["labels_path"],
             temporal_views_path=self.cfg["data"].get("temporal_views_path", None),
             transform=self.transform_te,
+            segmentations_lmdb_path=self.cfg["data"].get(
+                "segmentations_lmdb_path", None
+            ),
         )
         self.testset = self.get_dataset(
-            lmdb_path=self.cfg["data"]["lmdb_path"],
+            lmdb_path=self.cfg["data"]["images_lmdb_path"],
             csv_path=self.cfg["data"]["train_csv"],
             labels_path=self.cfg["data"]["labels_path"],
             temporal_views_path=self.cfg["data"].get("temporal_views_path", None),
             transform=self.transform_te,
+            segmentations_lmdb_path=self.cfg["data"].get(
+                "segmentations_lmdb_path", None
+            ),
         )
 
     def get_loader(self, dataset, drop_last):
@@ -96,7 +113,13 @@ class BigEarthNetDataModule(DataModule):
         self.init_active_classes()
 
     def get_dataset(
-        self, lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        self,
+        lmdb_path,
+        csv_path,
+        labels_path,
+        transform,
+        temporal_views_path=None,
+        segmentations_lmdb_path=None,
     ):
         return Ben19Dataset(
             lmdb_path,
@@ -189,10 +212,21 @@ class DeepGlobeDataModule(DataModule):
         self.init_transforms()
 
     def get_dataset(
-        self, lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        self,
+        lmdb_path,
+        csv_path,
+        labels_path,
+        transform,
+        temporal_views_path=None,
+        segmentations_lmdb_path=None,
     ):
         return DeepGlobeDataset(
-            lmdb_path, csv_path, labels_path, temporal_views_path, transform
+            images_lmdb_path=lmdb_path,
+            csv_path=csv_path,
+            labels_path=labels_path,
+            transform=transform,
+            temporal_views_path=temporal_views_path,
+            segmentations_lmdb_path=segmentations_lmdb_path,
         )
 
     def init_transforms(self):
@@ -217,10 +251,21 @@ class EuroSATDataModule(DataModule):
         self.init_transforms()
 
     def get_dataset(
-        self, lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        self,
+        lmdb_path,
+        csv_path,
+        labels_path,
+        transform,
+        temporal_views_path=None,
+        segmentations_lmdb_path=None,
     ):
         return EuroSATDataset(
-            lmdb_path, csv_path, labels_path, temporal_views_path, transform
+            lmdb_path,
+            csv_path,
+            labels_path,
+            temporal_views_path,
+            transform,
+            segmentations_lmdb_path,
         )
 
     def init_transforms(self):

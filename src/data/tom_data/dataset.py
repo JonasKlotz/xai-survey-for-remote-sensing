@@ -7,14 +7,12 @@ import pandas as pd
 from skimage.transform import resize
 from torch.utils.data import Dataset
 
-from utility.cluster_logging import logger
-
-
 from src.data.tom_data.constants import (
     BEN19_NAME2IDX,
     DEEPGLOBE_NAME2IDX,
     EUROSAT_NAME2IDX,
 )
+from utility.cluster_logging import logger
 
 
 class BaseDataset(Dataset):
@@ -130,6 +128,7 @@ class Ben19Dataset(BaseDataset):
         active_classes=None,
         rgb_only=False,
         discard_empty_labels=True,
+        segmentations_lmdb_path=None,
     ):
         super().__init__(
             images_lmdb_path, csv_path, labels_path, temporal_views_path, transform
@@ -226,6 +225,7 @@ class DeepGlobeDataset(BaseDataset):
         labels_path,
         temporal_views_path=None,
         transform=None,
+        segmentations_lmdb_path=None,
     ):
         super().__init__(
             images_lmdb_path, csv_path, labels_path, temporal_views_path, transform
@@ -246,6 +246,7 @@ class EuroSATDataset(BaseDataset):
         labels_path,
         temporal_views_path=None,
         transform=None,
+        segmentations_lmdb_path=None,
     ):
         super().__init__(
             images_lmdb_path, csv_path, labels_path, temporal_views_path, transform

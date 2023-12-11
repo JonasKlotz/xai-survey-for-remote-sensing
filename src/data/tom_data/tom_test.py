@@ -1,13 +1,14 @@
 import os
 import sys
 
+from torchvision import transforms
+
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 sys.path.append(project_root)
 print(f"Added {project_root} to path.")
 
-from torchvision import transforms  # noqa: E402
 
 from src.data.tom_data.datamodule import DeepGlobeDataModule  # noqa: E402
 from src.data.tom_data.transformations_impl import TransformationsImpl  # noqa: E402
