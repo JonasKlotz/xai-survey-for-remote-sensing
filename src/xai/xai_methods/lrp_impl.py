@@ -6,7 +6,6 @@ from captum.attr._utils.lrp_rules import (
     EpsilonRule,
     GammaRule,
     IdentityRule,
-    Alpha1_Beta0_Rule,
 )
 
 from src.xai.xai_methods.explanation import Explanation

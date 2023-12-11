@@ -3,15 +3,10 @@ import os
 import torch
 import torch.nn.functional as F
 
-from captum.attr import visualization as viz
-from captum.attr import Lime, LimeBase
-from captum._utils.models.linear_model import SkLearnLinearRegression, SkLearnLasso
-from captum.attr._core.lime import get_exp_kernel_similarity_function
 from models.lightningresnet import LightningResnet
 
 from data.data_utils import read_tif
 from visualization.plot import quant_norm_data, plot_rgb
-
 
 
 def load_image_from_datamodule(datamodule, index=None):
@@ -112,15 +107,15 @@ if __name__ == "__main__":
         "River",
         "SeaLake",
     ]
-
-    image_path = os.path.join(PROJECT_DIR, image_path)
-    model_path = os.path.join(PROJECT_DIR, model_path)
+    project_dir = "/home/jonasklotz/Studys/MASTERS/XAI_PLAYGROUND"
+    image_path = os.path.join(project_dir, image_path)
+    model_path = os.path.join(project_dir, model_path)
 
     # show the original image
     img, meta = read_tif(image_path)
     img = quant_norm_data(img)
 
-    from torchgeo.datamodules import EuroSATDataModule, UCMercedDataModule
+    from torchgeo.datamodules import UCMercedDataModule
 
     # root = '/home/jonasklotz/Studys/MASTERS/XAI_PLAYGROUND/data/eurosat'
     # Load the EuroSAT dataset

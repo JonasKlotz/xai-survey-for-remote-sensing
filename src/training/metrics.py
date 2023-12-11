@@ -3,7 +3,6 @@ import sys
 import logging
 from datetime import datetime
 
-import torch
 from sklearn.metrics import f1_score, average_precision_score, accuracy_score
 
 
@@ -63,10 +62,24 @@ def calculate_metrics(y_true, y_pred, threshold=0.5):
     y_pred = y_pred.cpu().numpy()
 
     acc = round(accuracy_score(y_true=y_true, y_pred=y_pred_threshed), 3)
-    mif1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average="micro", zero_division=0), 3)
-    maf1 = round(f1_score(y_true=y_true, y_pred=y_pred_threshed, average="macro", zero_division=0), 3)
-    miMAP = round(average_precision_score(y_true=y_true, y_score=y_pred, average="micro"), 3)
-    maMAP = round(average_precision_score(y_true=y_true, y_score=y_pred, average="macro"), 3)
+    mif1 = round(
+        f1_score(
+            y_true=y_true, y_pred=y_pred_threshed, average="micro", zero_division=0
+        ),
+        3,
+    )
+    maf1 = round(
+        f1_score(
+            y_true=y_true, y_pred=y_pred_threshed, average="macro", zero_division=0
+        ),
+        3,
+    )
+    miMAP = round(
+        average_precision_score(y_true=y_true, y_score=y_pred, average="micro"), 3
+    )
+    maMAP = round(
+        average_precision_score(y_true=y_true, y_score=y_pred, average="macro"), 3
+    )
     return mif1, maf1, miMAP, maMAP, acc
 
 
@@ -97,13 +110,13 @@ class CSV_logger:
     def __init__(self, file_name, dir_name, metric_names=None):
         try:
             os.makedirs(dir_name)
-        except OSError as exc:
+        except OSError:
             pass
         if metric_names:
             self.metric_names = metric_names
 
         self.file_path = os.path.join(dir_name, f"{file_name}.csv")
-        csv_header = s = ",".join(self.metric_names)
+        csv_header = ",".join(self.metric_names)
         with open(self.file_path, "a") as csv_file:
             csv_file.write(csv_header)
             csv_file.write("\n")

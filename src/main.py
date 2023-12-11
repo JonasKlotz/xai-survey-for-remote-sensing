@@ -1,24 +1,27 @@
 import os
 import sys
 
+import pytorch_lightning as pl
+import torch.multiprocessing
+import yaml
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 print(f"Added {project_root} to path.")
 CONFIGPATH = os.path.join(project_root, "config")
 
-import yaml
-import pytorch_lightning as pl
-
-from src.training.train import train
-from src.xai.generate_explanations import generate_explanations
-from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods
-from utility.cluster_logging import logger
+# Trick linter
+from src.training.train import train  # noqa: E402
+from src.xai.generate_explanations import generate_explanations  # noqa: E402
+from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods  # noqa: E402
+from utility.cluster_logging import logger  # noqa: E402
 
 # Fix all seeds with lightning
 pl.seed_everything(42)
-import torch.multiprocessing
 
-torch.multiprocessing.set_sharing_strategy('file_system')  # handle too many open files error
+torch.multiprocessing.set_sharing_strategy(
+    "file_system"
+)  # handle too many open files error
 
 
 def parse_config(config_path):
@@ -37,16 +40,16 @@ def parse_config(config_path):
 
 
 def add_important_paths_to_cfg(configs: dict, project_root: str):
-    data_path = os.path.join(project_root, 'data')
-    models_path = os.path.join(project_root, 'models')
-    log_path = os.path.join(project_root, 'logs')
-    results_path = os.path.join(project_root, 'results')
+    data_path = os.path.join(project_root, "data")
+    models_path = os.path.join(project_root, "models")
+    log_path = os.path.join(project_root, "logs")
+    results_path = os.path.join(project_root, "results")
 
     for cfg in configs.values():
-        cfg['data_path'] = data_path
-        cfg['models_path'] = models_path
-        cfg['log_path'] = log_path
-        cfg['results_path'] = results_path
+        cfg["data_path"] = data_path
+        cfg["models_path"] = models_path
+        cfg["log_path"] = log_path
+        cfg["results_path"] = results_path
 
     return configs
 

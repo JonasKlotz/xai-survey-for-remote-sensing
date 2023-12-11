@@ -6,7 +6,6 @@ import torch
 import zarr
 
 
-
 class ZarrHandler:
     def __init__(
         self,
@@ -15,7 +14,6 @@ class ZarrHandler:
         chunks: tuple = None,
         folder_name: str = None,
     ):
-
         self.name = name
         self.results_dir = results_dir
         self.chunks = chunks

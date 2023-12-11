@@ -3,22 +3,21 @@ import quantus
 import torch
 
 from utility.csv_logger import CSVLogger
-from xai.metrics.metrics_utiliies import aggregation_function
 from xai.xai_methods.explanation_manager import explanation_wrapper
 
 
 class MetricsManager:
     def __init__(
-            self,
-            model: torch.nn.Module,
-            explanation: callable,
-            aggregate=True,
-            device_string=None,
-            log=False,
-            log_dir=None,
-            image_shape=(1, 28, 28),
-            sentinel_value=np.nan,
-            softmax=True,
+        self,
+        model: torch.nn.Module,
+        explanation: callable,
+        aggregate=True,
+        device_string=None,
+        log=False,
+        log_dir=None,
+        image_shape=(1, 28, 28),
+        sentinel_value=np.nan,
+        softmax=True,
     ):
         """
         Metrics Manager for evaluating metrics
@@ -93,11 +92,11 @@ class MetricsManager:
         self._load_axiomatic_metrics()
 
     def evaluate_batch(
-            self,
-            x_batch: np.ndarray,
-            y_batch: np.ndarray,
-            a_batch: np.ndarray,
-            s_batch: np.ndarray = None,
+        self,
+        x_batch: np.ndarray,
+        y_batch: np.ndarray,
+        a_batch: np.ndarray,
+        s_batch: np.ndarray = None,
     ):
         """Evaluate a batch of images
 
@@ -132,7 +131,9 @@ class MetricsManager:
         ]
 
         for metrics_category in all_metrics_categories:
-            results = self._evaluate_category(metrics_category, x_batch, y_batch, a_batch, s_batch)
+            results = self._evaluate_category(
+                metrics_category, x_batch, y_batch, a_batch, s_batch
+            )
             all_results.update(results)
 
         if self.log:
@@ -141,12 +142,12 @@ class MetricsManager:
         return all_results
 
     def _evaluate_category(
-            self,
-            metrics: dict,
-            x_batch: np.ndarray,
-            y_batch: np.ndarray,
-            a_batch: np.ndarray,
-            s_batch: np.ndarray = None,
+        self,
+        metrics: dict,
+        x_batch: np.ndarray,
+        y_batch: np.ndarray,
+        a_batch: np.ndarray,
+        s_batch: np.ndarray = None,
     ):
         """Evaluate a category of metrics
 
@@ -170,7 +171,6 @@ class MetricsManager:
         """
         results = {}
         for key in metrics.keys():
-
             try:
                 results[key] = metrics[key](
                     model=self.model,
@@ -211,17 +211,12 @@ class MetricsManager:
             "region_perturb": quantus.RegionPerturbation(
                 patch_size=4, regions_evaluation=10, normalise=True, **self.general_args
             ),
-            "selectivity": quantus.Selectivity(patch_size=4,
-                                               **self.general_args),
+            "selectivity": quantus.Selectivity(patch_size=4, **self.general_args),
             "sensitivity_n": quantus.SensitivityN(
-                features_in_step=28,
-                n_max_percentage=0.8,
-                **self.general_args
+                features_in_step=28, n_max_percentage=0.8, **self.general_args
             ),
             "irof": quantus.IROF(
-                segmentation_method="slic",
-                perturb_baseline="mean",
-                **self.general_args
+                segmentation_method="slic", perturb_baseline="mean", **self.general_args
             ),
             "infidelity": quantus.Infidelity(
                 perturb_baseline="uniform",
@@ -242,10 +237,7 @@ class MetricsManager:
         """Load all robustness metrics"""
         self.robustness_metrics = {
             "local_lipschitz_estimate": quantus.LocalLipschitzEstimate(
-                nr_samples=10,
-                perturb_std=0.2,
-                perturb_mean=0.0,
-                **self.general_args
+                nr_samples=10, perturb_std=0.2, perturb_mean=0.0, **self.general_args
             ),
             "max_sensitivity": quantus.MaxSensitivity(
                 nr_samples=10,
@@ -332,4 +324,3 @@ class MetricsManager:
             ),
             "input_invariance": quantus.InputInvariance(**self.general_args),
         }
-

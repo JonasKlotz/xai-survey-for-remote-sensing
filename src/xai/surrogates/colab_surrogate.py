@@ -6,20 +6,16 @@ import ssl
 import torch.nn as nn
 import math
 import torch
-from collections import OrderedDict
 from torch.utils import model_zoo
 import tempfile
 import torch.nn.functional as F
 import timm
 
-from torchmetrics.functional import accuracy
-from pytorch_lightning import LightningModule, Trainer, seed_everything
+from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import (
-    LearningRateMonitor,
     EarlyStopping,
     ModelCheckpoint,
 )
-from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.loggers import CSVLogger
 from torchmetrics.functional import accuracy
 from torchgeo.models import ResNet18_Weights
@@ -349,7 +345,7 @@ class SurrogateModel(LightningModule):
         return F.log_softmax(out, dim=1)
 
     def training_step(self, batch, batch_idx):
-        x, y = batch["image"], batch["label"]
+        x, _ = batch["image"], batch["label"]
         logits = self(x)
 
         blackbox_logits = self.blackbox(x)

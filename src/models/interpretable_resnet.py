@@ -317,7 +317,7 @@ def _resnet(
     progress: bool,
     num_classes: int = 1000,
     num_channels: int = 3,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> ResNet:
     model = ResNet(block, layers, **kwargs)
 

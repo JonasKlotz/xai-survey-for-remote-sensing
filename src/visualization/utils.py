@@ -120,8 +120,7 @@ def generate_heatmap_pytorch(model, image, target, patchsize):
         # extract patches
         patches = input.permute(0, 2, 3, 1)
         patches = patches.unfold(1, patchsize, 1).unfold(2, patchsize, 1)
-        num_rows = patches.shape[1]
-        num_cols = patches.shape[2]
+
         patches = patches.contiguous().view((-1, 3, patchsize, patchsize))
 
         # compute logits for each patch
@@ -143,7 +142,6 @@ def get_fool_sample(
     shape=(224, 224),
     data_format="channels_first",
 ):
-
     sample, label = samples(
         dataset=dataset,
         index=index,

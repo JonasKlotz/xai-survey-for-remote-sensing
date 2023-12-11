@@ -14,7 +14,7 @@ NUM_WORKERS = 4 if torch.cuda.is_available() else 0
 # exemplary data module
 class MNISTDataModule(LightningDataModule):
     def __init__(
-            self, data_dir: str = DATA_PATH, num_workers=NUM_WORKERS, batch_size=BATCH_SIZE
+        self, data_dir: str = DATA_PATH, num_workers=NUM_WORKERS, batch_size=BATCH_SIZE
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -62,6 +62,7 @@ class MNISTDataModule(LightningDataModule):
         return DataLoader(
             self.mnist_test, batch_size=self.batch_size, num_workers=self.num_workers
         )
+
 
 #
 # if __name__ == "__main__":

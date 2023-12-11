@@ -4,7 +4,6 @@ import pickle
 import lmdb
 import numpy as np
 import pandas as pd
-from bigearthnet_patch_interface.s2_interface import BigEarthNet_S2_Patch
 from skimage.transform import resize
 from torch.utils.data import Dataset
 
@@ -19,17 +18,29 @@ from src.data.tom_data.constants import (
 
 
 class BaseDataset(Dataset):
-    def __init__(self, lmdb_path, csv_path, labels_path, temporal_views_path=None, transform=None):
+    def __init__(
+        self,
+        images_lmdb_path,
+        csv_path,
+        labels_path,
+        temporal_views_path=None,
+        transform=None,
+        segmentations_lmdb_path=None,
+    ):
         """
         Parameter
         ---------
-        lmdb_path      : path to the LMDB file for efficiently loading the patches.
+        images_lmdb_path      : path to the LMDB file for efficiently loading the patches.
         csv_path       : path to a csv file containing the patch names that will make up this split
         transform_mode:  specifies the image transform mode which determines the augmentations
                          to be applied to the image
         """
-        self.env = None
-        self.lmdb_path = lmdb_path
+        self.lmdb_path = images_lmdb_path
+        self.images_env = None
+
+        self.segmentations_lmdb_path = segmentations_lmdb_path
+        self.segmentations_env = None
+
         self.patch_names = self.read_csv(csv_path)
         self.labels = self.read_labels(labels_path, self.patch_names)
         self.transform = transform
@@ -43,7 +54,9 @@ class BaseDataset(Dataset):
 
     def read_labels(self, meta_data_path, patch_names):
         df = pd.read_parquet(meta_data_path)
-        df_subset = df.set_index('name').loc[self.patch_names].reset_index(inplace=False)
+        df_subset = (
+            df.set_index("name").loc[self.patch_names].reset_index(inplace=False)
+        )
         string_labels = df_subset.labels.tolist()
         multihot_labels = np.array(list(map(self.convert_to_multihot, string_labels)))
         return multihot_labels
@@ -59,24 +72,47 @@ class BaseDataset(Dataset):
 
     def __getitem__(self, idx):
         """Get item at position idx of Dataset."""
-        if self.env is None:
-            self.env = lmdb.open(
-                str(self.lmdb_path),
+        patch, self.images_env = self._extract_path_from_lmdb(
+            idx, self.images_env, self.lmdb_path
+        )
+
+        segmentation_patch = None
+        if self.segmentations_lmdb_path is not None:
+            (
+                segmentation_patch,
+                self.segmentations_env,
+            ) = self._extract_path_from_lmdb(
+                idx, self.segmentations_env, self.segmentations_lmdb_path
+            )
+
+        label = self.labels[idx]
+        patch = self.transform(patch) if self.transform is not None else patch
+
+        logger.debug(f"Patch shape: {patch.shape}")
+        logger.debug(f"Label shape: {label.shape}")
+        logger.debug(
+            f"Segmentation shape: {segmentation_patch.shape if segmentation_patch is not None else None}"
+        )
+        logger.debug(f"Iteration: {idx}")
+
+        return patch, label, idx, segmentation_patch
+
+    def _extract_path_from_lmdb(self, idx, env, lmdb_path):
+        """Extract patch from LMDB."""
+        if env is None:
+            env = lmdb.open(
+                str(lmdb_path),
                 readonly=True,
                 lock=False,
                 meminit=False,
                 readahead=True,
             )
-
         patch_name = self.patch_names[idx]
+        with env.begin(write=False) as txn:
+            byte_flow = txn.get(patch_name.encode("utf-8"))
+        patch = pickle.loads(byte_flow)
 
-        with self.env.begin(write=False) as txn:
-            byteflow = txn.get(patch_name.encode('utf-8'))
-
-        patch = pickle.loads(byteflow)
-        label = self.labels[idx]
-        patch = self.transform(patch) if self.transform is not None else patch
-        return patch, label, idx
+        return patch, env
 
     def __len__(self):
         """Get length of Dataset."""
@@ -84,9 +120,20 @@ class BaseDataset(Dataset):
 
 
 class Ben19Dataset(BaseDataset):
-    def __init__(self, lmdb_path, csv_path, labels_path, temporal_views_path=None, transform=None, active_classes=None,
-                 rgb_only=False, discard_empty_labels=True):
-        super().__init__(lmdb_path, csv_path, labels_path, temporal_views_path, transform)
+    def __init__(
+        self,
+        images_lmdb_path,
+        csv_path,
+        labels_path,
+        temporal_views_path=None,
+        transform=None,
+        active_classes=None,
+        rgb_only=False,
+        discard_empty_labels=True,
+    ):
+        super().__init__(
+            images_lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        )
         """
         Parameter
         ---------
@@ -98,14 +145,27 @@ class Ben19Dataset(BaseDataset):
         self.active_classes = active_classes
         self.labels = self.select_active_classes(self.labels)
         self.rgb_only = rgb_only
-        self.band_ordering = ['B02', 'B03', 'B04', 'B08', 'B05', 'B06', 'B07', 'B8A', 'B11', 'B12']
+        self.band_ordering = [
+            "B02",
+            "B03",
+            "B04",
+            "B08",
+            "B05",
+            "B06",
+            "B07",
+            "B8A",
+            "B11",
+            "B12",
+        ]
 
         if discard_empty_labels:
             self.discard_empty_labels()
 
     def read_labels(self, meta_data_path, patch_names):
         df = pd.read_parquet(meta_data_path)
-        df_subset = df.set_index('name').loc[self.patch_names].reset_index(inplace=False)
+        df_subset = (
+            df.set_index("name").loc[self.patch_names].reset_index(inplace=False)
+        )
         string_labels = df_subset.new_labels.tolist()
         multihot_labels = np.array(list(map(self.convert_to_multihot, string_labels)))
         return multihot_labels
@@ -120,7 +180,9 @@ class Ben19Dataset(BaseDataset):
         """Interpolate bands. See: https://github.com/lanha/DSen2/blob/master/utils/patches.py."""
         bands_interp = np.zeros([bands.shape[0]] + img10_shape).astype(np.float32)
         for i in range(bands.shape[0]):
-            bands_interp[i] = resize(bands[i] / 30000, img10_shape, mode='reflect') * 30000
+            bands_interp[i] = (
+                resize(bands[i] / 30000, img10_shape, mode="reflect") * 30000
+            )
         return bands_interp
 
     def select_active_classes(self, multihot):
@@ -136,21 +198,9 @@ class Ben19Dataset(BaseDataset):
 
     def __getitem__(self, idx):
         """Get item at position idx of Dataset."""
-        if self.env is None:
-            self.env = lmdb.open(
-                str(self.lmdb_path),
-                readonly=True,
-                lock=False,
-                meminit=False,
-                readahead=True,
-            )
-
-        patch_name = self.patch_names[idx]
-
-        with self.env.begin(write=False) as txn:
-            byteflow = txn.get(patch_name.encode('utf-8'))
-
-        s2_patch = BigEarthNet_S2_Patch.loads(byteflow)
+        s2_patch, self.images_env = self._extract_path_from_lmdb(
+            idx, self.images_env, self.lmdb_path
+        )
         label = self.labels[idx]
 
         bands10 = s2_patch.get_stacked_10m_bands()
@@ -165,12 +215,21 @@ class Ben19Dataset(BaseDataset):
         if self.rgb_only:
             patch = patch[[2, 1, 0], ...]
 
-        return patch, label, idx
+        return patch, label, idx, None
 
 
 class DeepGlobeDataset(BaseDataset):
-    def __init__(self, lmdb_path, csv_path, labels_path, temporal_views_path=None, transform=None):
-        super().__init__(lmdb_path, csv_path, labels_path, temporal_views_path, transform)
+    def __init__(
+        self,
+        images_lmdb_path,
+        csv_path,
+        labels_path,
+        temporal_views_path=None,
+        transform=None,
+    ):
+        super().__init__(
+            images_lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        )
 
     def convert_to_multihot(self, labels):
         multihot = np.zeros(6)
@@ -180,10 +239,31 @@ class DeepGlobeDataset(BaseDataset):
 
 
 class EuroSATDataset(BaseDataset):
-    def __init__(self, lmdb_path, csv_path, labels_path, temporal_views_path=None, transform=None):
-        super().__init__(lmdb_path, csv_path, labels_path, temporal_views_path, transform)
+    def __init__(
+        self,
+        images_lmdb_path,
+        csv_path,
+        labels_path,
+        temporal_views_path=None,
+        transform=None,
+    ):
+        super().__init__(
+            images_lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        )
         self.band_ordering = [
-            'B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B010', 'B11', 'B12'
+            "B01",
+            "B02",
+            "B03",
+            "B04",
+            "B05",
+            "B06",
+            "B07",
+            "B08",
+            "B8A",
+            "B09",
+            "B010",
+            "B11",
+            "B12",
         ]
         self.ben19_ordering = [1, 2, 3, 7, 4, 5, 6, 8, 11, 12]
 
@@ -191,24 +271,13 @@ class EuroSATDataset(BaseDataset):
         return EUROSAT_NAME2IDX[labels[0]]  # hack for single-label classification
 
     def __getitem__(self, idx):
-        if self.env is None:
-            self.env = lmdb.open(
-                str(self.lmdb_path),
-                readonly=True,
-                lock=False,
-                meminit=False,
-                readahead=True,
-            )
-
-        patch_name = self.patch_names[idx]
-
-        with self.env.begin(write=False) as txn:
-            byteflow = txn.get(patch_name.encode('utf-8'))
-
-        patch = pickle.loads(byteflow)
+        """Get item at position idx of Dataset."""
+        patch, self.images_env = self._extract_path_from_lmdb(
+            idx, self.images_env, self.lmdb_path
+        )
 
         label = self.labels[idx]
         patch = patch[:, :, self.ben19_ordering]
         patch = self.transform(patch) if self.transform is not None else patch
 
-        return patch, label, idx
+        return patch, label, idx, None

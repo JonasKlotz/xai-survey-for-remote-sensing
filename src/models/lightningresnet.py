@@ -1,29 +1,29 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 
-from torchmetrics import AveragePrecision, Accuracy, F1Score, Precision, Recall, ConfusionMatrix
+from torchmetrics import (
+    AveragePrecision,
+    Accuracy,
+    F1Score,
+)
 
 from src.models.interpretable_resnet import get_resnet
-from src.xai.xai_methods.deeplift_impl import DeepLiftImpl
-from training.metrics import calculate_metrics
-from utility.cluster_logging import logger
 
 
 class LightningResnet(LightningModule):
     def __init__(
-            self,
-            resnet_layers=18,
-            input_channels=3,
-            num_classes=10,
-            lr=0.001,
-            batch_size=32,
-            freeze=False,
-            loss=nn.BCEWithLogitsLoss(),
+        self,
+        resnet_layers=18,
+        input_channels=3,
+        num_classes=10,
+        lr=0.001,
+        batch_size=32,
+        freeze=False,
+        loss=nn.BCEWithLogitsLoss(),
     ):
         super(LightningResnet, self).__init__()
-        self.save_hyperparameters(ignore=['loss'])
+        self.save_hyperparameters(ignore=["loss"])
 
         self.model = get_resnet(resnet_layers)
         self.loss = loss
@@ -39,43 +39,49 @@ class LightningResnet(LightningModule):
         )
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
 
-        self.f1_score_macro = F1Score(task='multilabel', average='macro', threshold=0.5, num_labels=num_classes)
-        self.f1_score_micro = F1Score(task='multilabel', average='micro', threshold=0.5, num_labels=num_classes)
-        self.average_precision_macro = AveragePrecision(task='multilabel', average='macro', num_labels=num_classes)
-        self.accuracy = Accuracy(task='multilabel',threshold=0.5,  num_labels=num_classes)
+        self.f1_score_macro = F1Score(
+            task="multilabel", average="macro", threshold=0.5, num_labels=num_classes
+        )
+        self.f1_score_micro = F1Score(
+            task="multilabel", average="micro", threshold=0.5, num_labels=num_classes
+        )
+        self.average_precision_macro = AveragePrecision(
+            task="multilabel", average="macro", num_labels=num_classes
+        )
+        self.accuracy = Accuracy(
+            task="multilabel", threshold=0.5, num_labels=num_classes
+        )
 
     def forward(self, x):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
         # for deepglobe:
-        images, labels, _ = batch
+        images, target, idx, segments = batch
 
         y_hat = self.model(images)
-        loss = self.loss(y_hat, labels)
+        loss = self.loss(y_hat, target)
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
     def predict(self, batch):
-        images, target, idx = batch
+        images, target, idx, segments = batch
 
         y_hat = self.model(images)
-        #todo find if name logits is right, sigmoid is normalization
+        # todo find if name logits is right, sigmoid is normalization
         logits = torch.sigmoid(y_hat)
         return logits, y_hat
-
 
     def evaluate(self, batch, stage=None):
         # for deepglobe:
         # x = batch["image"]
         # y = batch["mask"]
         # for tom:
-        images, target, idx = batch
+        images, target, idx, segments = batch
 
         logits, y_hat = self.predict(batch)
 
         loss = self.loss(y_hat, target)
-
 
         target = target.long()
         maf1 = self.f1_score_macro(logits, target)

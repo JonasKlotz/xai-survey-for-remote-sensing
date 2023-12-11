@@ -3,7 +3,6 @@ import unittest
 import numpy as np
 import torch
 
-from src.xai.xai_methods.gradcam_impl import GradCamImpl
 from src.xai.xai_methods.ig_impl import IntegratedGradientsImpl
 from src.xai.xai_methods.lime_impl import LimeImpl
 from src.xai.xai_methods.lrp_impl import LRPImpl
@@ -15,16 +14,29 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 
-def generate_pseudo_data(h: int, w: int, c: int, num_samples: int, ) -> torch.Tensor:
+def generate_pseudo_data(
+    h: int,
+    w: int,
+    c: int,
+    num_samples: int,
+) -> torch.Tensor:
     return torch.from_numpy(np.random.rand(num_samples, c, h, w)).float()
 
 
-def generate_pseudo_labels(num_samples: int, num_classes: int, num_dims: int = 1) -> torch.Tensor:
-    return torch.from_numpy(np.random.randint(0, num_classes, size=(num_samples, num_dims))).long()
+def generate_pseudo_labels(
+    num_samples: int, num_classes: int, num_dims: int = 1
+) -> torch.Tensor:
+    return torch.from_numpy(
+        np.random.randint(0, num_classes, size=(num_samples, num_dims))
+    ).long()
 
 
-def generate_pseudo_segmentation(h: int, w: int, num_classes: int, num_samples: int) -> torch.Tensor:
-    return torch.from_numpy(np.random.randint(0, num_classes, size=(num_samples, h, w))).long()
+def generate_pseudo_segmentation(
+    h: int, w: int, num_classes: int, num_samples: int
+) -> torch.Tensor:
+    return torch.from_numpy(
+        np.random.randint(0, num_classes, size=(num_samples, h, w))
+    ).long()
 
 
 def save_np_array(array: np.ndarray, path: str, name: str):
@@ -44,14 +56,12 @@ def load_tensor_from_np(path: str, name: str) -> torch.Tensor:
 
 
 class MockModel(torch.nn.Module):
-
     def __init__(self, num_classes: int):
         super(MockModel, self).__init__()
         self.layers = torch.nn.Sequential(
             torch.nn.Linear(100, 200),
             torch.nn.ReLU(),
             torch.nn.Linear(200, num_classes),
-
         )
         # self.softmax = torch.nn.Softmax(dim=1)
 
@@ -62,7 +72,6 @@ class MockModel(torch.nn.Module):
 
 
 class TestExplanationMethods(unittest.TestCase):
-
     def setUp(self):
         self.num_classes = 10
         self.num_samples = 2
@@ -78,10 +87,18 @@ class TestExplanationMethods(unittest.TestCase):
         self.LRP = LRPImpl(self.model)
         self.IG = IntegratedGradientsImpl(self.model)
 
-        self.image_tensor = generate_pseudo_data(h=self.h, w=self.w, c=self.c, num_samples=self.num_samples)
-        self.labels = generate_pseudo_labels(num_samples=self.num_samples, num_classes=self.num_classes)
-        self.segmentation = generate_pseudo_segmentation(h=self.h, w=self.w, num_classes=self.num_classes,
-                                                         num_samples=self.num_samples)
+        self.image_tensor = generate_pseudo_data(
+            h=self.h, w=self.w, c=self.c, num_samples=self.num_samples
+        )
+        self.labels = generate_pseudo_labels(
+            num_samples=self.num_samples, num_classes=self.num_classes
+        )
+        self.segmentation = generate_pseudo_segmentation(
+            h=self.h,
+            w=self.w,
+            num_classes=self.num_classes,
+            num_samples=self.num_samples,
+        )
 
     def test_slc_explanations(self):
         # for sample in range(self.num_samples):

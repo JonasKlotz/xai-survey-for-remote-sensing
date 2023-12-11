@@ -1,7 +1,3 @@
-import os
-
-import torch
-import torch.nn.functional as F
 import yaml
 from PIL import Image
 from torchvision import transforms
@@ -14,21 +10,21 @@ from utility.cluster_logging import logger
 
 
 def load_test_imagenet_image(idx_to_labels, image_tensor):
-
     transform = transforms.Compose(
         [transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor()]
     )
     transform_normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
-    inv_normalize = transforms.Normalize(
-        mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.255],
-        std=[1 / 0.229, 1 / 0.224, 1 / 0.255],
-    )
+    # inv_normalize = transforms.Normalize(
+    #     mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.255],
+    #     std=[1 / 0.229, 1 / 0.224, 1 / 0.255],
+    # )
     img = Image.open("/home/jonasklotz/Studys/MASTERS/XAI_PLAYGROUND/img/swan.jpeg")
     transformed_img = transform(img)
     image_tensor = transform_normalize(transformed_img)
     image_tensor = image_tensor.unsqueeze(0)
+    return image_tensor
 
 
 def generate_explanations(cfg: dict):
@@ -38,7 +34,12 @@ def generate_explanations(cfg: dict):
     test_loader = get_loader_for_datamodule(data_module)
 
     # load model
-    model = get_model(cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0], pretrained=True)
+    model = get_model(
+        cfg,
+        num_classes=data_module.num_classes,
+        input_channels=data_module.dims[0],
+        pretrained=True,
+    )
 
     batch = next(iter(test_loader))
 
@@ -49,7 +50,6 @@ def generate_explanations(cfg: dict):
 
     explanation_manager = ExplanationsManager(cfg, model)
     explanation_manager.explain_batch(images, preds)
-
 
 
 if __name__ == "__main__":

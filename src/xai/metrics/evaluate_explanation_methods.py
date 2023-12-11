@@ -13,9 +13,7 @@ from utility.cluster_logging import logger
 device_string = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def evaluate_explanation_methods(
-    cfg: dict, load_precomputed: bool = True
-):
+def evaluate_explanation_methods(cfg: dict, load_precomputed: bool = True):
     """
     Evaluate Explanation Methods
 
@@ -51,7 +49,9 @@ def evaluate_explanation_methods(
 
     data_module = load_data_module(cfg)
     # load model
-    model = get_model(cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0])
+    model = get_model(
+        cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0]
+    )
 
     model.eval()
 
@@ -73,7 +73,6 @@ def evaluate_explanation_methods(
     )
 
     logger.debug(all_results)
-
 
 
 def main():

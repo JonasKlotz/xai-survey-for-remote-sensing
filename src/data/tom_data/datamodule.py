@@ -6,14 +6,8 @@ from torch.utils.data import DataLoader
 
 # from data.utils import add_mixed_noise
 from src.data.tom_data.constants import ACTIVE_CLASSES
-from src.data.tom_data.constants import (
-    BAND_99TH_PERCENTILES,
-    EUROSAT_99TH_PERCENTILES
-)
-from src.data.tom_data.constants import (
-    BAND_NORM_STATS,
-    EUROSAT_NORM_STATS
-)
+from src.data.tom_data.constants import BAND_99TH_PERCENTILES, EUROSAT_99TH_PERCENTILES
+from src.data.tom_data.constants import BAND_NORM_STATS, EUROSAT_NORM_STATS
 from src.data.tom_data.dataset import (
     Ben19Dataset,
     DeepGlobeDataset,
@@ -22,14 +16,23 @@ from src.data.tom_data.dataset import (
 
 
 class DataModule(pl.LightningDataModule):
-
     def __init__(self, cfg, transform_tr, transform_te):
+        """DataModule for BigEarthNet, DeepGlobe, EuroSAT.
+
+        Parameters
+        ----------
+        cfg : dict
+        transform_tr : Transform
+        transform_te : Transform
+        """
         super().__init__()
         self.cfg = cfg
         self.transform_tr = transform_tr
         self.transform_te = transform_te
 
-    def get_dataset(self, lmdb_path, csv_path, labels_path, temporal_views_path, transform):
+    def get_dataset(
+        self, lmdb_path, csv_path, labels_path, temporal_views_path, transform
+    ):
         raise NotImplementedError
 
     def setup(self, stage=None):
@@ -38,37 +41,36 @@ class DataModule(pl.LightningDataModule):
         #     self.transform_val = self.transform_te
 
         self.trainset_tr = self.get_dataset(
-            lmdb_path=self.cfg['data']['lmdb_path'],
-            csv_path=self.cfg['data']['train_csv'],
-            labels_path=self.cfg['data']['labels_path'],
-            temporal_views_path=self.cfg['data'].get('temporal_views_path', None),
+            lmdb_path=self.cfg["data"]["lmdb_path"],
+            csv_path=self.cfg["data"]["train_csv"],
+            labels_path=self.cfg["data"]["labels_path"],
+            temporal_views_path=self.cfg["data"].get("temporal_views_path", None),
             transform=self.transform_tr,
         )
         self.valset = self.get_dataset(
-            lmdb_path=self.cfg['data']['lmdb_path'],
-            csv_path=self.cfg['data']['train_csv'],
-            labels_path=self.cfg['data']['labels_path'],
-            temporal_views_path=self.cfg['data'].get('temporal_views_path', None),
+            lmdb_path=self.cfg["data"]["lmdb_path"],
+            csv_path=self.cfg["data"]["train_csv"],
+            labels_path=self.cfg["data"]["labels_path"],
+            temporal_views_path=self.cfg["data"].get("temporal_views_path", None),
             transform=self.transform_te,
         )
         self.testset = self.get_dataset(
-            lmdb_path=self.cfg['data']['lmdb_path'],
-            csv_path=self.cfg['data']['train_csv'],
-            labels_path=self.cfg['data']['labels_path'],
-            temporal_views_path=self.cfg['data'].get('temporal_views_path', None),
+            lmdb_path=self.cfg["data"]["lmdb_path"],
+            csv_path=self.cfg["data"]["train_csv"],
+            labels_path=self.cfg["data"]["labels_path"],
+            temporal_views_path=self.cfg["data"].get("temporal_views_path", None),
             transform=self.transform_te,
         )
-
 
     def get_loader(self, dataset, drop_last):
         shuffle = True if dataset == self.trainset_tr else False
         dataloader = DataLoader(
             dataset,
-            batch_size=self.cfg['data']['batch_size'],
-            num_workers=self.cfg['data']['num_workers'],
+            batch_size=self.cfg["data"]["batch_size"],
+            num_workers=self.cfg["data"]["num_workers"],
             shuffle=shuffle,
-            pin_memory=self.cfg['data']['pin_memory'],
-            drop_last=drop_last
+            pin_memory=self.cfg["data"]["pin_memory"],
+            drop_last=drop_last,
         )
         return dataloader
 
@@ -76,50 +78,75 @@ class DataModule(pl.LightningDataModule):
         return self.get_loader(self.trainset_tr, drop_last)
 
     def val_dataloader(self, drop_last=False):
-        return self.get_loader(self.valset, drop_last) #list(map(lambda x: self.get_loader(x, drop_last), self.valset))
+        return self.get_loader(
+            self.valset, drop_last
+        )  # list(map(lambda x: self.get_loader(x, drop_last), self.valset))
 
     def test_dataloader(self, drop_last=False):
-        return self.get_loader(self.testset, drop_last)# list(map(lambda x: self.get_loader(x, drop_last), self.testset))
+        return self.get_loader(
+            self.testset, drop_last
+        )  # list(map(lambda x: self.get_loader(x, drop_last), self.testset))
 
 
 class BigEarthNetDataModule(DataModule):
-
     def __init__(self, cfg, transform_tr, transform_te):
         super().__init__(cfg, transform_tr, transform_te)
         self.cfg = cfg
         self.init_transforms()
         self.init_active_classes()
 
-    def get_dataset(self, lmdb_path, csv_path, labels_path, temporal_views_path, transform):
-        return Ben19Dataset(lmdb_path, csv_path, labels_path, temporal_views_path, transform, self.active_classes)
+    def get_dataset(
+        self, lmdb_path, csv_path, labels_path, temporal_views_path, transform
+    ):
+        return Ben19Dataset(
+            lmdb_path,
+            csv_path,
+            labels_path,
+            temporal_views_path,
+            transform,
+            self.active_classes,
+        )
 
     def init_transforms(self):
-        self.train_country = os.path.basename(self.cfg['data'].train_csv).split('_')[0].capitalize()
-        self.test_country = list(map(lambda x: os.path.basename(x).split('_')[0].capitalize(), self.cfg['data'].test_csv))
-        if self.cfg['data'].global_pctl:
-            print('Global Pre-Normalization.')
+        self.train_country = (
+            os.path.basename(self.cfg["data"].train_csv).split("_")[0].capitalize()
+        )
+        self.test_country = list(
+            map(
+                lambda x: os.path.basename(x).split("_")[0].capitalize(),
+                self.cfg["data"].test_csv,
+            )
+        )
+        if self.cfg["data"].global_pctl:
+            print("Global Pre-Normalization.")
             tr_percentiles = 10000
-        elif self.cfg['data'].all_percentiles and not self.cfg['data'].global_pctl:
-            print('All BEN Pre-Normalization.')
-            tr_percentiles = list(BAND_99TH_PERCENTILES['All'].values())
+        elif self.cfg["data"].all_percentiles and not self.cfg["data"].global_pctl:
+            print("All BEN Pre-Normalization.")
+            tr_percentiles = list(BAND_99TH_PERCENTILES["All"].values())
         else:
-            print('Country Pre-Normalization.')
+            print("Country Pre-Normalization.")
             tr_percentiles = list(BAND_99TH_PERCENTILES[self.train_country].values())
         # te_percentiles = list(map(lambda x: list(BAND_99TH_PERCENTILES[x].values()), self.train_country))
 
         # currently train and test normalized by train norms (!)
-        channel_global = 'Global' if self.cfg['data'].global_pctl else 'Channel'
-        if self.cfg['data'].all_percentiles:
-            print('All Percentiles', channel_global)
-            means = list(BAND_NORM_STATS[channel_global]['All']['mean'].values())
-            stds = list(BAND_NORM_STATS[channel_global]['All']['std'].values())
+        channel_global = "Global" if self.cfg["data"].global_pctl else "Channel"
+        if self.cfg["data"].all_percentiles:
+            print("All Percentiles", channel_global)
+            means = list(BAND_NORM_STATS[channel_global]["All"]["mean"].values())
+            stds = list(BAND_NORM_STATS[channel_global]["All"]["std"].values())
         else:
-            print('Country Percentiles', channel_global)
-            means = list(BAND_NORM_STATS[channel_global][self.train_country]['mean'].values())
-            stds = list(BAND_NORM_STATS[channel_global][self.train_country]['std'].values())
+            print("Country Percentiles", channel_global)
+            means = list(
+                BAND_NORM_STATS[channel_global][self.train_country]["mean"].values()
+            )
+            stds = list(
+                BAND_NORM_STATS[channel_global][self.train_country]["std"].values()
+            )
 
         # add data transforms to transform_tr
-        self.transform_tr.add_data_transforms(means, stds, tr_percentiles, sentinel2=True)
+        self.transform_tr.add_data_transforms(
+            means, stds, tr_percentiles, sentinel2=True
+        )
         self.transform_tr.setup_compose()
 
         transform_va_list = []
@@ -141,17 +168,18 @@ class BigEarthNetDataModule(DataModule):
 
     def init_active_classes(self):
         active_classes_tr = set(ACTIVE_CLASSES[self.train_country])
-        active_classes_te = list(map(lambda x: set(ACTIVE_CLASSES[x]), self.test_country))
+        active_classes_te = list(
+            map(lambda x: set(ACTIVE_CLASSES[x]), self.test_country)
+        )
         active_classes_te = set.intersection(*active_classes_te)
         self.active_classes = list(active_classes_tr.intersection(active_classes_te))
 
-        if self.cfg['data'].intersection_8country:
-            self.active_classes = ACTIVE_CLASSES['Intersection_8Country']
+        if self.cfg["data"].intersection_8country:
+            self.active_classes = ACTIVE_CLASSES["Intersection_8Country"]
         self.num_cls = len(self.active_classes)
 
 
 class DeepGlobeDataModule(DataModule):
-
     def __init__(self, cfg, transform_tr, transform_te):
         super().__init__(cfg, transform_tr, transform_te)
         self.num_classes = 6
@@ -160,8 +188,12 @@ class DeepGlobeDataModule(DataModule):
         self.num_cls = 6
         self.init_transforms()
 
-    def get_dataset(self, lmdb_path, csv_path, labels_path, temporal_views_path, transform):
-        return DeepGlobeDataset(lmdb_path, csv_path, labels_path, temporal_views_path, transform)
+    def get_dataset(
+        self, lmdb_path, csv_path, labels_path, temporal_views_path, transform
+    ):
+        return DeepGlobeDataset(
+            lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        )
 
     def init_transforms(self):
         """Currently hard-coded always only one test-dataloader."""
@@ -178,27 +210,30 @@ class DeepGlobeDataModule(DataModule):
 
 
 class EuroSATDataModule(DataModule):
-
     def __init__(self, cfg, transform_tr, transform_te):
         super().__init__(cfg, transform_tr, transform_te)
         self.cfg = cfg
         self.num_cls = 10
         self.init_transforms()
 
-    def get_dataset(self, lmdb_path, csv_path, labels_path, temporal_views_path, transform):
-        return EuroSATDataset(lmdb_path, csv_path, labels_path, temporal_views_path, transform)
+    def get_dataset(
+        self, lmdb_path, csv_path, labels_path, temporal_views_path, transform
+    ):
+        return EuroSATDataset(
+            lmdb_path, csv_path, labels_path, temporal_views_path, transform
+        )
 
     def init_transforms(self):
-        if self.cfg['data'].pretrain_norm:
-            percentiles = list(BAND_99TH_PERCENTILES['All'].values())
+        if self.cfg["data"].pretrain_norm:
+            percentiles = list(BAND_99TH_PERCENTILES["All"].values())
             # currently train and test normalized by train norms (!)
-            means = list(BAND_NORM_STATS['Channel']['All']['mean'].values())
-            stds = list(BAND_NORM_STATS['Channel']['All']['std'].values())
+            means = list(BAND_NORM_STATS["Channel"]["All"]["mean"].values())
+            stds = list(BAND_NORM_STATS["Channel"]["All"]["std"].values())
         else:
             percentiles = list(EUROSAT_99TH_PERCENTILES.values())
             # currently train and test normalized by train norms (!)
-            means = list(EUROSAT_NORM_STATS['mean'].values())
-            stds = list(EUROSAT_NORM_STATS['std'].values())
+            means = list(EUROSAT_NORM_STATS["mean"].values())
+            stds = list(EUROSAT_NORM_STATS["std"].values())
 
         # add data transforms to transform_tr
         self.transform_tr.add_data_transforms(means, stds, percentiles, sentinel2=True)
@@ -211,9 +246,9 @@ class EuroSATDataModule(DataModule):
 
 
 def get_datamodule(dataset):
-    if dataset == 'BigEarthNet':
+    if dataset == "BigEarthNet":
         return BigEarthNetDataModule
-    if dataset == 'DeepGlobe':
+    if dataset == "DeepGlobe":
         return DeepGlobeDataModule
-    if dataset == 'EuroSAT':
+    if dataset == "EuroSAT":
         return EuroSATDataModule

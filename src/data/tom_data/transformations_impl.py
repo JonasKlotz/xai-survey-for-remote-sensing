@@ -2,7 +2,6 @@ from torchvision import transforms
 
 
 class TransformationsImpl:
-
     def __init__(self, transformations_config: dict, transformations: list):
         self.transformations_config = transformations_config
         self.transformations_list = transformations

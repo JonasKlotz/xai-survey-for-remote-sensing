@@ -20,10 +20,11 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/patches.lmdb"
+  images_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/patches.lmdb"
   labels_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/labels.parquet"
   train_csv: "/media/storagecube/jonasklotz/deepGlobe/splits/deepglobe_version1_train.csv"
   test_csv: "/media/storagecube/jonasklotz/deepGlobe/splits/deepglobe_version1_test.csv"
+  segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
   batch_size: 64
   num_workers: 10
   pin_memory: True
