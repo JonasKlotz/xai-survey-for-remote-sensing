@@ -28,7 +28,7 @@ def load_test_imagenet_image(idx_to_labels, image_tensor):
 
 
 def generate_explanations(cfg: dict):
-    logger.debug("In generate_explanations")
+    logger.debug("Generating explanations")
     # load datamodule
     data_module = load_data_module(cfg)
     test_loader = get_loader_for_datamodule(data_module)
@@ -43,15 +43,8 @@ def generate_explanations(cfg: dict):
 
     batch = next(iter(test_loader))
 
-    logits, _ = model.predict(batch)
-    threshold = 0.5
-    preds = (logits > threshold).long()
-
-    images, target, idx, segments = batch
-
-    # todo: move prediction into explanation manager
     explanation_manager = ExplanationsManager(cfg, model)
-    explanation_manager.explain_batch(images, preds, segments)
+    explanation_manager.explain_batch(batch)
 
 
 if __name__ == "__main__":

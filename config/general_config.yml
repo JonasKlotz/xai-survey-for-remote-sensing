@@ -1,6 +1,6 @@
 ---
 # Description: General configuration file for the project
-training: True
+training: False
 explanations: True
 evaluations: False
 visualize: False
@@ -13,7 +13,7 @@ dataset_name: 'deepglobe'
 # Explanation parameters
 explanation_methods:
 #  - 'lime'
-  - 'lrp'
+#  - 'lrp'
   - 'integrated_gradients'
   - 'gradcam'
   - 'deeplift'
@@ -25,18 +25,19 @@ data:
   train_csv: "/media/storagecube/jonasklotz/deepGlobe/splits/deepglobe_version1_train.csv"
   test_csv: "/media/storagecube/jonasklotz/deepGlobe/splits/deepglobe_version1_test.csv"
   segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
-  batch_size: 64
+  batch_size: 32
   num_workers: 10
   pin_memory: True
 
 # Training parameters
-max_epochs: 50
+max_epochs: 10
 batch_size: 64
 learning_rate: 0.001
 momentum: 0.9
 weight_decay: 0.0005
 optimizer: 'sgd'
 scheduler: 'step'
+threshold: 0.5
 
 
 

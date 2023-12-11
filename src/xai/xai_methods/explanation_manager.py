@@ -28,7 +28,11 @@ class ExplanationsManager:
         self.explanations = {}
         self.explanations_zarr_handler = {}
         self.model = model
+        self.model.eval()
+
         self.visualize = cfg["visualize"]
+        self.threshold: float = cfg["threshold"]
+        self.vis_path = f"{self.explanations_config['results_path']}/visualizations_{self.explanations_config['timestamp']}"
 
         self._init_explanations()
 
@@ -57,6 +61,11 @@ class ExplanationsManager:
             name="s_batch",
             folder_name=folder_name,
         )
+        self.index_handler = ZarrHandler(
+            results_dir=self.explanations_config["results_path"],
+            name="index",
+            folder_name=folder_name,
+        )
 
     def _init_explanation(self, explanation_name: str, folder_name: str):
         self.explanations[explanation_name] = _explanation_methods[explanation_name](
@@ -70,37 +79,51 @@ class ExplanationsManager:
 
     def explain_batch(
         self,
-        image_batch: torch.Tensor,
-        target_batch: torch.Tensor,
-        s_batch: torch.Tensor = None,
+        batch: torch.Tensor,
     ):
         """
         Explain a batch of images.
         Parameters
         ----------
-        image_batch
-        target_batch
-        s_batch : torch.Tensor
-            The segmentation batch.
+        batch: torch.Tensor
+            The batch to explain.
 
         Returns
         -------
 
         """
-        # Save regular batch content to zarr
-        self.x_batch_handler.append(image_batch)
-        self.y_batch_handler.append(target_batch)
-        if s_batch is not None:
-            self.s_batch_handler.append(s_batch)
+        logits, _ = self.model.predict(batch)
+        prediction_batch = (logits > self.threshold).long()
+
+        image_batch, target_batch, idx, segments_batch = batch
+
+        self._append_to_handlers(idx, image_batch, segments_batch, target_batch)
 
         # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():
-            logger.info(f"Explain batch for {explanation_name}")
-            batch_attrs = explanation.explain_batch(image_batch, target_batch)
+            logger.info(f"Explain batch {idx} for {explanation_name}")
+            batch_attrs = explanation.explain_batch(image_batch, prediction_batch)
             if self.visualize:
-                explanation.visualize(batch_attrs[0], image_batch[0])
+                self._visualize(
+                    batch_attrs, explanation, explanation_name, idx, image_batch
+                )
             # save it to zarr
             self.explanations_zarr_handler[explanation_name].append(batch_attrs)
+
+    def _visualize(self, batch_attrs, explanation, explanation_name, idx, image_batch):
+        # todo this is only for mlc and only prints the first attr map regarding whether its all 0
+        fig = explanation.visualize(batch_attrs[0][0], image_batch[0])
+        save_path = f"{self.vis_path}/{idx}_{explanation_name}.png"
+        logger.info(f"Saving visualization to {save_path}")
+        fig.savefig(save_path)
+
+    def _append_to_handlers(self, idx, image_batch, segments_batch, target_batch):
+        # Save regular batch content to zarr
+        self.x_batch_handler.append(image_batch)
+        self.y_batch_handler.append(target_batch)
+        self.index_handler.append(idx)
+        if segments_batch is not None:
+            self.s_batch_handler.append(segments_batch)
 
 
 def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
