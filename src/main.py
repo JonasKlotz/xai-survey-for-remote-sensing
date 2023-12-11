@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 
 import pytorch_lightning as pl
 import torch.multiprocessing
@@ -44,12 +45,15 @@ def add_important_paths_to_cfg(configs: dict, project_root: str):
     models_path = os.path.join(project_root, "models")
     log_path = os.path.join(project_root, "logs")
     results_path = os.path.join(project_root, "results")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     for cfg in configs.values():
         cfg["data_path"] = data_path
         cfg["models_path"] = models_path
         cfg["log_path"] = log_path
         cfg["results_path"] = results_path
+
+        cfg["timestamp"] = timestamp
 
     return configs
 

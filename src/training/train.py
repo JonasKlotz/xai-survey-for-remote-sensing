@@ -42,7 +42,8 @@ def train(
 
 
 def save_model(cfg: dict, model: torch.nn.Module):
-    model_name = f"{cfg['model_name']}{cfg['layer_number']}_{cfg['dataset_name']}.pt"
+    # get timestamp
+    model_name = f"{cfg['model_name']}{cfg['layer_number']}_{cfg['dataset_name']}_epochs{cfg['max_epochs']}_{cfg['timestamp']}.pt"
     model_path = os.path.join(cfg["models_path"], model_name)
     torch.save(model.state_dict(), model_path)
     logger.debug(f"Saved model to {model_path}")

@@ -1,7 +1,7 @@
 ---
 # Description: General configuration file for the project
 training: True
-explanations: False
+explanations: True
 evaluations: False
 visualize: False
 

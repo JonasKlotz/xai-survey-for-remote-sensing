@@ -12,7 +12,6 @@ from src.data.tom_data.constants import (
     DEEPGLOBE_NAME2IDX,
     EUROSAT_NAME2IDX,
 )
-from utility.cluster_logging import logger
 
 
 class BaseDataset(Dataset):
@@ -86,13 +85,6 @@ class BaseDataset(Dataset):
         label = self.labels[idx]
         patch = self.transform(patch) if self.transform is not None else patch
 
-        logger.debug(f"Patch shape: {patch.shape}")
-        logger.debug(f"Label shape: {label.shape}")
-        logger.debug(
-            f"Segmentation shape: {segmentation_patch.shape if segmentation_patch is not None else None}"
-        )
-        logger.debug(f"Iteration: {idx}")
-
         return patch, label, idx, segmentation_patch
 
     def _extract_path_from_lmdb(self, idx, env, lmdb_path):
@@ -131,7 +123,12 @@ class Ben19Dataset(BaseDataset):
         segmentations_lmdb_path=None,
     ):
         super().__init__(
-            images_lmdb_path, csv_path, labels_path, temporal_views_path, transform
+            images_lmdb_path,
+            csv_path,
+            labels_path,
+            temporal_views_path,
+            transform,
+            segmentations_lmdb_path,
         )
         """
         Parameter
@@ -228,7 +225,12 @@ class DeepGlobeDataset(BaseDataset):
         segmentations_lmdb_path=None,
     ):
         super().__init__(
-            images_lmdb_path, csv_path, labels_path, temporal_views_path, transform
+            images_lmdb_path,
+            csv_path,
+            labels_path,
+            temporal_views_path,
+            transform,
+            segmentations_lmdb_path,
         )
 
     def convert_to_multihot(self, labels):
@@ -249,7 +251,12 @@ class EuroSATDataset(BaseDataset):
         segmentations_lmdb_path=None,
     ):
         super().__init__(
-            images_lmdb_path, csv_path, labels_path, temporal_views_path, transform
+            images_lmdb_path,
+            csv_path,
+            labels_path,
+            temporal_views_path,
+            transform,
+            segmentations_lmdb_path,
         )
         self.band_ordering = [
             "B01",

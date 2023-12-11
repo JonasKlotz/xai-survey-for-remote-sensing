@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import numpy as np
 import torch
 
@@ -25,7 +23,6 @@ class ExplanationsManager:
         self,
         cfg: dict,
         model: torch.nn.Module,
-        datetime_appendix: bool = True,
     ):
         self.explanations_config = cfg
         self.explanations = {}
@@ -33,44 +30,70 @@ class ExplanationsManager:
         self.model = model
         self.visualize = cfg["visualize"]
 
-        if datetime_appendix:
-            self.datetime_appendix = datetime.now().strftime("%Y%m%d-%H%M%S")
-
         self._init_explanations()
 
     def _init_explanations(self):
-        for explanation_name in self.explanations_config["explanation_methods"]:
-            self._init_explanation(explanation_name)
+        """
+        Initialize the explanation methods.
+        """
 
-    def _init_explanation(self, explanation_name: str):
+        folder_name = f"batches_{self.explanations_config['timestamp']}"
+
+        for explanation_name in self.explanations_config["explanation_methods"]:
+            self._init_explanation(explanation_name, folder_name)
+
+        self.x_batch_handler = ZarrHandler(
+            results_dir=self.explanations_config["results_path"],
+            name="x_batch",
+            folder_name=folder_name,
+        )
+        self.y_batch_handler = ZarrHandler(
+            results_dir=self.explanations_config["results_path"],
+            name="y_batch",
+            folder_name=folder_name,
+        )
+        self.s_batch_handler = ZarrHandler(
+            results_dir=self.explanations_config["results_path"],
+            name="s_batch",
+            folder_name=folder_name,
+        )
+
+    def _init_explanation(self, explanation_name: str, folder_name: str):
         self.explanations[explanation_name] = _explanation_methods[explanation_name](
             model=self.model
         )
         self.explanations_zarr_handler[explanation_name] = ZarrHandler(
             results_dir=self.explanations_config["results_path"],
             name=f"a_batch_{explanation_name}",
-            folder_name=f"batches_{self.datetime_appendix}",
-        )
-        self.x_batch_handler = ZarrHandler(
-            results_dir=self.explanations_config["results_path"],
-            name="x_batch",
-            folder_name=f"batches_{self.datetime_appendix}",
-        )
-        self.y_batch_handler = ZarrHandler(
-            results_dir=self.explanations_config["results_path"],
-            name="y_batch",
-            folder_name=f"batches_{self.datetime_appendix}",
+            folder_name=folder_name,
         )
 
-    def explain_batch(self, image_batch: torch.Tensor, target_batch: torch.Tensor):
-        """Explain a batch of images and save it to zarr
-
-        :param image_batch: batch of images
-        :param target_batch: batch of targets
-        :return: None
+    def explain_batch(
+        self,
+        image_batch: torch.Tensor,
+        target_batch: torch.Tensor,
+        s_batch: torch.Tensor = None,
+    ):
         """
+        Explain a batch of images.
+        Parameters
+        ----------
+        image_batch
+        target_batch
+        s_batch : torch.Tensor
+            The segmentation batch.
+
+        Returns
+        -------
+
+        """
+        # Save regular batch content to zarr
         self.x_batch_handler.append(image_batch)
         self.y_batch_handler.append(target_batch)
+        if s_batch is not None:
+            self.s_batch_handler.append(s_batch)
+
+        # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():
             logger.info(f"Explain batch for {explanation_name}")
             batch_attrs = explanation.explain_batch(image_batch, target_batch)

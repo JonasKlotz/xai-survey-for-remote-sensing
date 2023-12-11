@@ -46,10 +46,12 @@ def generate_explanations(cfg: dict):
     logits, _ = model.predict(batch)
     threshold = 0.5
     preds = (logits > threshold).long()
-    images, _, _ = batch
 
+    images, target, idx, segments = batch
+
+    # todo: move prediction into explanation manager
     explanation_manager = ExplanationsManager(cfg, model)
-    explanation_manager.explain_batch(images, preds)
+    explanation_manager.explain_batch(images, preds, segments)
 
 
 if __name__ == "__main__":
