@@ -66,6 +66,7 @@ class Explanation:
             attrs = attrs.squeeze(0)
         if len(image_tensor.shape) == 4:
             image_tensor = image_tensor.squeeze(0)
+
         heatmap = np.transpose(attrs.cpu().detach().numpy(), (1, 2, 0))
         image = np.transpose(image_tensor.cpu().detach().numpy(), (1, 2, 0))
 
@@ -103,8 +104,8 @@ class Explanation:
         all_attrs = torch.zeros((batchsize, self.num_classes, 1, height, width))
         for batch_index in range(batchsize):
             image_tensor = tensor_batch[batch_index : batch_index + 1]
-            print(f"image_tensor shape: {image_tensor.shape}")
-            print(f"target_batch shape: {target_batch.shape}")
+            # print(f"image_tensor shape: {image_tensor.shape}")
+            # print(f"target_batch shape: {target_batch.shape}")
             for label_index in range(len(target_batch[batch_index])):
                 target = target_batch[batch_index][label_index]
                 # print(f"target: {target}")
@@ -139,6 +140,32 @@ class Explanation:
 
     def _assert_shapes(self):
         pass
+
+    def visualize_numpy(self, attrs: np.ndarray, image_array: np.ndarray):
+        if len(attrs.shape) == 4:
+            attrs = attrs.squeeze(0)
+        if len(image_array.shape) == 4:
+            image_array = image_array.squeeze(0)
+
+        heatmap = np.transpose(attrs, (1, 2, 0))
+        image = np.transpose(image_array, (1, 2, 0))
+
+        # min max normalization
+        # heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
+        image = (image - image.min()) / (image.max() - image.min())
+
+        _ = viz.visualize_image_attr_multiple(
+            attr=heatmap,
+            original_image=image,
+            methods=["original_image", "heat_map"],
+            signs=["all", "positive"],
+            titles=[
+                f"Original Image for {self.attribution_name} on {self.model.__class__.__name__}",
+                f"Heat Map for {self.attribution_name} on {self.model.__class__.__name__}",
+            ],
+            show_colorbar=True,
+            outlier_perc=2,
+        )
 
 
 """ refactored

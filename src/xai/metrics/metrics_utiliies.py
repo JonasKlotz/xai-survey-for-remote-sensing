@@ -1,6 +1,7 @@
 from typing import Union
 
 import numpy as np
+import plotly.express as px
 
 
 def aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
@@ -26,3 +27,22 @@ def aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
     else:
         raise ValueError(f"Input type {type(input_)} not supported.")
     return aggregated
+
+
+def get_colors(n_colors: int) -> list:
+    """Returns a list of colors.
+
+    Parameters
+    ----------
+    n_colors: int
+        The number of colors to return.
+
+    Returns
+    -------
+    colors: list
+        The list of colors.
+    """
+    return px.colors.sample_colorscale(
+        "turbo",
+        [n / (n_colors - 1) for n in range(n_colors)],
+    )

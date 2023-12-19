@@ -25,7 +25,7 @@ def get_lightning_resnet(
         input_channels=input_channels,
         resnet_layers=cfg["layer_number"],
         lr=cfg["learning_rate"],
-        batch_size=cfg["batch_size"],
+        batch_size=cfg["data"]["batch_size"],
     )
     if pretrained:
         model.load_state_dict(load_most_recent_model(cfg))
