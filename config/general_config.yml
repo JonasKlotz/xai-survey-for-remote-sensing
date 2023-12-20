@@ -1,8 +1,8 @@
 ---
 # Description: General configuration file for the project
 training: False
-explanations: False
-evaluations: True
+explanations: True
+evaluations: False
 visualize: False
 
 # General parameters
@@ -14,11 +14,11 @@ input_channels: 3
 
 # Explanation parameters
 explanation_methods:
-#  - 'lime'
-#  - 'lrp'
-  - 'integrated_gradients'
-  - 'gradcam'
-  - 'deeplift'
+  - 'lime'
+  - 'lrp'
+  #- 'integrated_gradients'
+  #- 'gradcam'
+  #- 'deeplift'
 
 # Dataset parameters
 data:
