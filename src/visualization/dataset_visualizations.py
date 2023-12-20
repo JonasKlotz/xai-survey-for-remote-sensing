@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 import torch
 
-from data.tom_data.constants import DEEPGLOBE_IDX2NAME
+from data.constants import DEEPGLOBE_IDX2NAME
 from data.zarr_handler import load_most_recent_batches
 from utility.cluster_logging import logger
 from xai.metrics.metrics_utiliies import get_colors

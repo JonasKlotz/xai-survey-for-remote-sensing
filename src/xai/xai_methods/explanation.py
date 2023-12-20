@@ -104,11 +104,8 @@ class Explanation:
         all_attrs = torch.zeros((batchsize, self.num_classes, 1, height, width))
         for batch_index in range(batchsize):
             image_tensor = tensor_batch[batch_index : batch_index + 1]
-            # print(f"image_tensor shape: {image_tensor.shape}")
-            # print(f"target_batch shape: {target_batch.shape}")
             for label_index in range(len(target_batch[batch_index])):
                 target = target_batch[batch_index][label_index]
-                # print(f"target: {target}")
                 # we only want to explain the labels that are present in the image
                 if target == 0:
                     continue
@@ -116,7 +113,6 @@ class Explanation:
                 attrs = self.explain(
                     image_tensor, torch.tensor(label_index).unsqueeze(0)
                 )
-                print(f"attrs shape: {attrs.shape}")
                 # if attrs is 3 channel sum over channels
                 # todo: be careful with this, channels might differ use asserts
                 if len(attrs.shape) == 4 and attrs.shape[1] == 3:

@@ -3,17 +3,26 @@ import os
 from abc import abstractmethod
 
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader
+import torch
+from pytorch_lightning import LightningDataModule
+from torch.utils.data import DataLoader, random_split
+from torchvision import transforms
+from torchvision.datasets import MNIST
+
 
 # from data.utils import add_mixed_noise
-from src.data.tom_data.constants import ACTIVE_CLASSES
-from src.data.tom_data.constants import BAND_99TH_PERCENTILES, EUROSAT_99TH_PERCENTILES
-from src.data.tom_data.constants import BAND_NORM_STATS, EUROSAT_NORM_STATS
-from src.data.tom_data.dataset import (
+from src.data.constants import ACTIVE_CLASSES
+from src.data.constants import BAND_99TH_PERCENTILES, EUROSAT_99TH_PERCENTILES
+from src.data.constants import BAND_NORM_STATS, EUROSAT_NORM_STATS
+from src.data.dataset import (
     Ben19Dataset,
     DeepGlobeDataset,
     EuroSATDataset,
 )
+
+DATA_PATH = os.path.join(os.getcwd(), "..", "..", "data")
+BATCH_SIZE = 256 if torch.cuda.is_available() else 64
+NUM_WORKERS = 4 if torch.cuda.is_available() else 0
 
 
 class DataModule(pl.LightningDataModule):
@@ -44,10 +53,6 @@ class DataModule(pl.LightningDataModule):
         raise NotImplementedError
 
     def setup(self, stage=None):
-        # if self.cfg['data'].eval_on_test:
-        #     self.cfg['data'].val_csv = self.cfg['data'].test_csv
-        #     self.transform_val = self.transform_te
-
         self.trainset_tr = self.get_dataset(
             lmdb_path=self.cfg["data"]["images_lmdb_path"],
             csv_path=self.cfg["data"]["train_csv"],
@@ -60,7 +65,7 @@ class DataModule(pl.LightningDataModule):
         )
         self.valset = self.get_dataset(
             lmdb_path=self.cfg["data"]["images_lmdb_path"],
-            csv_path=self.cfg["data"]["train_csv"],
+            csv_path=self.cfg["data"]["val_csv"],
             labels_path=self.cfg["data"]["labels_path"],
             temporal_views_path=self.cfg["data"].get("temporal_views_path", None),
             transform=self.transform_te,
@@ -70,7 +75,7 @@ class DataModule(pl.LightningDataModule):
         )
         self.testset = self.get_dataset(
             lmdb_path=self.cfg["data"]["images_lmdb_path"],
-            csv_path=self.cfg["data"]["train_csv"],
+            csv_path=self.cfg["data"]["test_csv"],
             labels_path=self.cfg["data"]["labels_path"],
             temporal_views_path=self.cfg["data"].get("temporal_views_path", None),
             transform=self.transform_te,
@@ -209,7 +214,7 @@ class DeepGlobeDataModule(DataModule):
         self.dims = (3, 256, 256)
         self.cfg = cfg
         self.num_cls = 6
-        self.init_transforms()
+        # self.init_transforms()
 
     def get_dataset(
         self,
@@ -288,6 +293,58 @@ class EuroSATDataModule(DataModule):
         self.transform_te.add_data_transforms(means, stds, percentiles, sentinel2=True)
         self.transform_te.setup_compose()
         self.transform_te = [self.transform_te]
+
+
+class MNISTDataModule(LightningDataModule):
+    def __init__(
+        self, data_dir: str = DATA_PATH, num_workers=NUM_WORKERS, batch_size=BATCH_SIZE
+    ):
+        super().__init__()
+        self.data_dir = data_dir
+        self.transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,)),
+            ]
+        )
+
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+        self.dims = (1, 28, 28)
+        self.num_classes = 10
+
+    def prepare_data(self):
+        # download
+        MNIST(self.data_dir, train=True, download=True)
+        MNIST(self.data_dir, train=False, download=True)
+
+    def setup(self, stage=None):
+        # Assign train/val datasets for use in dataloaders
+        if stage == "fit" or stage is None:
+            mnist_full = MNIST(self.data_dir, train=True, transform=self.transform)
+            self.mnist_train, self.mnist_val = random_split(mnist_full, [55000, 5000])
+
+        # Assign test dataset for use in dataloader(s)
+        if stage == "test" or stage is None:
+            self.mnist_test = MNIST(
+                self.data_dir, train=False, transform=self.transform
+            )
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.mnist_train, batch_size=self.batch_size, num_workers=self.num_workers
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            self.mnist_val, batch_size=self.batch_size, num_workers=self.num_workers
+        )
+
+    def test_dataloader(self):
+        return DataLoader(
+            self.mnist_test, batch_size=self.batch_size, num_workers=self.num_workers
+        )
 
 
 def get_datamodule(dataset):

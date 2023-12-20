@@ -1,0 +1,42 @@
+---
+# Description: General configuration file for the project
+visualize: False
+
+# General parameters
+model_name: 'resnet'
+layer_number: 18
+dataset_name: 'bigearthnet'
+num_classes: 6
+input_channels: 3
+
+# Explanation parameters
+explanation_methods:
+  - 'lime'
+  # 'lrp'
+  - 'integrated_gradients'
+  - 'gradcam'
+  - 'deeplift'
+
+# Dataset parameters
+data:
+  lmdb_path: /storagecube/tomburgert/datasets/BEN19/Fresh_S2_lmdb.db
+  labels_path: /storagecube/tomburgert/datasets/BEN19/ben-s2-metadata_labelvectors.parquet
+  train_csv: /storagecube/tomburgert/datasets/BEN19/splits/all_train.csv
+  test_csv: /storagecube/tomburgert/datasets/BEN19/splits/all_test.csv
+  batch_size: 32
+  num_workers: 10
+  pin_memory: True
+
+# Training parameters
+max_epochs: 10
+learning_rate: 0.001
+momentum: 0.9
+weight_decay: 0.0005
+optimizer: 'sgd'
+scheduler: 'step'
+threshold: 0.5
+
+
+
+
+

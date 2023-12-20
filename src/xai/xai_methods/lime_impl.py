@@ -16,9 +16,11 @@ class LimeImpl(Explanation):
         super().__init__(model)
 
         self.similarity_func = get_exp_kernel_similarity_function(
-            "euclidean", kernel_width=10
+            "euclidean", kernel_width=500
         )
-        self.interpretable_model = SkLearnLinearRegression()
+        self.interpretable_model = (
+            SkLearnLinearRegression()
+        )  # SkLearnLasso(alpha=0.0)  # SkLearnLinearRegression()
 
         self.attributor = Lime(
             model,
@@ -29,12 +31,26 @@ class LimeImpl(Explanation):
     def explain(
         self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
     ):
-        segments = slic_from_tensor(
-            image_tensor, plot=False, save_path=None, title="", n_segments=50, sigma=5
-        )
+        """Explain a single image
+
+        Parameters
+        ----------
+        image_tensor: torch.Tensor
+            The image to explain as tensor of shape (1, channels, height, width)
+        target: Union[int, torch.Tensor]
+            The target to explain
+
+        Returns
+        -------
+        attrs: torch.Tensor
+            The attributions of the explanation method.
+
+        """
+
+        segments = slic_from_tensor(image_tensor, plot=False, n_segments=15, sigma=5)
 
         attrs = self.attributor.attribute(
-            image_tensor, target=target, feature_mask=segments
+            image_tensor, target=target, feature_mask=segments.unsqueeze(0)
         )
         return attrs
 

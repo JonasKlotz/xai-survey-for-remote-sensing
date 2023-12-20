@@ -1,8 +1,5 @@
 ---
 # Description: General configuration file for the project
-training: False
-explanations: True
-evaluations: False
 visualize: False
 
 # General parameters
@@ -14,7 +11,7 @@ input_channels: 3
 
 # Explanation parameters
 explanation_methods:
-  - 'lime'
+  #- 'lime'
   - 'lrp'
   #- 'integrated_gradients'
   #- 'gradcam'
@@ -24,9 +21,15 @@ explanation_methods:
 data:
   images_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/patches.lmdb"
   labels_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/labels.parquet"
-  train_csv: "/media/storagecube/jonasklotz/deepGlobe/splits/deepglobe_version1_train.csv"
-  test_csv: "/media/storagecube/jonasklotz/deepGlobe/splits/deepglobe_version1_test.csv"
+  train_csv: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/splits/deepglobe_version1_train.csv"
+  val_csv: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/splits/deepglobe_version1_val.csv"
+  test_csv: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/splits/deepglobe_version1_test.csv"
   segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
+#  images_lmdb_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/patches.lmdb"
+#  segmentations_lmdb_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
+#  labels_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/labels.parquet"
+#  train_csv: "/media/storagecube/data/datasets/deepGlobe/splits/deepglobe_version1_train.csv"
+#  test_csv: "/media/storagecube/data/datasets/deepGlobe/splits/deepglobe_version1_test.csv"
   batch_size: 32
   num_workers: 10
   pin_memory: True

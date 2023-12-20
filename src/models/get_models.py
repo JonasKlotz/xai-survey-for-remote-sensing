@@ -77,6 +77,7 @@ def load_most_recent_model(cfg: dict):
 
     # Load the most recent model
     most_recent_model_file = model_files[0]
-    model = torch.load(most_recent_model_file)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = torch.load(most_recent_model_file, map_location=torch.device(device))
 
     return model

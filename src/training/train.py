@@ -4,7 +4,7 @@ import torch
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
-from data.get_data_modules import load_data_module
+from data.data_utils import load_data_module
 from models.get_models import get_model
 
 from utility.cluster_logging import logger

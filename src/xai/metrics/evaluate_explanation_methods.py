@@ -1,7 +1,7 @@
 import torch
 import yaml
 
-from data.tom_data.constants import DEEPGLOBE_IDX2NAME
+from data.constants import DEEPGLOBE_IDX2NAME
 from data.zarr_handler import load_most_recent_batches
 from models.get_models import get_model
 from utility.cluster_logging import logger
@@ -23,6 +23,12 @@ def evaluate_explanation_methods(cfg: dict, load_precomputed: bool = True):
 
     logger.debug("Loading batches as zarr")
     all_zarrs = load_most_recent_batches(results_dir=cfg["results_path"])
+    for key, value in all_zarrs.items():
+        all_zarrs[key] = value[:]  # convert to numpy
+
+        # convert y and sbatch to int
+        if key in ["y_batch", "s_batch"]:
+            all_zarrs[key] = all_zarrs[key].astype(int)
 
     x_batch = all_zarrs["x_batch"]
     y_batch = all_zarrs["y_batch"]
@@ -32,19 +38,6 @@ def evaluate_explanation_methods(cfg: dict, load_precomputed: bool = True):
     a_batch_gradcam = all_zarrs["a_batch_gradcam"]
     a_batch_deeplift = all_zarrs["a_batch_deeplift"]
     a_batch_integrated_gradients = all_zarrs["a_batch_integrated_gradients"]
-
-    # convert zarr to numpy
-    x_batch = x_batch[:]
-    y_batch = y_batch[:]
-    s_batch = s_batch[:]
-
-    a_batch_gradcam = a_batch_gradcam[:]
-    a_batch_deeplift = a_batch_deeplift[:]
-    a_batch_integrated_gradients = a_batch_integrated_gradients[:]
-
-    # convert to int
-    y_batch = y_batch.astype(int)
-    s_batch = s_batch.astype(int)
 
     batch_size = cfg["data"]["batch_size"]
     num_classes = cfg["num_classes"]

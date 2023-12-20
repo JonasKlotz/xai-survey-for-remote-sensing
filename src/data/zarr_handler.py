@@ -46,6 +46,20 @@ class ZarrHandler:
 
 
 def load_most_recent_batches(results_dir: str):
+    """
+    Load the most recent batches of data stored in .zarr files from a specified directory.
+
+    This function lists all folders in the specified directory, filters for folders starting with "batches_",
+    and sorts them to get the most recent folder. If the directory is empty, it gets the next folder.
+    It then lists all files in the last folder, filters for files ending with .zarr, and loads the zarr files.
+    It also removes the .zarr ending from file names and creates a dictionary with zarr files and the corresponding explanation name.
+
+    Args:
+        results_dir (str): The directory from which to load the most recent batches.
+
+    Returns:
+        dict: A dictionary where the keys are the names of the explanations and the values are the loaded zarr files.
+    """
     # get all folders in results_dir
     folders = os.listdir(results_dir)
     # filter for folders starting with a_batch
@@ -54,6 +68,12 @@ def load_most_recent_batches(results_dir: str):
     folders.sort(key=lambda x: "{0:0>8}".format(x).lower())
     # get the last folder
     last_folder = folders[-1]
+    # while directory is empty, get the next folder
+    while not os.listdir(os.path.join(results_dir, last_folder)):
+        folders.pop()
+        # remove the last folder
+        os.rmdir(os.path.join(results_dir, last_folder))
+        last_folder = folders[-1]
     # get all files in the last folder
     files = os.listdir(os.path.join(results_dir, last_folder))
     # filter for files ending with .zarr

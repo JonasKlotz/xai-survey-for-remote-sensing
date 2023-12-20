@@ -1,4 +1,3 @@
-import os.path
 import pickle
 
 import lmdb
@@ -7,7 +6,7 @@ import pandas as pd
 from skimage.transform import resize
 from torch.utils.data import Dataset
 
-from src.data.tom_data.constants import (
+from src.data.constants import (
     BEN19_NAME2IDX,
     DEEPGLOBE_NAME2IDX,
     EUROSAT_NAME2IDX,
@@ -45,9 +44,9 @@ class BaseDataset(Dataset):
 
     def read_csv(self, csv_path):
         # if file exists, read it
-        if os.path.isfile(csv_path):
-            return pd.read_csv(csv_path, header=None).to_numpy()[:, 0]
-        raise FileNotFoundError(f"CSV file not found at {csv_path}.")
+        # if os.path.isfile(csv_path):
+        return pd.read_csv(csv_path, header=None).to_numpy()[:, 0]
+        # raise FileNotFoundError(f"CSV file not found at {csv_path}")
 
     def read_labels(self, meta_data_path, patch_names):
         df = pd.read_parquet(meta_data_path)
@@ -83,6 +82,8 @@ class BaseDataset(Dataset):
             )
 
         label = self.labels[idx]
+        # divide by 255 to get values between 0 and 1
+        patch = patch / 255
         patch = self.transform(patch) if self.transform is not None else patch
 
         return patch, label, idx, segmentation_patch

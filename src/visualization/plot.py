@@ -130,10 +130,3 @@ def plot_distribution_from_datamodule(
 
     data_module.setup(loader.value)
     plot_distribution_from_dataloader(data_module.train_dataloader(), **kwargs)
-
-
-if __name__ == "__main__":
-    from data.data_modules import get_EuroSAT_data_module
-
-    datamodule = get_EuroSAT_data_module()
-    plot_distribution_from_datamodule(datamodule)

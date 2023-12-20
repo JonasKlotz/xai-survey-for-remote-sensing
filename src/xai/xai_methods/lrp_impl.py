@@ -24,6 +24,7 @@ class LRPImpl(Explanation):
     def explain(
         self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
     ):
+        print("LRP")
         attrs = self.attributor.attribute(image_tensor, target=target)
         return attrs
 
