@@ -24,13 +24,11 @@ class LRPImpl(Explanation):
     def explain(
         self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None
     ):
-        print("LRP")
         attrs = self.attributor.attribute(image_tensor, target=target)
         return attrs
 
     def _rule_resnet(self, model):
         num_layers = len(model._modules.keys())
-        self._set_layers_rules(model)
 
         for i, layer in enumerate(model._modules.keys()):
             if i < num_layers / 3:

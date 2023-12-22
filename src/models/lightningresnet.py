@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from pytorch_lightning import LightningModule
-
 from torchmetrics import (
     AveragePrecision,
     Accuracy,
@@ -20,13 +19,11 @@ class LightningResnet(LightningModule):
         lr=0.001,
         batch_size=32,
         freeze=False,
-        loss=nn.BCEWithLogitsLoss(),
     ):
         super(LightningResnet, self).__init__()
         self.save_hyperparameters(ignore=["loss"])
 
         self.model = get_resnet(resnet_layers)
-        self.loss = loss
 
         # replace the first conv layer
         self.model.conv1 = nn.Conv2d(
@@ -38,19 +35,7 @@ class LightningResnet(LightningModule):
             bias=False,
         )
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
-
-        self.f1_score_macro = F1Score(
-            task="multilabel", average="macro", threshold=0.5, num_labels=num_classes
-        )
-        self.f1_score_micro = F1Score(
-            task="multilabel", average="micro", threshold=0.5, num_labels=num_classes
-        )
-        self.average_precision_macro = AveragePrecision(
-            task="multilabel", average="macro", num_labels=num_classes
-        )
-        self.accuracy = Accuracy(
-            task="multilabel", threshold=0.5, num_labels=num_classes
-        )
+        self.metrics_calculator = MetricsCalculator(num_classes)
 
     def forward(self, x):
         return self.model(x)
@@ -73,27 +58,19 @@ class LightningResnet(LightningModule):
         return logits, y_hat
 
     def evaluate(self, batch, stage=None):
-        # for deepglobe:
-        # x = batch["image"]
-        # y = batch["mask"]
-        # for tom:
         images, target, idx, segments = batch
 
         logits, y_hat = self.predict(batch)
 
-        loss = self.loss(y_hat, target)
+        # loss cannot be part of self as it would be interpreted as layer and need a ruling
+        loss = nn.BCEWithLogitsLoss()(y_hat, target)
 
         target = target.long()
-        maf1 = self.f1_score_macro(logits, target)
-        mif1 = self.f1_score_micro(logits, target)
-        maMAP = self.average_precision_macro(logits, target)
-        acc = self.accuracy(logits, target)
+        metrics = self.metrics_calculator.calculate_metrics(logits, target)
         if stage:
             self.log(f"{stage}_loss", loss, prog_bar=True)
-            self.log(f"{stage}_maf1", maf1, prog_bar=True)
-            self.log(f"{stage}_mif1", mif1, prog_bar=True)
-            self.log(f"{stage}_maMAP", maMAP, prog_bar=True)
-            self.log(f"{stage}_acc", acc, prog_bar=True)
+            for name, value in metrics.items():
+                self.log(f"{stage}_{name}", value, prog_bar=True)
 
     def validation_step(self, batch, batch_idx):
         self.evaluate(batch, "val")
@@ -111,3 +88,33 @@ class LightningResnet(LightningModule):
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1)
 
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
+
+
+class MetricsCalculator:
+    def __init__(self, num_classes):
+        self.metrics = {
+            "f1_score_macro": F1Score(
+                task="multilabel",
+                average="macro",
+                threshold=0.5,
+                num_labels=num_classes,
+            ),
+            "f1_score_micro": F1Score(
+                task="multilabel",
+                average="micro",
+                threshold=0.5,
+                num_labels=num_classes,
+            ),
+            "average_precision_macro": AveragePrecision(
+                task="multilabel", average="macro", num_labels=num_classes
+            ),
+            "accuracy": Accuracy(
+                task="multilabel", threshold=0.5, num_labels=num_classes
+            ),
+        }
+
+    def calculate_metrics(self, logits, target):
+        result = {}
+        for name, metric in self.metrics.items():
+            result[name] = metric(logits, target)
+        return result

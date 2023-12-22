@@ -25,10 +25,13 @@ torch.multiprocessing.set_sharing_strategy(
 )  # handle too many open files error
 
 
-def main(config_path, training=False, explanations=False, evaluations=False):
+def main(
+    config_path, training=False, explanations=False, evaluations=False, debug=False
+):
     logger.debug("In main")
     configs = parse_config(config_path, project_root)
     general_config = configs["general"]
+    general_config["debug"] = debug
 
     # plot_dataset_distribution_zarr(general_config)
     # plot_pixel_distribution_zarr(general_config)
@@ -39,7 +42,6 @@ def main(config_path, training=False, explanations=False, evaluations=False):
 
     if explanations:
         generate_explanations(general_config)
-        # for expl in general_config['explanations
 
     if evaluations:
         evaluate_explanation_methods(general_config)
@@ -55,9 +57,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--evaluations", action="store_true", help="Evaluate explanation methods"
     )
+
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="Enable debug logging"
+    )
+
     default_config_path = os.path.join(project_root, "config")
 
-    # add argument for a config path the default is the default_config_path
     parser.add_argument(
         "--config_path",
         type=str,
@@ -71,4 +77,5 @@ if __name__ == "__main__":
         training=args.training,
         explanations=args.explanations,
         evaluations=args.evaluations,
+        debug=args.debug,
     )

@@ -11,11 +11,11 @@ input_channels: 3
 
 # Explanation parameters
 explanation_methods:
-  #- 'lime'
+  - 'lime'
   - 'lrp'
-  #- 'integrated_gradients'
-  #- 'gradcam'
-  #- 'deeplift'
+  - 'integrated_gradients'
+  - 'gradcam'
+  - 'deeplift'
 
 # Dataset parameters
 data:

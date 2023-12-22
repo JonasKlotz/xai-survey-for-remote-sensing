@@ -38,17 +38,15 @@ def generate_explanations(cfg: dict):
     logger.debug("Generating explanations")
 
     # load model
-
-    from_zarr = True
-
-    if from_zarr:
-        model = get_model(
-            cfg,
-            num_classes=cfg["num_classes"],
-            input_channels=cfg["input_channels"],  # data_module.dims[0],
-            pretrained=True,
-        ).double()
-        model.eval()
+    model = get_model(
+        cfg,
+        num_classes=cfg["num_classes"],
+        input_channels=cfg["input_channels"],  # data_module.dims[0],
+        pretrained=True,
+    )
+    model.eval()
+    if cfg["debug"]:
+        model = model.double()
 
         all_zarrs = load_most_recent_batches(results_dir=cfg["results_path"])
         for key, value in all_zarrs.items():
@@ -69,7 +67,7 @@ def generate_explanations(cfg: dict):
             batch = tuple(map(torch.tensor, batch))
             # convert to double
             batch = tuple(map(lambda x: x.double(), batch))
-            # if cude available, move to cuda
+            # if cuda available, move to cuda
             if torch.cuda.is_available():
                 batch = tuple(map(lambda x: x.cuda(), batch))
 
@@ -85,20 +83,15 @@ def generate_explanations(cfg: dict):
         logger.debug(f"Samples in train loader: {len(train__loader)}")
         logger.debug(f"Samples in test loader: {len(test_loader)}")
         logger.debug(f"Samples in val loader: {len(val_loader)}")
-        if from_zarr:
+        if cfg["debug"]:
             calculate_dataset_distribution(cfg, train__loader)
             calculate_dataset_distribution(cfg, test_loader)
             calculate_dataset_distribution(cfg, val_loader)
 
-        i = 0
-        model = None
         explanation_manager = ExplanationsManager(cfg, model)
 
         for batch in tqdm.tqdm(test_loader):
             explanation_manager.explain_batch(batch)
-            i += 1
-            if i == 10:
-                break
 
 
 if __name__ == "__main__":
