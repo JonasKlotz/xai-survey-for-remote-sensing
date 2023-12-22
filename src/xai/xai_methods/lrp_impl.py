@@ -14,8 +14,8 @@ from src.xai.xai_methods.explanation import Explanation
 class LRPImpl(Explanation):
     attribution_name = "LRP"
 
-    def __init__(self, model):
-        super().__init__(model)
+    def __init__(self, model, **kwargs):
+        super().__init__(model, **kwargs)
         self._rule_resnet(model)
 
         self.attributor = LRP(model)

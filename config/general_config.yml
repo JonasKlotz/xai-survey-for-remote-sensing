@@ -43,6 +43,9 @@ optimizer: 'sgd'
 scheduler: 'step'
 threshold: 0.5
 
+# whether to vectorize the explanation generation
+vectorize: False
+
 
 
 

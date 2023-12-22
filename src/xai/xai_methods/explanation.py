@@ -4,15 +4,37 @@ from typing import Union
 import numpy as np
 import torch
 from captum.attr import visualization as viz
+from functools import wraps
+import time
+
+
+def timeit(func):
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        print(f"Function {func.__name__}Took {total_time:.4f} seconds")
+        return result
+
+    return timeit_wrapper
 
 
 class Explanation:
     attribution_name = "Explanation"
 
-    def __init__(self, model, multi_label: bool = True, num_classes: int = 6):
+    def __init__(
+        self,
+        model,
+        multi_label: bool = True,
+        num_classes: int = 6,
+        vectorize: bool = True,
+    ):
         self.model = model
         self.multi_label = multi_label
         self.num_classes = num_classes
+        self.vectorize = vectorize
 
     def __call__(self, *args, **kwargs):
         return self.explain(*args, **kwargs)
@@ -39,24 +61,36 @@ class Explanation:
     def explain_batch(
         self, tensor_batch: torch.Tensor, target_batch: torch.Tensor = None
     ):
-        """Explain a batch of images
+        """
+        Explain a batch of images.
+
+        This method takes a batch of image tensors and their corresponding targets,
+        and computes the attributions for each image and target pair.
+        The attribitions are then stored in a tensor that is returned.
+
+        If the model is a multi-label classification model, it will handle the explanation
+        in a vectorized manner if vectorize is True, otherwise it will handle it in a non-vectorized manner.
+        If the model is a single-label classification model, it will handle the explanation accordingly.
 
         Parameters
         ----------
-        tensor_batch: torch.Tensor
-            The batch of images to explain as tensor of shape (batchsize, channels, height, width)
-        target_batch: torch.Tensor
-            The batch of targets to explain
+        tensor_batch : torch.Tensor
+            A batch of image tensors of shape (batchsize, channels, height, width).
+        target_batch : torch.Tensor, optional
+            The corresponding targets for each image in the batch. If not provided,
+            the method will compute attributions for all classes.
 
         Returns
         -------
-        all_attrs: torch.Tensor
-            The attributions of the explanation method for the whole batch.
+        all_attrs : torch.Tensor
+            A tensor of shape (batchsize, num_classes, 1, height, width) containing the
+            computed attributions for each image and target pair in the batch.
         """
-
-        # todo vectorize
-        # create output tensor without channels batchsize x 1 x height x width
         if self.multi_label:
+            if self.vectorize:
+                return self._handle_mlc_explanation_vectorized(
+                    tensor_batch, target_batch
+                )
             return self._handle_mlc_explanation(tensor_batch, target_batch)
 
         return self._handle_slc_explanation(tensor_batch, target_batch)
@@ -95,9 +129,83 @@ class Explanation:
             image = image_batch[i]
             self.visualize(attrs, image)
 
+    @timeit
+    def _handle_mlc_explanation_vectorized(
+        self, image_tensors: torch.Tensor, target_batch: torch.Tensor = None
+    ):
+        """
+        Handle multi-label classification explanation in a vectorized manner.
+
+        This method takes a batch of image tensors and their corresponding targets,
+        reshapes the image tensors, and computes the attributions for each image and target pair.
+        The attributions are then stored in a tensor that is returned.
+
+        Parameters
+        ----------
+        image_tensors : torch.Tensor
+            A batch of image tensors of shape (batchsize, channels, height, width).
+        target_batch : torch.Tensor, optional
+            The corresponding targets for each image in the batch. If not provided,
+            the method will compute attributions for all classes.
+
+        Returns
+        -------
+        all_attrs : torch.Tensor
+            A tensor of shape (batchsize, num_classes, 1, height, width) containing the
+            computed attributions for each image and target pair in the batch.
+        """
+        batchsize, _, height, width = image_tensors.shape
+
+        # Getting the indices of zeros and ones
+        ones_indices = (target_batch == 1).nonzero(as_tuple=False)
+
+        target_indices = ones_indices[:, 0] * target_batch.size(1) + ones_indices[:, 1]
+        targets = ones_indices[:, 1]
+
+        image_tensors = (
+            image_tensors.unsqueeze(1)
+            .expand(-1, 6, -1, -1, -1)
+            .reshape(-1, 3, 120, 120)
+        )
+        image_tensors = image_tensors[target_indices]
+
+        attrs = self.explain(image_tensors, targets)
+        # If attrs is 3 channel sum over channels
+        if len(attrs.shape) == 4 and attrs.shape[1] == 3:
+            attrs = attrs.sum(dim=1, keepdim=True)
+
+        all_attrs = torch.zeros(
+            (batchsize * self.num_classes, 1, height, width), dtype=attrs.dtype
+        )
+        all_attrs[target_indices] = attrs
+        all_attrs = all_attrs.reshape(batchsize, self.num_classes, 1, height, width)
+        return all_attrs
+
+    @timeit
     def _handle_mlc_explanation(
         self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None
     ):
+        """
+        Handle multi-label classification explanation.
+
+        This method takes a batch of image tensors and their corresponding targets,
+        and computes the attributions for each image and target pair.
+        The attributions are then stored in a tensor that is returned.
+
+        Parameters
+        ----------
+        tensor_batch : torch.Tensor
+            A batch of image tensors of shape (batchsize, channels, height, width).
+        target_batch : Union[int, torch.Tensor], optional
+            The corresponding targets for each image in the batch. If not provided,
+            the method will compute attributions for all classes.
+
+        Returns
+        -------
+        all_attrs : torch.Tensor
+            A tensor of shape (batchsize, num_classes, 1, height, width) containing the
+            computed attributions for each image and target pair in the batch.
+        """
         batchsize, _, height, width = tensor_batch.shape
 
         # create output tensor without channels (classes * batchsize) x 1 x height x width
@@ -113,8 +221,7 @@ class Explanation:
                 attrs = self.explain(
                     image_tensor, torch.tensor(label_index).unsqueeze(0)
                 )
-                # if attrs is 3 channel sum over channels
-                # todo: be careful with this, channels might differ use asserts
+                # If attrs is 3 channel sum over channels
                 if len(attrs.shape) == 4 and attrs.shape[1] == 3:
                     attrs = attrs.sum(dim=1, keepdim=True)
                 all_attrs[batch_index, label_index] = attrs
@@ -123,72 +230,4 @@ class Explanation:
     def _handle_slc_explanation(
         self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None
     ):
-        batchsize, channels, height, width = tensor_batch.shape
-
-        all_attrs = torch.zeros((batchsize, 1, height, width))
-        for i in range(batchsize):
-            image_tensor = tensor_batch[i : i + 1]
-            target = target_batch[i]
-            attrs = self.explain(image_tensor, target)
-            all_attrs[i] = attrs
-
-        return all_attrs
-
-    def _assert_shapes(self):
-        pass
-
-    def visualize_numpy(self, attrs: np.ndarray, image_array: np.ndarray):
-        if len(attrs.shape) == 4:
-            attrs = attrs.squeeze(0)
-        if len(image_array.shape) == 4:
-            image_array = image_array.squeeze(0)
-
-        heatmap = np.transpose(attrs, (1, 2, 0))
-        image = np.transpose(image_array, (1, 2, 0))
-
-        # min max normalization
-        # heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
-        image = (image - image.min()) / (image.max() - image.min())
-
-        _ = viz.visualize_image_attr_multiple(
-            attr=heatmap,
-            original_image=image,
-            methods=["original_image", "heat_map"],
-            signs=["all", "positive"],
-            titles=[
-                f"Original Image for {self.attribution_name} on {self.model.__class__.__name__}",
-                f"Heat Map for {self.attribution_name} on {self.model.__class__.__name__}",
-            ],
-            show_colorbar=True,
-            outlier_perc=2,
-        )
-
-
-""" refactored
-def _handle_mlc_explanation(
-    self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None
-):
-    batchsize, _, height, width = tensor_batch.shape
-
-    # create output tensor without channels (classes * batchsize) x 1 x height x width
-    all_attrs = torch.zeros((batchsize, self.num_classes, 1, height, width))
-
-    # Get the indices of the non-zero targets
-    non_zero_targets = target_batch.nonzero(as_tuple=True)
-
-    # Select the images and targets that are non-zero
-    image_tensors = tensor_batch[non_zero_targets]
-    targets = target_batch[non_zero_targets]
-
-    # Explain the selected images
-    attrs = self.explain(image_tensors, targets)
-
-    # If attrs is 3 channel sum over channels
-    if len(attrs.shape) == 4 and attrs.shape[1] == 3:
-        attrs = attrs.sum(dim=1, keepdim=True)
-
-    # Assign the attrs to the corresponding positions in all_attrs
-    all_attrs[non_zero_targets] = attrs
-
-    return all_attrs
-"""
+        return self.explain(tensor_batch, target_batch)

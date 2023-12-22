@@ -12,8 +12,8 @@ from src.xai.xai_methods.explanation import Explanation
 class LimeImpl(Explanation):
     attribution_name = "LIME"
 
-    def __init__(self, model):
-        super().__init__(model)
+    def __init__(self, model, **kwargs):
+        super().__init__(model, **kwargs)
 
         self.similarity_func = get_exp_kernel_similarity_function(
             "euclidean", kernel_width=500
@@ -46,13 +46,47 @@ class LimeImpl(Explanation):
             The attributions of the explanation method.
 
         """
+        if self.vectorize:
+            segments = _batchwise_slic(image_tensor, plot=False, n_segments=15, sigma=5)
 
-        segments = slic_from_tensor(image_tensor, plot=False, n_segments=15, sigma=5)
+        else:
+            segments = slic_from_tensor(
+                image_tensor, plot=False, n_segments=15, sigma=5
+            ).unsqueeze(0)
 
         attrs = self.attributor.attribute(
-            image_tensor, target=target, feature_mask=segments.unsqueeze(0)
+            image_tensor, target=target, feature_mask=segments
         )
         return attrs
+
+
+def _batchwise_slic(img_tensor_batch: torch.Tensor, plot=False, n_segments=50, sigma=5):
+    """
+    Apply SLIC algorithm to a batch of images.
+
+    Parameters
+    ----------
+    img_tensor_batch : torch.Tensor
+        A batch of images to segment as tensor of shape (batchsize, channels, height, width)
+    plot : bool, optional
+        Whether to plot the segmented images. Default is False.
+    n_segments : int, optional
+        The (approximate) number of labels in the segmented output image.
+    sigma : float, optional
+        Width of Gaussian smoothing kernel for pre-processing for segmentation.
+
+    Returns
+    -------
+    segments_batch : torch.Tensor
+        A batch of segmented images.
+    """
+    segments_batch = []
+    for img_tensor in img_tensor_batch:
+        segments = slic_from_tensor(
+            img_tensor, plot=plot, n_segments=n_segments, sigma=sigma
+        )
+        segments_batch.append(segments)
+    return torch.stack(segments_batch)
 
 
 def slic_from_tensor(
@@ -63,24 +97,7 @@ def slic_from_tensor(
     n_segments=50,
     sigma=5,
 ):
-    """Superpixel segmentation using SLIC algorithm
-
-
-    Parameters
-    ----------
-    img_tensor : torch.Tensor
-    plot : bool
-    save_path : str
-    title : str
-    n_segments : int
-    sigma : int
-
-    Returns
-    -------
-    segments : torch.Tensor
-        The segments of the image
-
-    """
+    """Superpixel segmentation using SLIC algorithm"""
 
     if len(img_tensor.shape) == 4:
         img_tensor = img_tensor.squeeze(0)

@@ -69,7 +69,8 @@ class ExplanationsManager:
 
     def _init_explanation(self, explanation_name: str, folder_name: str):
         self.explanations[explanation_name] = _explanation_methods[explanation_name](
-            model=self.model
+            model=self.model,
+            vectorize=self.explanations_config["vectorize"],
         )
         self.explanations_zarr_handler[explanation_name] = ZarrHandler(
             results_dir=self.explanations_config["results_path"],

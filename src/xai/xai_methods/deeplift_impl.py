@@ -9,8 +9,8 @@ from src.xai.xai_methods.explanation import Explanation
 class DeepLiftImpl(Explanation):
     attribution_name = "deeplift"
 
-    def __init__(self, model):
-        super().__init__(model)
+    def __init__(self, model, **kwargs):
+        super().__init__(model, **kwargs)
 
         self.attributor = DeepLift(model)
 
