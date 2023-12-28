@@ -1,9 +1,9 @@
+import argparse
 import os
 import sys
 
 import pytorch_lightning as pl
 import torch.multiprocessing
-import argparse
 
 from config_utils import parse_config
 
@@ -16,6 +16,7 @@ from src.training.train import train  # noqa: E402
 from src.xai.generate_explanations import generate_explanations  # noqa: E402
 from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods  # noqa: E402
 from utility.cluster_logging import logger  # noqa: E402
+from visualization.visualize import visualize  # noqa: E402
 
 # Fix all seeds with lightning
 pl.seed_everything(42)
@@ -26,11 +27,15 @@ torch.multiprocessing.set_sharing_strategy(
 
 
 def main(
-    config_path, training=False, explanations=False, evaluations=False, debug=False
+    config_path,
+    training=False,
+    explanations=False,
+    evaluations=False,
+    visualizations=False,
+    debug=False,
 ):
     logger.debug("In main")
-    configs = parse_config(config_path, project_root)
-    general_config = configs["general"]
+    general_config = parse_config(config_path, project_root)
     general_config["debug"] = debug
 
     # plot_dataset_distribution_zarr(general_config)
@@ -39,6 +44,9 @@ def main(
     logger.debug(f"General config: {general_config}")
     if training:
         train(general_config)
+
+    if visualizations:
+        visualize(general_config)
 
     if explanations:
         generate_explanations(general_config)
@@ -58,11 +66,16 @@ if __name__ == "__main__":
         "--evaluations", action="store_true", help="Evaluate explanation methods"
     )
 
+    # add visualization flag
+    parser.add_argument(
+        "--visualizations", action="store_true", help="Visualize explanation methods"
+    )
+
     parser.add_argument(
         "-d", "--debug", action="store_true", help="Enable debug logging"
     )
 
-    default_config_path = os.path.join(project_root, "config")
+    default_config_path = os.path.join(project_root, "config", "general_config.yml")
 
     parser.add_argument(
         "--config_path",
@@ -77,5 +90,6 @@ if __name__ == "__main__":
         training=args.training,
         explanations=args.explanations,
         evaluations=args.evaluations,
+        visualizations=args.visualizations,
         debug=args.debug,
     )

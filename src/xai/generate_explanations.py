@@ -2,8 +2,7 @@ import numpy as np
 import torch
 import tqdm
 import yaml
-from PIL import Image
-from torchvision import transforms
+
 
 from data.data_utils import (
     get_loader_for_datamodule,
@@ -14,24 +13,6 @@ from data.zarr_handler import load_most_recent_batches
 from models.get_models import get_model
 from utility.cluster_logging import logger
 from xai.xai_methods.explanation_manager import ExplanationsManager
-
-
-def load_test_imagenet_image(idx_to_labels, image_tensor):
-    transform = transforms.Compose(
-        [transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor()]
-    )
-    transform_normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-    )
-    # inv_normalize = transforms.Normalize(
-    #     mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.255],
-    #     std=[1 / 0.229, 1 / 0.224, 1 / 0.255],
-    # )
-    img = Image.open("/home/jonasklotz/Studys/MASTERS/XAI_PLAYGROUND/img/swan.jpeg")
-    transformed_img = transform(img)
-    image_tensor = transform_normalize(transformed_img)
-    image_tensor = image_tensor.unsqueeze(0)
-    return image_tensor
 
 
 def generate_explanations(cfg: dict):

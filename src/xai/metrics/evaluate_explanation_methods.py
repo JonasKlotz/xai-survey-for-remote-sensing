@@ -66,7 +66,7 @@ def evaluate_explanation_methods(cfg: dict, load_precomputed: bool = True):
         }
         try:
             vis.visualize_multi_label_classification(
-                all_attrs, img, segmentations=segments, labels=labels
+                all_attrs, img, segmentation_tensor=segments, label_tensor=labels
             )
         except Exception as e:
             logger.error(f"Error visualizing: {e}")

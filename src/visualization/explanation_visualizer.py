@@ -1,3 +1,4 @@
+import os
 from typing import Union
 
 import numpy as np
@@ -5,6 +6,8 @@ import plotly.graph_objects as go
 import torch
 import torchvision
 from plotly.subplots import make_subplots
+
+from data.constants import DEEPGLOBE_IDX2NAME
 
 
 def _assert_single_image_and_attrs_shape(
@@ -49,14 +52,27 @@ def remove_axis(fig, row, col):
 
 
 class ExplanationVisualizer:
-    def __init__(
-        self, cfg: dict, explanation_method_name: str, index_to_name: dict = None
-    ):
+    def __init__(self, cfg: dict, explanation_method_name: str, index_to_name: dict):
+        """
+        Initialize the ExplanationVisualizer class.
+
+        Parameters
+        ----------
+        cfg : dict
+            Configuration dictionary.
+        explanation_method_name : str
+            Name of the explanation method.
+        index_to_name : dict, optional
+            Dictionary mapping index to name.
+        """
         self.cfg = cfg
         self.explanation_method_name = explanation_method_name
         self.index_to_name = index_to_name
         self.last_fig = None
         self.num_classes = cfg["num_classes"]
+        self.save_path = (
+            f"{cfg['results_path']}/visualizations/{cfg['experiment_name']}"
+        )
 
         self.segmentation_colors = [
             "grey",
@@ -83,25 +99,64 @@ class ExplanationVisualizer:
         self,
         attrs: Union[torch.Tensor, dict[torch.Tensor]],
         image_tensor: torch.Tensor,
-        segmentations: torch.Tensor = None,
-        labels: torch.Tensor = None,
+        segmentation_tensor: torch.Tensor = None,
+        label_tensor: torch.Tensor = None,
+        show=True,
     ):
-        # permute image with numpy
-        # the list contains different attrs, e.g. gradcam, deeplift. each attrs is a tensor of shape (num_classes, h, w)
-        if isinstance(attrs, dict):
-            data = self._create_data_for_dict_plot(attrs, image_tensor, segmentations)
+        """
+        Visualize multi-label classification.
 
-            fig = self._create_fig_from_dict_data(data, labels=labels)
+        Parameters
+        ----------
+        attrs : Union[torch.Tensor, dict[torch.Tensor]]
+            Attributes tensor or dictionary of attributes tensors.
+        image_tensor : torch.Tensor
+            Image tensor.
+        segmentation_tensor : torch.Tensor, optional
+            Segmentations tensor.
+        label_tensor : torch.Tensor, optional
+            Labels tensor.
+        """
+        # permute image with numpy
+        # the dict contains different attrs, e.g. gradcam, deeplift. each attrs is a tensor of shape (num_classes, h, w)
+        if isinstance(attrs, dict):
+            data = self._create_data_for_dict_plot(
+                attrs, image_tensor, segmentation_tensor
+            )
+
+            fig = self._create_fig_from_dict_data(data, labels=label_tensor)
 
         else:
-            data, titles = self.create_data_for_plot(attrs, image_tensor, segmentations)
+            data, titles = self.create_data_for_plot(
+                attrs, image_tensor, segmentation_tensor
+            )
 
             fig = self._create_fig_from_data(data, titles=titles)
 
         # Show the figure
-        fig.show()
+        self.last_fig = fig
+
+        if show:
+            fig.show()
 
     def create_data_for_plot(self, attrs, image_tensor, segmentations):
+        """
+        Create data for plot.
+
+        Parameters
+        ----------
+        attrs : torch.Tensor
+            Attributes tensor.
+        image_tensor : torch.Tensor
+            Image tensor.
+        segmentations : torch.Tensor
+            Segmentations tensor.
+
+        Returns
+        -------
+        list
+            List of data for plot.
+        """
         _assert_single_image_and_attrs_shape(attrs[0], image_tensor)
         image = self._preprocess_image(image_tensor)
         attrs = [self._preprocess_attrs(attr) for attr in attrs]
@@ -133,6 +188,23 @@ class ExplanationVisualizer:
         return data, titles
 
     def _create_data_for_dict_plot(self, attrs_dict: dict, image_tensor, segmentations):
+        """
+        Create data for dictionary plot.
+
+        Parameters
+        ----------
+        attrs_dict : dict
+            Dictionary of attributes tensors.
+        image_tensor : torch.Tensor
+            Image tensor.
+        segmentations : torch.Tensor
+            Segmentations tensor.
+
+        Returns
+        -------
+        dict
+            Dictionary of data for plot.
+        """
         data = {}
 
         image = self._preprocess_image(image_tensor)
@@ -157,15 +229,21 @@ class ExplanationVisualizer:
 
     def _create_fig_from_dict_data(self, data: dict, labels, plot_title=""):
         """
-        Creates a figure from a list of plotly traces.
+        Create figure from dictionary data.
 
         Parameters
         ----------
-        data
+        data : dict
+            Dictionary of data for plot.
+        labels : torch.Tensor
+            Labels tensor.
+        plot_title : str, optional
+            Title of the plot.
 
         Returns
         -------
-
+        plotly.graph_objects.Figure
+            Figure object.
         """
         # Create a subplot layout with 1 row and the number of non-empty plots
 
@@ -177,11 +255,9 @@ class ExplanationVisualizer:
             if key not in ["Image", "Segmentation"]
         }
         num_attrs = len(attrs)
-        plots_per_attr = len(
-            attrs[list(attrs.keys())[0]]
-        )  # all attrs have the same number of plots
+        plots_per_attr = int(np.sum(labels))
         cols = num_attrs + 1
-        rows = plots_per_attr + 1
+        rows = max(plots_per_attr, 2)  # at least 2 rows for segmentation
 
         subplot_titles = self._create_subplot_titles(
             list(attrs.keys()), cols, labels, rows
@@ -223,6 +299,23 @@ class ExplanationVisualizer:
         return fig
 
     def _create_subplot_titles(self, attr_names, cols, labels, rows):
+        """
+        Create figure from data.
+
+        Parameters
+        ----------
+        data : list
+            List of data for plot.
+        plot_title : str, optional
+            Title of the plot.
+        titles : list, optional
+            List of titles.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Figure object.
+        """
         label_indices = np.nonzero(labels)[0]
         label_names = [self.index_to_name[index] for index in label_indices]
         subplot_titles = [
@@ -230,10 +323,13 @@ class ExplanationVisualizer:
         ]  # Use list comprehension here
 
         subplot_titles[0][0] = "Image"
+
         subplot_titles[1][0] = "Segmentation"
+
         # # Add each attribution to the subplot and update axes
 
         for col_key, attr_name in enumerate(attr_names, start=1):
+            attr_name = attr_name[8:]  # remove a_batch_
             for row_key, label_name in enumerate(label_names):
                 subplot_titles[row_key][col_key] = f"{attr_name} {label_name}"
         # flatten list
@@ -242,15 +338,21 @@ class ExplanationVisualizer:
 
     def _create_fig_from_data(self, data, plot_title="Explanation", titles=None):
         """
-        Creates a figure from a list of plotly traces.
+        Create figure from data.
 
         Parameters
         ----------
-        data
+        data : list
+            List of data for plot.
+        plot_title : str, optional
+            Title of the plot.
+        titles : list, optional
+            List of titles.
 
         Returns
         -------
-
+        plotly.graph_objects.Figure
+            Figure object.
         """
         # Create a subplot layout with 1 row and the number of non-empty plots
         non_empty_plots = [plot for plot in data if not isinstance(plot, go.Scatter)]
@@ -332,10 +434,35 @@ class ExplanationVisualizer:
         )
         return fig
 
-    def save_last_fig(self, path, format="svg"):
-        self.last_fig.write_image(path, format=format)
+    def save_last_fig(self, name, format="svg"):
+        """
+        Save the last figure.
+
+        Parameters
+        ----------
+        path : str
+            Path to save the figure.
+        format : str, optional
+            Format to save the figure.
+        """
+        # create save path if it does not exist
+        os.makedirs(self.save_path, exist_ok=True)
+        self.last_fig.write_image(f"{self.save_path}/{name}.{format}", format=format)
 
     def _preprocess_image(self, image: Union[torch.Tensor, np.ndarray]) -> np.ndarray:
+        """
+        Preprocess image.
+
+        Parameters
+        ----------
+        image : Union[torch.Tensor, np.ndarray]
+            Image tensor or numpy array.
+
+        Returns
+        -------
+        np.ndarray
+            Preprocessed image.
+        """
         if not isinstance(image, torch.Tensor):
             image = torch.tensor(image)
 
@@ -348,6 +475,19 @@ class ExplanationVisualizer:
         return image
 
     def _preprocess_attrs(self, attrs: Union[torch.Tensor, np.ndarray]) -> np.ndarray:
+        """
+        Preprocess attributes.
+
+        Parameters
+        ----------
+        attrs : Union[torch.Tensor, np.ndarray]
+            Attributes tensor or numpy array.
+
+        Returns
+        -------
+        np.ndarray
+            Preprocessed attributes.
+        """
         if not isinstance(attrs, torch.Tensor):
             attrs = torch.tensor(attrs)
 
@@ -356,10 +496,31 @@ class ExplanationVisualizer:
         return attrs
 
     def _denormalize(self, image: torch.tensor):
+        """
+        Denormalize image.
+
+        Parameters
+        ----------
+        image : torch.tensor
+            Image tensor.
+
+        Returns
+        -------
+        torch.tensor
+            Denormalized image.
+        """
         mean, std = self._get_mean_and_std()
         return NormalizeInverse(mean, std)(image)
 
     def _get_mean_and_std(self):
+        """
+        Get mean and standard deviation.
+
+        Returns
+        -------
+        tuple
+            Mean and standard deviation.
+        """
         if self.cfg["dataset_name"] == "deepglobe":
             mean = torch.tensor([0.485, 0.456, 0.406])
             std = torch.tensor([0.229, 0.224, 0.225])
@@ -370,6 +531,21 @@ class ExplanationVisualizer:
     def plot_segmentation(
         self, segmentation: Union[np.ndarray], title: str = "Segmentation Map"
     ):
+        """
+        Plot segmentation.
+
+        Parameters
+        ----------
+        segmentation : Union[np.ndarray]
+            Segmentation numpy array.
+        title : str, optional
+            Title of the plot.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Figure object.
+        """
         # convert segmentation to int
         segmentation = segmentation.astype(int)
         n_colors = len(self.segmentation_colors)
@@ -427,3 +603,22 @@ class NormalizeInverse(torchvision.transforms.Normalize):
 
     def __call__(self, tensor):
         return super().__call__(tensor.clone())
+
+
+if __name__ == "__main__":
+    # load config
+    import yaml
+
+    p = "/home/jonasklotz/Studys/MASTERS/XAI/config/general_config.yml"
+
+    with open(p, "r") as f:
+        cfg = yaml.load(f, Loader=yaml.FullLoader)
+    cfg["results_path"] = "/home/jonasklotz/Studys/MASTERS/XAI/results"
+    cfg["experiment_name"] = "deepglobe"
+    # test segmentation map plot
+    vis = ExplanationVisualizer(cfg, "gradcam", DEEPGLOBE_IDX2NAME)
+    seg = np.random.randint(0, 3, (224, 224))
+    vis.plot_segmentation(seg)
+
+    seg1 = np.random.randint(0, 4, (224, 224))
+    vis.plot_segmentation(seg1)

@@ -5,33 +5,31 @@ import yaml
 
 
 def parse_config(config_path, project_root):
-    # read all files in config_path
-    file_names = os.listdir(config_path)
-    configs = {}
-    # load all yaml files
-    for file_name in file_names:
-        if file_name.endswith(".yaml") or file_name.endswith(".yml"):
-            with open(os.path.join(config_path, file_name)) as file:
-                loaded_cfg = yaml.load(file, Loader=yaml.FullLoader)
-                configs[file_name[:-11]] = loaded_cfg
+    """
+    Parse the config file and add important paths to the config dictionary.
+    Parameters
+    ----------
+    config_path
+    project_root
 
+    Returns
+    -------
+
+    """
+    with open(config_path, "r") as f:
+        configs = yaml.load(f, Loader=yaml.FullLoader)
     configs = add_important_paths_to_cfg(configs, project_root)
     return configs
 
 
-def add_important_paths_to_cfg(configs: dict, project_root: str):
-    data_path = os.path.join(project_root, "data")
-    models_path = os.path.join(project_root, "models")
-    log_path = os.path.join(project_root, "logs")
-    results_path = os.path.join(project_root, "results")
+def add_important_paths_to_cfg(config: dict, project_root: str):
+    for key in ["data", "models", "logs", "results"]:
+        config[f"{key}_path"] = os.path.join(project_root, key)
+
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    config["timestamp"] = timestamp
+    config[
+        "experiment_name"
+    ] = f'{config["dataset_name"]}_{config["model_name"]}_{timestamp}'
 
-    for cfg in configs.values():
-        cfg["data_path"] = data_path
-        cfg["models_path"] = models_path
-        cfg["log_path"] = log_path
-        cfg["results_path"] = results_path
-
-        cfg["timestamp"] = timestamp
-
-    return configs
+    return config
