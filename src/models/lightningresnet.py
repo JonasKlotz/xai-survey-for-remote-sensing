@@ -19,11 +19,12 @@ class LightningResnet(LightningModule):
         lr=0.001,
         batch_size=32,
         freeze=False,
+        pretrained=False,
     ):
         super(LightningResnet, self).__init__()
         self.save_hyperparameters(ignore=["loss"])
 
-        self.model = get_resnet(resnet_layers)
+        self.model = get_resnet(resnet_layers, pretrained=pretrained)
 
         # replace the first conv layer
         self.model.conv1 = nn.Conv2d(

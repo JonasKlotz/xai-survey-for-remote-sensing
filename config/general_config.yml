@@ -46,6 +46,9 @@ threshold: 0.5
 # whether to vectorize the explanation generation
 vectorize: False
 
+# whether to load the batches from a specific path
+batches_path: "/home/jonasklotz/Studys/MASTERS/XAI/results/new_batches"
+
 
 
 

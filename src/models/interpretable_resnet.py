@@ -473,17 +473,17 @@ def wide_resnet101_2(
     )
 
 
-def get_resnet(resnet_layers):
+def get_resnet(resnet_layers, pretrained=True):
     if resnet_layers == 18:
-        model = resnet18(pretrained=True)
+        model = resnet18(pretrained=pretrained)
     elif resnet_layers == 34:
-        model = resnet34(pretrained=True)
+        model = resnet34(pretrained=pretrained)
     elif resnet_layers == 50:
-        model = resnet50(pretrained=True)
+        model = resnet50(pretrained=pretrained)
     elif resnet_layers == 101:
-        model = resnet101(pretrained=True)
+        model = resnet101(pretrained=pretrained)
     elif resnet_layers == 152:
-        model = resnet152(pretrained=True)
+        model = resnet152(pretrained=pretrained)
     else:
         raise ValueError("Resnet layers must be 18, 34, 50, 101, or 152")
     return model

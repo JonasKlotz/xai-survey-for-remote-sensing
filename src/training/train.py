@@ -4,6 +4,7 @@ import torch
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
+
 from data.data_utils import load_data_module
 from models.get_models import get_model
 
@@ -19,10 +20,7 @@ def train(
     # load datamodule
     data_module = load_data_module(cfg)
     logger.debug(f"Loaded data module {data_module}")
-    # setup data module
 
-    #
-    # data_module = DeepGlobeDataModule(cfg, transforms_train, transforms_train)
     # load model
     model = get_model(
         cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0]
@@ -35,7 +33,6 @@ def train(
         accelerator="auto",
         devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
     )
-    # Pass the datamodule as arg to trainer.fit to override model hooks :)
     trainer.fit(model, data_module)
 
     save_model(cfg, model)

@@ -17,32 +17,31 @@ from xai.xai_methods.explanation_manager import ExplanationsManager
 
 def generate_explanations(cfg: dict):
     logger.debug("Generating explanations")
+    logger.debug(f"Using CUDA: {torch.cuda.is_available()}")
 
     # load model
     model = get_model(
         cfg,
         num_classes=cfg["num_classes"],
         input_channels=cfg["input_channels"],  # data_module.dims[0],
-        pretrained=True,
+        self_trained=True,
     )
     model.eval()
     if cfg["debug"]:
         model = model.double()
 
         all_zarrs = load_most_recent_batches(results_dir=cfg["results_path"])
-        for key, value in all_zarrs.items():
-            all_zarrs[key] = value[:]
 
         index = np.arange(0, len(all_zarrs["x_batch"]))
         batchsize = cfg["data"]["batch_size"]
         explanation_manager = ExplanationsManager(cfg, model)
 
-        for i in range(int(len(index) / batchsize) - 1):
+        for i in tqdm.tqdm(range(int(len(index) / batchsize) - 1)):
             batch = (
-                all_zarrs["x_batch"][i * batchsize : (i + 1) * batchsize],
-                all_zarrs["y_batch"][i * batchsize : (i + 1) * batchsize],
-                index[i * batchsize : (i + 1) * batchsize],
-                all_zarrs["s_batch"][i * batchsize : (i + 1) * batchsize],
+                all_zarrs["x_batch"][i * batchsize : (i + 1) * batchsize][:],
+                all_zarrs["y_batch"][i * batchsize : (i + 1) * batchsize][:],
+                index[i * batchsize : (i + 1) * batchsize][:],
+                all_zarrs["s_batch"][i * batchsize : (i + 1) * batchsize][:],
             )
             # convert to tensor
             batch = tuple(map(torch.tensor, batch))

@@ -45,6 +45,14 @@ class ZarrHandler:
         return self.zarr.shape
 
 
+def load_batches(cfg: dict):
+    if not cfg["batches_path"]:
+        return load_most_recent_batches(results_dir=cfg["results_path"])
+
+    else:
+        return _load_zarrs(cfg["batches_path"])
+
+
 def load_most_recent_batches(results_dir: str):
     """
     Load the most recent batches of data stored in .zarr files from a specified directory.
@@ -75,16 +83,20 @@ def load_most_recent_batches(results_dir: str):
         os.rmdir(os.path.join(results_dir, last_folder))
         last_folder = folders[-1]
     # get all files in the last folder
-    files = os.listdir(os.path.join(results_dir, last_folder))
+    files_path = os.path.join(results_dir, last_folder)
+
+    zarr_files = _load_zarrs(files_path)
+
+    return zarr_files
+
+
+def _load_zarrs(files_path):
     # filter for files ending with .zarr
-    files = [file for file in files if file.endswith(".zarr")]
+    files = [file for file in os.listdir(files_path) if file.endswith(".zarr")]
     # load the zarr files
-    zarr_files = [
-        zarr.open_array(os.path.join(results_dir, last_folder, file)) for file in files
-    ]
+    zarr_files = [zarr.open_array(os.path.join(files_path, file)) for file in files]
     # remove .zarr ending from file names
     files = [file[:-5] for file in files]
     # create dict with zarr files and the corresponsing explanation name
     zarr_files = dict(zip(files, zarr_files))
-
     return zarr_files

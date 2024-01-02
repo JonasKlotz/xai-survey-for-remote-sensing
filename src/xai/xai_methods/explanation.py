@@ -59,7 +59,10 @@ class Explanation:
         pass
 
     def explain_batch(
-        self, tensor_batch: torch.Tensor, target_batch: torch.Tensor = None
+        self,
+        tensor_batch: torch.Tensor,
+        target_batch: torch.Tensor = None,
+        labels_batch: torch.Tensor = None,
     ):
         """
         Explain a batch of images.
@@ -89,9 +92,11 @@ class Explanation:
         if self.multi_label:
             if self.vectorize:
                 return self._handle_mlc_explanation_vectorized(
-                    tensor_batch, target_batch
+                    tensor_batch, target_batch, labels_batch
                 )
-            return self._handle_mlc_explanation(tensor_batch, target_batch)
+            return self._handle_mlc_explanation(
+                tensor_batch, target_batch, labels_batch
+            )
 
         return self._handle_slc_explanation(tensor_batch, target_batch)
 
@@ -129,9 +134,11 @@ class Explanation:
             image = image_batch[i]
             self.visualize(attrs, image)
 
-    @timeit
     def _handle_mlc_explanation_vectorized(
-        self, image_tensors: torch.Tensor, target_batch: torch.Tensor = None
+        self,
+        image_tensors: torch.Tensor,
+        target_batch: torch.Tensor = None,
+        labels_batch: torch.Tensor = None,
     ):
         """
         Handle multi-label classification explanation in a vectorized manner.
@@ -157,7 +164,8 @@ class Explanation:
         batchsize, _, height, width = image_tensors.shape
 
         # Getting the indices of zeros and ones
-        ones_indices = (target_batch == 1).nonzero(as_tuple=False)
+        # todo this has changed check if correct
+        ones_indices = (labels_batch == 1).nonzero(as_tuple=False)
 
         target_indices = ones_indices[:, 0] * target_batch.size(1) + ones_indices[:, 1]
         targets = ones_indices[:, 1]
@@ -181,9 +189,11 @@ class Explanation:
         all_attrs = all_attrs.reshape(batchsize, self.num_classes, 1, height, width)
         return all_attrs
 
-    @timeit
     def _handle_mlc_explanation(
-        self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None
+        self,
+        tensor_batch: torch.Tensor,
+        target_batch: Union[int, torch.Tensor] = None,
+        labels_batch: torch.Tensor = None,
     ):
         """
         Handle multi-label classification explanation.
@@ -212,10 +222,11 @@ class Explanation:
         all_attrs = torch.zeros((batchsize, self.num_classes, 1, height, width))
         for batch_index in range(batchsize):
             image_tensor = tensor_batch[batch_index : batch_index + 1]
-            for label_index in range(len(target_batch[batch_index])):
-                target = target_batch[batch_index][label_index]
+
+            for label_index in range(self.num_classes):
+                positive_label = labels_batch[batch_index][label_index]
                 # we only want to explain the labels that are present in the image
-                if target == 0:
+                if positive_label == 0:
                     continue
 
                 attrs = self.explain(

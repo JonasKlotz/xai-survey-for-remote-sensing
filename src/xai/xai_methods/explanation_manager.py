@@ -102,7 +102,10 @@ class ExplanationsManager:
 
         # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():
-            batch_attrs = explanation.explain_batch(image_batch, prediction_batch)
+            batch_attrs = explanation.explain_batch(
+                image_batch, prediction_batch, target_batch
+            )
+            logger.debug(f"Explained batch with {explanation_name}")
             if self.visualize:
                 self._visualize(
                     batch_attrs, explanation, explanation_name, idx, image_batch

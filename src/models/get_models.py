@@ -7,18 +7,30 @@ from models.lightningresnet import LightningResnet
 
 
 def get_model(
-    config: dict, num_classes: int, input_channels: int, pretrained: bool = False
+    config: dict,
+    num_classes: int,
+    input_channels: int,
+    self_trained: bool = False,
+    pretrained: bool = False,
 ):
     if config["model_name"] == "resnet":
         return get_lightning_resnet(
-            config, num_classes, input_channels, pretrained=pretrained
+            config,
+            num_classes,
+            input_channels,
+            self_trained=self_trained,
+            pretrained=pretrained,
         )
 
     raise ValueError(f"Model name {config['model_name']} not supported.")
 
 
 def get_lightning_resnet(
-    cfg: dict, num_classes: int, input_channels: int, pretrained: bool
+    cfg: dict,
+    num_classes: int,
+    input_channels: int,
+    self_trained: bool,
+    pretrained: bool,
 ):
     model = LightningResnet(
         num_classes=num_classes,
@@ -26,8 +38,9 @@ def get_lightning_resnet(
         resnet_layers=cfg["layer_number"],
         lr=cfg["learning_rate"],
         batch_size=cfg["data"]["batch_size"],
+        pretrained=pretrained,
     )
-    if pretrained:
+    if self_trained:
         model.load_state_dict(load_most_recent_model(cfg))
     return model
 
