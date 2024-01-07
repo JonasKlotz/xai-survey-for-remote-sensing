@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 
 
 # todo a problem here is how to get th explanation while training?
@@ -8,7 +7,7 @@ import torch.nn.functional as F
 
 
 class RightForRightReasonsLoss(torch.nn.Module):
-    def __init__(self, loss=F.nll_loss, lambda_=1):
+    def __init__(self, lambda_=1, explanation_method=None):
         """
 
         The right for the right reasons loss is defined as:
@@ -26,8 +25,7 @@ class RightForRightReasonsLoss(torch.nn.Module):
             The weight of the explanation loss
         """
         super().__init__()
-        self.explanation_method = None
-        self.loss = loss
+        self.explanation_method = explanation_method
         self.lambda_ = lambda_
 
     def forward(
@@ -35,12 +33,13 @@ class RightForRightReasonsLoss(torch.nn.Module):
         x_batch: torch.Tensor,
         y_batch: torch.Tensor,
         s_batch: torch.Tensor,
-        explanation_method,
+        regular_loss_value: float = 0,
     ):
         """
 
         Parameters
         ----------
+        regular_loss_value
         x_batch : torch.Tensor
             The input batch
         y_batch: torch.Tensor
@@ -48,19 +47,33 @@ class RightForRightReasonsLoss(torch.nn.Module):
         s_batch: torch.Tensor
             The relevancy map, this map is 1 where the explanation should be 0
 
-        explanation_method: Explanation
-            The explanation method to use
-
         Returns
         -------
 
         """
-        rrr_loss = 0
-        # todo vectorize
-        for x, y, s in zip(x_batch, y_batch, s_batch):
-            explanation = explanation_method.explain(x, y)
-            rrr_loss += torch.linalg.norm(explanation * s)
+        attrs = self.explanation_method.explain_batch(x_batch, y_batch)
+        print(f"attrs: {attrs.shape}")
+        print(f"s_batch: {s_batch.shape}")
 
+        # convert sbatch into relevancy maps (0 where the explanation should be 0)
+
+        rrr_loss = torch.linalg.norm(attrs * s_batch)
         rrr_loss /= len(x_batch)
-        regular_loss = self.loss(x_batch, y_batch)
-        return regular_loss + self.lambda_ * rrr_loss
+        return regular_loss_value + self.lambda_ * rrr_loss
+
+
+def segmentations_to_relevancy_map(y_batch, s_batch):
+    """
+    Convert a batch of segmentations to a relevancy map
+
+    Parameters
+    ----------
+    s_batch: torch.Tensor
+        The batch of segmentations
+
+    Returns
+    -------
+    relevancy_map: torch.Tensor
+        The relevancy map
+    """
+    pass

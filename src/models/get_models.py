@@ -39,6 +39,7 @@ def get_lightning_resnet(
         lr=cfg["learning_rate"],
         batch_size=cfg["data"]["batch_size"],
         pretrained=pretrained,
+        loss_name=cfg["loss_name"],
     )
     if self_trained:
         model.load_state_dict(load_most_recent_model(cfg))

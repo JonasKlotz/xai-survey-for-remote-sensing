@@ -8,6 +8,10 @@ from torchmetrics import (
 )
 
 from src.models.interpretable_resnet import get_resnet
+from training.rrr_loss import RightForRightReasonsLoss
+from xai.xai_methods.deeplift_impl import DeepLiftImpl
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class LightningResnet(LightningModule):
@@ -20,6 +24,7 @@ class LightningResnet(LightningModule):
         batch_size=32,
         freeze=False,
         pretrained=False,
+        loss_name="bce",
     ):
         super(LightningResnet, self).__init__()
         self.save_hyperparameters(ignore=["loss"])
@@ -37,6 +42,7 @@ class LightningResnet(LightningModule):
         )
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
         self.metrics_calculator = MetricsCalculator(num_classes)
+        self.loss_name = loss_name
 
     def forward(self, x):
         return self.model(x)
@@ -46,7 +52,25 @@ class LightningResnet(LightningModule):
         images, target, idx, segments = batch
 
         y_hat = self.model(images)
-        loss = self.loss(y_hat, target)
+        # loss cannot be part of self as it would be interpreted as layer and need a ruling
+        if self.loss_name == "RRR":
+            print("RRR")
+            base_loss = nn.BCEWithLogitsLoss()(y_hat, target)
+
+            rrr = RightForRightReasonsLoss(
+                lambda_=1, explanation_method=DeepLiftImpl(self)
+            )
+            self.log("base_loss", base_loss, prog_bar=True)
+            loss = rrr(
+                x_batch=images,
+                y_batch=target,
+                s_batch=segments,
+                regular_loss_value=base_loss,
+            )
+            logits, y_hat = self.predict(batch)  # re-establish grads
+        else:
+            loss = nn.BCEWithLogitsLoss()(y_hat, target)
+
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
@@ -64,7 +88,24 @@ class LightningResnet(LightningModule):
         logits, y_hat = self.predict(batch)
 
         # loss cannot be part of self as it would be interpreted as layer and need a ruling
-        loss = nn.BCEWithLogitsLoss()(y_hat, target)
+        if self.loss_name == "rrr":
+            print("RRR")
+            base_loss = nn.BCEWithLogitsLoss()(y_hat, target)
+
+            rrr = RightForRightReasonsLoss(
+                lambda_=1, explanation_method=DeepLiftImpl(self)
+            )
+            if stage:
+                self.log(f"{stage}_base_loss", base_loss, prog_bar=True)
+            loss = rrr(
+                x_batch=images,
+                y_batch=target,
+                s_batch=segments,
+                regular_loss_value=base_loss,
+            )
+            logits, y_hat = self.predict(batch)  # re-establish grads
+        else:
+            loss = nn.BCEWithLogitsLoss()(y_hat, target)
 
         target = target.long()
         metrics = self.metrics_calculator.calculate_metrics(logits, target)
@@ -92,26 +133,27 @@ class LightningResnet(LightningModule):
 
 
 class MetricsCalculator:
-    def __init__(self, num_classes):
+    # https://lightning.ai/docs/torchmetrics/stable/pages/overview.html#metrics-and-devices
+    def __init__(self, num_classes: int):
         self.metrics = {
             "f1_score_macro": F1Score(
                 task="multilabel",
                 average="macro",
                 threshold=0.5,
                 num_labels=num_classes,
-            ),
+            ).to(device),
             "f1_score_micro": F1Score(
                 task="multilabel",
                 average="micro",
                 threshold=0.5,
                 num_labels=num_classes,
-            ),
+            ).to(device),
             "average_precision_macro": AveragePrecision(
                 task="multilabel", average="macro", num_labels=num_classes
-            ),
+            ).to(device),
             "accuracy": Accuracy(
                 task="multilabel", threshold=0.5, num_labels=num_classes
-            ),
+            ).to(device),
         }
 
     def calculate_metrics(self, logits, target):

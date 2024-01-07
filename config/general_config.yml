@@ -25,17 +25,13 @@ data:
   val_csv: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/splits/deepglobe_version1_val.csv"
   test_csv: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/splits/deepglobe_version1_test.csv"
   segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
-#  images_lmdb_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/patches.lmdb"
-#  segmentations_lmdb_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
-#  labels_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/labels.parquet"
-#  train_csv: "/media/storagecube/data/datasets/deepGlobe/splits/deepglobe_version1_train.csv"
-#  test_csv: "/media/storagecube/data/datasets/deepGlobe/splits/deepglobe_version1_test.csv"
+
   batch_size: 32
   num_workers: 10
   pin_memory: True
 
 # Training parameters
-max_epochs: 10
+max_epochs: 50
 learning_rate: 0.001
 momentum: 0.9
 weight_decay: 0.0005
@@ -48,6 +44,10 @@ vectorize: False
 
 # whether to load the batches from a specific path
 batches_path: "/home/jonasklotz/Studys/MASTERS/XAI/results/new_batches"
+
+
+loss_name: 'RRR'
+loss_explanation: 'deeplift'
 
 
 
