@@ -43,7 +43,7 @@ threshold: 0.5
 vectorize: False
 
 # whether to load the batches from a specific path
-zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/explanations_2024-01-08_12-42-29.zarr' # If this is empty the most recent will be loaded "/home/jonasklotz/Studys/MASTERS/XAI/results/new_batches"
+zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/explanations_2024-01-08_12-37-57.zarr' # If this is empty the most recent will be loaded "/home/jonasklotz/Studys/MASTERS/XAI/results/new_batches"
 
 
 loss_name: 'RRR'

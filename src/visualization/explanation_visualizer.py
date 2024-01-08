@@ -25,10 +25,14 @@ def _assert_single_image_and_attrs_shape(
 
 
 def _min_max_normalize(image: np.ndarray):
+    if image.max() == image.min():  # if all values are the same (0)
+        return image
     return (image - image.min()) / (image.max() - image.min())
 
 
 def _tensor_to_numpy(image: torch.Tensor):
+    if len(image.shape) == 2:  # grayscale (segmentations)
+        return image.cpu().detach().numpy()
     return np.transpose(image.cpu().detach().numpy(), (1, 2, 0))
 
 
@@ -255,7 +259,9 @@ class ExplanationVisualizer:
             if key not in ["Image", "Segmentation"]
         }
         num_attrs = len(attrs)
-        plots_per_attr = int(np.sum(labels))
+
+        labels = labels.numpy()
+        plots_per_attr = int(len(labels))
         cols = num_attrs + 1
         rows = max(plots_per_attr, 2)  # at least 2 rows for segmentation
 
@@ -274,7 +280,6 @@ class ExplanationVisualizer:
         # Add segmentation
         fig.add_trace(segmentations[0], row=2, col=1)
         remove_axis(fig, row=2, col=1)
-
         # # Add each attribution to the subplot and update axes
         for col_key, (attr_name, attr_list) in enumerate(attrs.items(), start=2):
             for row_key, plot in enumerate(attr_list, start=1):
@@ -316,8 +321,7 @@ class ExplanationVisualizer:
         plotly.graph_objects.Figure
             Figure object.
         """
-        label_indices = np.nonzero(labels)[0]
-        label_names = [self.index_to_name[index] for index in label_indices]
+        label_names = [self.index_to_name[index] for index in range(len(labels))]
         subplot_titles = [
             [""] * cols for _ in range(rows)
         ]  # Use list comprehension here
@@ -329,7 +333,7 @@ class ExplanationVisualizer:
         # # Add each attribution to the subplot and update axes
 
         for col_key, attr_name in enumerate(attr_names, start=1):
-            attr_name = attr_name[8:]  # remove a_batch_
+            attr_name = attr_name[:5]  # remove .. _data
             for row_key, label_name in enumerate(label_names):
                 subplot_titles[row_key][col_key] = f"{attr_name} {label_name}"
         # flatten list
@@ -546,6 +550,9 @@ class ExplanationVisualizer:
         plotly.graph_objects.Figure
             Figure object.
         """
+        # convert to np if tensor
+        if isinstance(segmentation, torch.Tensor):
+            segmentation = segmentation.cpu().detach().numpy()
         # convert segmentation to int
         segmentation = segmentation.astype(int)
         n_colors = len(self.segmentation_colors)
