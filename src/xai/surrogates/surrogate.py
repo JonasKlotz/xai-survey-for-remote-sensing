@@ -1,6 +1,5 @@
 import torch.nn.functional as F
 from torch import optim
-import tqdm
 
 
 def surrogate_training(
@@ -31,7 +30,6 @@ def surrogate_training(
     """
     optimizer = optimizer_fn(surrogate.parameters(), lr=lr)
     blackbox.eval()
-    tqdm_bar = tqdm.tqdm(range(epochs))
 
     for epoch in range(epochs):
         surrogate.train()

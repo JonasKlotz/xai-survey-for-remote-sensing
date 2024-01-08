@@ -8,7 +8,7 @@ from captum.attr._utils.lrp_rules import (
     IdentityRule,
 )
 
-from src.xai.xai_methods.explanation import Explanation
+from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
 class LRPImpl(Explanation):

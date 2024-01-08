@@ -6,7 +6,7 @@ from captum._utils.models import SkLearnLinearRegression
 from captum.attr._core.lime import get_exp_kernel_similarity_function, Lime
 from skimage.segmentation import mark_boundaries, slic
 
-from src.xai.xai_methods.explanation import Explanation
+from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
 class LimeImpl(Explanation):

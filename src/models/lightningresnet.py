@@ -9,7 +9,7 @@ from torchmetrics import (
 
 from src.models.interpretable_resnet import get_resnet
 from training.rrr_loss import RightForRightReasonsLoss
-from xai.xai_methods.deeplift_impl import DeepLiftImpl
+from xai.explanations.explanation_methods.deeplift_impl import DeepLiftImpl
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -67,7 +67,7 @@ class LightningResnet(LightningModule):
                 s_batch=segments,
                 regular_loss_value=base_loss,
             )
-            logits, y_hat = self.predict(batch)  # re-establish grads
+            _ = self.model(images)
         else:
             loss = nn.BCEWithLogitsLoss()(y_hat, target)
 

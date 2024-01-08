@@ -3,7 +3,7 @@ import quantus
 import torch
 
 from utility.csv_logger import CSVLogger
-from xai.xai_methods.explanation_manager import explanation_wrapper
+from xai.explanations.explanation_manager import explanation_wrapper
 
 
 class MetricsManager:

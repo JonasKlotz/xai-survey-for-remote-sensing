@@ -51,7 +51,10 @@ class RightForRightReasonsLoss(torch.nn.Module):
         -------
 
         """
-        attrs = self.explanation_method.explain_batch(x_batch, y_batch)
+        # todo should i xexplain the predictions or the labels
+        attrs = self.explanation_method.explain_batch(
+            tensor_batch=x_batch, predictions_batch=None, labels_batch=y_batch
+        )
         print(f"attrs: {attrs.shape}")
         print(f"s_batch: {s_batch.shape}")
 

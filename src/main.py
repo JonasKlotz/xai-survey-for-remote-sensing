@@ -13,7 +13,7 @@ print(f"Added {project_root} to path.")
 
 # Trick linter
 from src.training.train import train  # noqa: E402
-from src.xai.generate_explanations import generate_explanations  # noqa: E402
+from src.xai.explanations.generate_explanations import generate_explanations  # noqa: E402
 from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods  # noqa: E402
 from utility.cluster_logging import logger  # noqa: E402
 from visualization.visualize import visualize  # noqa: E402

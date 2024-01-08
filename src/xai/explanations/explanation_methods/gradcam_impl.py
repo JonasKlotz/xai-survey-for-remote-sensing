@@ -3,7 +3,7 @@ from typing import Union
 import torch
 from captum.attr import GuidedGradCam
 
-from src.xai.xai_methods.explanation import Explanation
+from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
 class GradCamImpl(Explanation):

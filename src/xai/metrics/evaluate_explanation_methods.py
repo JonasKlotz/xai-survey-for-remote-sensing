@@ -2,13 +2,13 @@ import torch
 import yaml
 
 from data.constants import DEEPGLOBE_IDX2NAME
-from data.zarr_handler import load_most_recent_batches
+from data.zarr_handler import load_batches
 from models.get_models import get_model
 from utility.cluster_logging import logger
 from visualization.explanation_visualizer import ExplanationVisualizer
-from xai.generate_explanations import generate_explanations
+from xai.explanations.generate_explanations import generate_explanations
 from xai.metrics.metrics_manager import MetricsManager
-from xai.xai_methods.gradcam_impl import GradCamImpl
+from xai.explanations.explanation_methods.gradcam_impl import GradCamImpl
 
 device_string = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -22,7 +22,7 @@ def evaluate_explanation_methods(cfg: dict, load_precomputed: bool = True):
         generate_explanations(cfg)
 
     logger.debug("Loading batches as zarr")
-    all_zarrs = load_most_recent_batches(results_dir=cfg["results_path"])
+    all_zarrs = load_batches(cfg)
     for key, value in all_zarrs.items():
         all_zarrs[key] = value[:]  # convert to numpy
 

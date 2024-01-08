@@ -5,14 +5,14 @@ import plotly.graph_objects as go
 import torch
 
 from data.constants import DEEPGLOBE_IDX2NAME
-from data.zarr_handler import load_most_recent_batches
+from data.zarr_handler import load_batches
 from utility.cluster_logging import logger
 from xai.metrics.metrics_utiliies import get_colors
 
 
 def plot_dataset_distribution_zarr(cfg: dict):
     logger.debug("Loading batches as zarr")
-    all_zarrs = load_most_recent_batches(results_dir=cfg["results_path"])
+    all_zarrs = load_batches(cfg)
 
     y_batch = all_zarrs["y_batch"]
 
@@ -31,7 +31,7 @@ def plot_dataset_distribution_zarr(cfg: dict):
 
 def plot_pixel_distribution_zarr(cfg):
     logger.debug("Loading batches as zarr")
-    all_zarrs = load_most_recent_batches(results_dir=cfg["results_path"])
+    all_zarrs = load_batches(cfg)
 
     s_batch = all_zarrs["s_batch"][:]
     plot_pixel_distribution(cfg, s_batch)

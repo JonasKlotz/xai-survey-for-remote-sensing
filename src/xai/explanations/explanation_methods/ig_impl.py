@@ -1,18 +1,18 @@
 from typing import Union
 
 import torch
-from captum.attr import DeepLift
+from captum.attr import IntegratedGradients
 
-from src.xai.xai_methods.explanation import Explanation
+from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
-class DeepLiftImpl(Explanation):
-    attribution_name = "deeplift"
+class IntegratedGradientsImpl(Explanation):
+    attribution_name = "IntegratedGradients"
 
     def __init__(self, model, **kwargs):
         super().__init__(model, **kwargs)
 
-        self.attributor = DeepLift(model)
+        self.attributor = IntegratedGradients(model)
 
     def explain(
         self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None

@@ -61,8 +61,8 @@ class Explanation:
     def explain_batch(
         self,
         tensor_batch: torch.Tensor,
-        target_batch: torch.Tensor = None,
-        labels_batch: torch.Tensor = None,
+        prediction_batch: torch.Tensor,
+        labels_batch: torch.Tensor,
     ):
         """
         Explain a batch of images.
@@ -79,7 +79,7 @@ class Explanation:
         ----------
         tensor_batch : torch.Tensor
             A batch of image tensors of shape (batchsize, channels, height, width).
-        target_batch : torch.Tensor, optional
+        prediction_batch : torch.Tensor, optional
             The corresponding targets for each image in the batch. If not provided,
             the method will compute attributions for all classes.
 
@@ -92,13 +92,13 @@ class Explanation:
         if self.multi_label:
             if self.vectorize:
                 return self._handle_mlc_explanation_vectorized(
-                    tensor_batch, target_batch, labels_batch
+                    tensor_batch, prediction_batch, labels_batch
                 )
             return self._handle_mlc_explanation(
-                tensor_batch, target_batch, labels_batch
+                tensor_batch, prediction_batch, labels_batch
             )
 
-        return self._handle_slc_explanation(tensor_batch, target_batch)
+        return self._handle_slc_explanation(tensor_batch, prediction_batch)
 
     def visualize(self, attrs: torch.Tensor, image_tensor: torch.Tensor):
         if len(attrs.shape) == 4:
