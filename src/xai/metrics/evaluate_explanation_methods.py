@@ -1,14 +1,13 @@
 import torch
 import yaml
+from tqdm import tqdm
 
-from data.constants import DEEPGLOBE_IDX2NAME
-from data.zarr_handler import load_batches
+from data.zarr_handler import get_zarr_dataloader
 from models.get_models import get_model
 from utility.cluster_logging import logger
-from visualization.explanation_visualizer import ExplanationVisualizer
-from xai.explanations.generate_explanations import generate_explanations
 from xai.metrics.metrics_manager import MetricsManager
-from xai.explanations.explanation_methods.gradcam_impl import GradCamImpl
+from xai.explanations.explanation_manager import _explanation_methods
+
 
 device_string = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -18,82 +17,47 @@ def evaluate_explanation_methods(cfg: dict, load_precomputed: bool = True):
     Evaluate Explanation Methods
 
     """
-    if not load_precomputed:
-        generate_explanations(cfg)
-
-    logger.debug("Loading batches as zarr")
-    all_zarrs = load_batches(cfg)
-    for key, value in all_zarrs.items():
-        all_zarrs[key] = value[:]  # convert to numpy
-
-        # convert y and sbatch to int
-        if key in ["y_batch", "s_batch"]:
-            all_zarrs[key] = all_zarrs[key].astype(int)
-
-    x_batch = all_zarrs["x_batch"]
-    y_batch = all_zarrs["y_batch"]
-    s_batch = all_zarrs["s_batch"]
-
-    # test batch
-    a_batch_gradcam = all_zarrs["a_batch_gradcam"]
-    a_batch_deeplift = all_zarrs["a_batch_deeplift"]
-    a_batch_integrated_gradients = all_zarrs["a_batch_integrated_gradients"]
-
-    batch_size = cfg["data"]["batch_size"]
-    num_classes = cfg["num_classes"]
-    input_channels = cfg["input_channels"]
-
-    vis = ExplanationVisualizer(
-        cfg, explanation_method_name="GradCAM", index_to_name=DEEPGLOBE_IDX2NAME
+    logger.debug(f"Evaluating explanations from {cfg['zarr_path']}")
+    # set batch size to 1 for evaluation
+    cfg["data"]["batch_size"] = 4
+    data_loader, keys = get_zarr_dataloader(
+        cfg,
     )
-
-    for batch_index in range(batch_size):
-        img = x_batch[batch_index]
-        labels = y_batch[batch_index]
-        segments = s_batch[batch_index]
-
-        # # if more than two labels are 1
-        # if sum(labels) <= 1:
-        #     continue
-
-        gradcam_attrs = a_batch_gradcam[batch_index]  # # num classes attributions
-        deeplift_attrs = a_batch_deeplift[batch_index]  # # num classes attributions
-        integrated_gradients_attrs = a_batch_integrated_gradients[batch_index]
-        all_attrs = {
-            "gradcam": gradcam_attrs,
-            "deeplift": deeplift_attrs,
-            "integrated_gradients": integrated_gradients_attrs,
-        }
-        try:
-            vis.visualize_multi_label_classification(
-                all_attrs, img, segmentation_tensor=segments, label_tensor=labels
-            )
-        except Exception as e:
-            logger.error(f"Error visualizing: {e}")
-            continue
-
-    # load model
-    model = get_model(cfg, num_classes=num_classes, input_channels=input_channels)
+    model = get_model(
+        cfg,
+        num_classes=cfg["num_classes"],
+        input_channels=cfg["input_channels"],  # data_module.dims[0],
+        self_trained=True,
+    )
     model.eval()
-    explanation = GradCamImpl(model)
 
-    metrics_manager = MetricsManager(
-        model=model,
-        explanation=explanation,
-        aggregate=True,
-        device_string=device_string,
-        log=True,
-        log_dir=cfg["models_path"],
-    )
+    metrics_manager_dict = {}
+    for explanation_name in cfg["explanation_methods"]:
+        metrics_manager_dict[explanation_name] = MetricsManager(
+            model=model,
+            explanation=_explanation_methods[explanation_name](model),
+            aggregate=True,
+            device_string=device_string,
+            log=True,
+            log_dir=cfg["models_path"],
+        )
 
-    all_results = metrics_manager.evaluate_batch(
-        x_batch=x_batch,
-        y_batch=y_batch,
-        a_batch=a_batch_gradcam,
-        s_batch=s_batch,
-    )
+    for batch in tqdm(data_loader):
+        batch_dict = dict(zip(keys, batch))
+        image_tensor = batch_dict.pop("x_data")
+        label_tensor = batch_dict.pop("y_data")
+        _ = batch_dict.pop("y_pred_data")
+        segments_tensor = batch_dict.pop("s_data")
+        _ = batch_dict.pop("index_data")
 
-    logger.debug(all_results)
+        for explanation_name in cfg["explanation_methods"]:
+            results = metrics_manager_dict[explanation_name].evaluate_batch_mlc(
+                x_batch=image_tensor,
+                y_batch=label_tensor,
+                a_batch=batch_dict[explanation_name + "_data"],
+                s_batch=segments_tensor,
+            )
+            logger.debug(f"Results: {results}")
 
 
 def main():

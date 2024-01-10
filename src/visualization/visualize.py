@@ -21,14 +21,6 @@ def visualize(cfg: dict):
 
     if cfg["debug"]:
         model = model.double()
-
-        # load model
-        model = get_model(
-            cfg,
-            num_classes=cfg["num_classes"],
-            input_channels=cfg["input_channels"],  # data_module.dims[0],
-            self_trained=True,
-        )
         model.eval()
 
         model = model.double()
@@ -47,7 +39,7 @@ def visualize(cfg: dict):
             batch_dict = dict(zip(keys, batch))
             image_tensor = batch_dict.pop("x_data")
             label_tensor = batch_dict.pop("y_data")
-            _ = batch_dict.pop("y_pred_data")
+            predictions_tensor = batch_dict.pop("y_pred_data")
             segments_tensor = batch_dict.pop("s_data")
             index_tensor = batch_dict.pop("index_data")
 
@@ -59,7 +51,8 @@ def visualize(cfg: dict):
                 image_tensor=image_tensor,
                 label_tensor=label_tensor,
                 segmentation_tensor=segments_tensor,
+                predictions_tensor=predictions_tensor,
+                show=False,
             )
 
             explanation_visualizer.save_last_fig(name=f"sample_{index_tensor}")
-            break

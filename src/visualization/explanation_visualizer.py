@@ -105,6 +105,7 @@ class ExplanationVisualizer:
         image_tensor: torch.Tensor,
         segmentation_tensor: torch.Tensor = None,
         label_tensor: torch.Tensor = None,
+        predictions_tensor: torch.Tensor = None,
         show=True,
     ):
         """
@@ -225,8 +226,12 @@ class ExplanationVisualizer:
         for key, attrs in attrs_dict.items():
             attrs = [self._preprocess_attrs(attr) for attr in attrs]
             # squeeze batch dimension in attrs
+
             attrs = [attr.squeeze() for attr in attrs]
             attrs = [attr for attr in attrs if not np.isnan(attr).all()]
+            # if attrs are all zero replace with 5x5 zeros
+            attrs = [np.zeros((5, 5)) if np.all(attr == 0) else attr for attr in attrs]
+
             data[key] = [go.Heatmap(z=attr, colorscale="RdBu_r") for attr in attrs]
 
         return data
@@ -333,7 +338,8 @@ class ExplanationVisualizer:
         # # Add each attribution to the subplot and update axes
 
         for col_key, attr_name in enumerate(attr_names, start=1):
-            attr_name = attr_name[:5]  # remove .. _data
+            attr_name = attr_name[:-5]  # remove .. _data
+            attr_name = attr_name[2:]  # remove a_
             for row_key, label_name in enumerate(label_names):
                 subplot_titles[row_key][col_key] = f"{attr_name} {label_name}"
         # flatten list

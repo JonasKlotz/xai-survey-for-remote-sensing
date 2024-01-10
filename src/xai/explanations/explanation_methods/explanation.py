@@ -35,6 +35,8 @@ class Explanation:
         self.multi_label = multi_label
         self.num_classes = num_classes
         self.vectorize = vectorize
+        self.only_explain_true_labels = False
+        self.only_explain_predictions = False
 
     def __call__(self, *args, **kwargs):
         return self.explain(*args, **kwargs)
@@ -224,10 +226,16 @@ class Explanation:
             image_tensor = tensor_batch[batch_index : batch_index + 1]
 
             for label_index in range(self.num_classes):
-                positive_label = labels_batch[batch_index][label_index]
                 # we only want to explain the labels that are present in the image
-                if positive_label == 0:
-                    continue
+                if self.only_explain_true_labels:
+                    positive_label = labels_batch[batch_index][label_index]
+                    if positive_label == 0:
+                        continue
+                # we only want to explain the predictions that are present in the image
+                elif self.only_explain_predictions:
+                    prediction = target_batch[batch_index][label_index]
+                    if prediction == 0:
+                        continue
 
                 attrs = self.explain(
                     image_tensor, torch.tensor(label_index).unsqueeze(0)

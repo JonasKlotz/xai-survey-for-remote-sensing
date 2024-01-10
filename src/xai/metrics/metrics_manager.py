@@ -141,6 +141,45 @@ class MetricsManager:
 
         return all_results
 
+    def evaluate_batch_mlc(
+        self,
+        x_batch: torch.tensor,
+        y_batch: torch.tensor,
+        a_batch: torch.tensor,
+        s_batch: torch.tensor = None,
+    ):
+        x_batch = (
+            x_batch.unsqueeze(1).expand(-1, 6, -1, -1, -1).reshape(-1, 3, 120, 120)
+        )
+        # expand s_batch
+        if s_batch is not None:
+            s_batch = (
+                s_batch.unsqueeze(1)
+                .expand(
+                    -1,
+                    6,
+                    -1,
+                    -1,
+                )
+                .reshape(-1, 1, 120, 120)
+            )
+        # get indices where y_batch is not 0 (i.e. the labels that are present) batchsize x 1 where 1 from 0 to 5
+        _ = torch.where(y_batch != 0)[1]
+
+        # flatten a batch and y batch
+        y_batch = y_batch.flatten(start_dim=0, end_dim=1)
+        a_batch = a_batch.flatten(start_dim=0, end_dim=1)
+
+        # filter out all indices where the label is 0
+        tmp_indices = torch.where(y_batch != 0)[0]
+        y_batch = y_batch[tmp_indices]
+        a_batch = a_batch[tmp_indices]
+        x_batch = x_batch[tmp_indices]
+        if s_batch is not None:
+            s_batch = s_batch[tmp_indices]
+
+        pass
+
     def _evaluate_category(
         self,
         metrics: dict,

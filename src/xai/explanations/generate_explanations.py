@@ -27,7 +27,7 @@ def generate_explanations(cfg: dict):
     explanation_manager = ExplanationsManager(cfg, model)
 
     if cfg["debug"]:
-        model = model.double()
+        # model = model.double()
         data_loader, _ = get_zarr_dataloader(
             cfg,
             filter_keys=[
