@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import torch
 import torchvision
 from plotly.subplots import make_subplots
+import plotly.express as px
 
 from data.constants import DEEPGLOBE_IDX2NAME
 
@@ -129,7 +130,9 @@ class ExplanationVisualizer:
                 attrs, image_tensor, segmentation_tensor
             )
 
-            fig = self._create_fig_from_dict_data(data, labels=label_tensor)
+            fig = self._create_fig_from_dict_data(
+                data, labels=label_tensor, predictions_tensor=predictions_tensor
+            )
 
         else:
             data, titles = self.create_data_for_plot(
@@ -236,7 +239,9 @@ class ExplanationVisualizer:
 
         return data
 
-    def _create_fig_from_dict_data(self, data: dict, labels, plot_title=""):
+    def _create_fig_from_dict_data(
+        self, data: dict, labels, predictions_tensor: torch.Tensor = None, plot_title=""
+    ):
         """
         Create figure from dictionary data.
 
@@ -268,7 +273,7 @@ class ExplanationVisualizer:
         labels = labels.numpy()
         plots_per_attr = int(len(labels))
         cols = num_attrs + 1
-        rows = max(plots_per_attr, 2)  # at least 2 rows for segmentation
+        rows = max(plots_per_attr, 3)  # at least 2 rows for segmentation
 
         subplot_titles = self._create_subplot_titles(
             list(attrs.keys()), cols, labels, rows
@@ -285,6 +290,14 @@ class ExplanationVisualizer:
         # Add segmentation
         fig.add_trace(segmentations[0], row=2, col=1)
         remove_axis(fig, row=2, col=1)
+
+        text = px.scatter_3d().add_annotation(
+            text="Plot is being computed. This can take some seconds.",
+            showarrow=False,
+            font={"size": 20},
+        )
+        fig.add_trace(text, row=3, col=1)
+        remove_axis(fig, row=3, col=1)
         # # Add each attribution to the subplot and update axes
         for col_key, (attr_name, attr_list) in enumerate(attrs.items(), start=2):
             for row_key, plot in enumerate(attr_list, start=1):

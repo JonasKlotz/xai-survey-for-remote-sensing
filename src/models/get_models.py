@@ -4,6 +4,7 @@ import os
 import torch
 
 from models.lightningresnet import LightningResnet
+from utility.cluster_logging import logger
 
 
 def get_model(
@@ -43,6 +44,9 @@ def get_lightning_resnet(
     )
     if self_trained:
         model.load_state_dict(load_most_recent_model(cfg))
+    logger.debug(
+        f"Loaded model {model}, pretrained from imagenet: {pretrained}, self trained: {self_trained}"
+    )
     return model
 
 
