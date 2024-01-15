@@ -5,11 +5,10 @@ from torchmetrics import (
     AveragePrecision,
     Accuracy,
     F1Score,
+    MetricCollection,
 )
 
 from src.models.interpretable_resnet import get_resnet
-from training.rrr_loss import RightForRightReasonsLoss
-from xai.explanations.explanation_methods.deeplift_impl import DeepLiftImpl
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -41,7 +40,32 @@ class LightningResnet(LightningModule):
             bias=False,
         )
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
-        self.metrics_calculator = MetricsCalculator(num_classes)
+
+        metrics = MetricCollection(
+            {
+                "f1_score_macro": F1Score(
+                    task="multilabel",
+                    average="macro",
+                    threshold=0.5,
+                    num_labels=num_classes,
+                ),
+                "f1_score_micro": F1Score(
+                    task="multilabel",
+                    average="micro",
+                    threshold=0.5,
+                    num_labels=num_classes,
+                ),
+                "average_precision_macro": AveragePrecision(
+                    task="multilabel", average="macro", num_labels=num_classes
+                ),
+                "accuracy": Accuracy(
+                    task="multilabel", threshold=0.5, num_labels=num_classes
+                ),
+            }
+        )
+        self.valid_metrics = metrics.clone(
+            prefix="val_"
+        )  # todo uncomment when calculating LRP
         self.loss_name = loss_name
 
     def forward(self, x):
@@ -53,66 +77,25 @@ class LightningResnet(LightningModule):
 
         y_hat = self.model(images)
         # loss cannot be part of self as it would be interpreted as layer and need a ruling
-        if self.loss_name == "RRR":
-            print("RRR")
-            base_loss = nn.BCEWithLogitsLoss()(y_hat, target)
 
-            rrr = RightForRightReasonsLoss(
-                lambda_=1, explanation_method=DeepLiftImpl(self)
-            )
-            self.log("base_loss", base_loss, prog_bar=True)
-            loss = rrr(
-                x_batch=images,
-                y_batch=target,
-                s_batch=segments,
-                regular_loss_value=base_loss,
-            )
-            _ = self.model(images)
-        else:
-            loss = nn.BCEWithLogitsLoss()(y_hat, target)
+        loss = nn.BCEWithLogitsLoss()(y_hat, target)
 
-        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_loss", loss, prog_bar=True, sync_dist=True)
         return loss
-
-    def predict(self, batch):
-        images, target, idx, segments = batch
-
-        y_hat = self.model(images)
-        # todo find if name logits is right, sigmoid is normalization
-        logits = torch.sigmoid(y_hat)
-        return logits, y_hat
 
     def evaluate(self, batch, stage=None):
         images, target, idx, segments = batch
 
-        logits, y_hat = self.predict(batch)
+        y_hat = self.model(images)
+        logits = torch.sigmoid(y_hat)
 
         # loss cannot be part of self as it would be interpreted as layer and need a ruling
-        if self.loss_name == "rrr":
-            print("RRR")
-            base_loss = nn.BCEWithLogitsLoss()(y_hat, target)
-
-            rrr = RightForRightReasonsLoss(
-                lambda_=1, explanation_method=DeepLiftImpl(self)
-            )
-            if stage:
-                self.log(f"{stage}_base_loss", base_loss, prog_bar=True)
-            loss = rrr(
-                x_batch=images,
-                y_batch=target,
-                s_batch=segments,
-                regular_loss_value=base_loss,
-            )
-            logits, y_hat = self.predict(batch)  # re-establish grads
-        else:
-            loss = nn.BCEWithLogitsLoss()(y_hat, target)
+        loss = nn.BCEWithLogitsLoss()(y_hat, target)
 
         target = target.long()
-        metrics = self.metrics_calculator.calculate_metrics(logits, target)
         if stage:
-            self.log(f"{stage}_loss", loss, prog_bar=True)
-            for name, value in metrics.items():
-                self.log(f"{stage}_{name}", value, prog_bar=True)
+            self.log(f"{stage}_loss", loss, prog_bar=True, sync_dist=True)
+            self.log_dict(self.valid_metrics(logits, target), sync_dist=True)
 
     def validation_step(self, batch, batch_idx):
         self.evaluate(batch, "val")
@@ -131,33 +114,5 @@ class LightningResnet(LightningModule):
 
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 
-
-class MetricsCalculator:
-    # https://lightning.ai/docs/torchmetrics/stable/pages/overview.html#metrics-and-devices
-    def __init__(self, num_classes: int):
-        self.metrics = {
-            "f1_score_macro": F1Score(
-                task="multilabel",
-                average="macro",
-                threshold=0.5,
-                num_labels=num_classes,
-            ).to(device),
-            "f1_score_micro": F1Score(
-                task="multilabel",
-                average="micro",
-                threshold=0.5,
-                num_labels=num_classes,
-            ).to(device),
-            "average_precision_macro": AveragePrecision(
-                task="multilabel", average="macro", num_labels=num_classes
-            ).to(device),
-            "accuracy": Accuracy(
-                task="multilabel", threshold=0.5, num_labels=num_classes
-            ).to(device),
-        }
-
-    def calculate_metrics(self, logits, target):
-        result = {}
-        for name, metric in self.metrics.items():
-            result[name] = metric(logits, target)
-        return result
+    def on_validation_epoch_end(self):
+        self.valid_metrics.reset()

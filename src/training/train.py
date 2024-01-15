@@ -2,12 +2,15 @@ import os
 
 import torch
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import (
+    GradientAccumulationScheduler,
+    StochasticWeightAveraging,
+    ModelCheckpoint,
+)
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
-
 
 from data.data_utils import load_data_module
 from models.get_models import get_model
-
 from utility.cluster_logging import logger
 
 
@@ -26,16 +29,29 @@ def train(
         cfg, num_classes=data_module.num_classes, input_channels=data_module.dims[0]
     )
     logger.debug("Start Training")
+    prefix_name = (
+        f"{cfg['model_name']}{cfg['layer_number']}_{cfg['dataset_name']}_epochs"
+    )
+    callbacks = [
+        TQDMProgressBar(refresh_rate=20),
+        GradientAccumulationScheduler(scheduling={0: 8, 4: 4, 8: 1}),
+        StochasticWeightAveraging(swa_lrs=1e-2),
+        ModelCheckpoint(
+            dirpath=cfg["models_path"],
+            filename=prefix_name + "{epoch}-{val_loss:.2f}",
+        ),
+    ]
     # init trainer
     trainer = Trainer(
         max_epochs=cfg["max_epochs"],
-        callbacks=[TQDMProgressBar(refresh_rate=20)],
+        callbacks=callbacks,
         accelerator="auto",
-        devices=1 if torch.cuda.is_available() else None,  # limiting got iPython runs
+        strategy="ddp",
     )
+
     trainer.fit(model, data_module)
 
-    save_model(cfg, model)
+    # save_model(cfg, model)
 
 
 def save_model(cfg: dict, model: torch.nn.Module):

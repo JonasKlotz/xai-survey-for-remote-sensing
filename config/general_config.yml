@@ -28,8 +28,8 @@ data:
   test_csv: "/home/jonas/splits/deepglobe_version2_test.csv"
   segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
 
-  batch_size: 32
-  num_workers: 0
+  batch_size: 128
+  num_workers: 4
   pin_memory: True
 
 # Training parameters
