@@ -15,6 +15,7 @@ from xai.explanations.explanation_manager import ExplanationsManager
 def generate_explanations(cfg: dict):
     logger.debug("Generating explanations")
     logger.debug(f"Using CUDA: {torch.cuda.is_available()}")
+    logger.debug(f"Using device: {cfg['device']}")
 
     # load model
     model = get_model(
@@ -22,7 +23,8 @@ def generate_explanations(cfg: dict):
         num_classes=cfg["num_classes"],
         input_channels=cfg["input_channels"],  # data_module.dims[0],
         self_trained=True,
-    )
+    ).to(cfg["device"])
+
     model.eval()
     explanation_manager = ExplanationsManager(cfg, model)
 

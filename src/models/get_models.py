@@ -1,6 +1,3 @@
-import glob
-import os
-
 import torch
 
 from models.lightningresnet import LightningResnet
@@ -43,14 +40,19 @@ def get_lightning_resnet(
         loss_name=cfg["loss_name"],
     )
     if self_trained:
-        model.load_state_dict(load_most_recent_model(cfg))
+        state_dict = load_model(cfg)
+        model.load_state_dict(
+            state_dict,
+            strict=False,
+        )
+
     logger.debug(
-        f"Loaded model {model}, pretrained from imagenet: {pretrained}, self trained: {self_trained}"
+        f"Loaded model {cfg['model_name']}, pretrained from imagenet: {pretrained}, self trained: {self_trained}"
     )
     return model
 
 
-def load_most_recent_model(cfg: dict):
+def load_model(cfg: dict):
     """
     Load the most recent model of a specific type from the models directory.
 
@@ -74,28 +76,10 @@ def load_most_recent_model(cfg: dict):
         If the models directory does not exist or is not a directory.
     """
     # Get the path to the models directory
-    models_path = cfg.get("models_path")
+    models_path = cfg.get("model_path")
     if not models_path:
         raise FileNotFoundError("Models path is not provided in the configuration.")
 
-    # Construct the model name pattern
-    model_name_pattern = (
-        f"{cfg['model_name']}{cfg['layer_number']}_{cfg['dataset_name']}*.pt"
-    )
-
-    # List the .pt files in the models directory that match the model name pattern
-    model_files = glob.glob(os.path.join(models_path, model_name_pattern))
-    if not model_files:
-        raise FileNotFoundError(
-            f"No model files found in the models directory that match the pattern {model_name_pattern}."
-        )
-
-    # Sort the model files based on the timestamp in their names
-    model_files.sort(key=os.path.getmtime, reverse=True)
-
-    # Load the most recent model
-    most_recent_model_file = model_files[0]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = torch.load(most_recent_model_file, map_location=torch.device(device))
+    model = torch.load(models_path, map_location=torch.device(cfg["device"]))
 
     return model

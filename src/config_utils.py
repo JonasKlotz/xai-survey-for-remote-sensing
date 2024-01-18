@@ -23,9 +23,10 @@ def parse_config(config_path, project_root):
 
 
 def add_important_paths_to_cfg(config: dict, project_root: str):
-    for key in ["data", "models", "logs", "results"]:
+    for key in ["data", "logs", "results", "models"]:
         config[f"{key}_path"] = os.path.join(project_root, key)
 
+    config["model_path"] = os.path.join(project_root, config["model_path"])
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     config["timestamp"] = timestamp
     config[

@@ -2,16 +2,17 @@ import argparse
 import os
 import sys
 
-import pytorch_lightning as pl
-import torch.multiprocessing
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
-from config_utils import parse_config
+import pytorch_lightning as pl  # noqa: E402
+import torch.multiprocessing  # noqa: E402
+
+from config_utils import parse_config  # noqa: E402
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 print(f"Added {project_root} to path.")
 
-# Trick linter
 from src.training.train import train  # noqa: E402
 from src.xai.explanations.generate_explanations import generate_explanations  # noqa: E402
 from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods  # noqa: E402
@@ -37,6 +38,19 @@ def main(
     logger.debug("In main")
     general_config = parse_config(config_path, project_root)
     general_config["debug"] = debug
+
+    # print all cuda devices
+    logger.debug(f"Available cuda devices: {torch.cuda.device_count()}")
+    for i in range(torch.cuda.device_count()):
+        logger.debug(f"Device {i}: {torch.cuda.get_device_name(i)}")
+        logger.debug(
+            f"Device {i} memory: {torch.cuda.get_device_properties(i)}"
+            f"total_memory: {torch.cuda.get_device_properties(i).total_memory}"
+        )
+
+    general_config["device"] = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
 
     # plot_dataset_distribution_zarr(general_config)
     # plot_pixel_distribution_zarr(general_config)

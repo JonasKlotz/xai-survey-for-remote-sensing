@@ -4,7 +4,7 @@ visualize: False
 
 # General parameters
 model_name: 'resnet'
-layer_number: 18
+layer_number: 34 # 18 34 50
 dataset_name: 'deepglobe'
 num_classes: 6
 input_channels: 3
@@ -28,12 +28,12 @@ data:
   test_csv: "/home/jonas/splits/deepglobe_version2_test.csv"
   segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
 
-  batch_size: 128
+  batch_size: 64
   num_workers: 4
   pin_memory: True
 
 # Training parameters
-max_epochs: 50
+max_epochs: 20
 learning_rate: 0.001
 momentum: 0.9
 weight_decay: 0.0005
@@ -47,6 +47,7 @@ vectorize: False
 # whether to load the batches from a specific path
 zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/explanations_2024-01-08_13-56-34.zarr' # If this is empty the most recent will be loaded "/home/jonasklotz/Studys/MASTERS/XAI/results/new_batches"
 
+model_path: 'models/resnet18_deepglobe_2024-01-19_12-03-44/epochs_20.pt'
 
 loss_name: 'BCEWithLogitsLoss'
 loss_explanation: 'deeplift'

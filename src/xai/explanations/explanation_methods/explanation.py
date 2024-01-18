@@ -1,11 +1,11 @@
+import time
 from abc import abstractmethod
+from functools import wraps
 from typing import Union
 
-import numpy as np
 import torch
-from captum.attr import visualization as viz
-from functools import wraps
-import time
+
+from utility.cluster_logging import logger
 
 
 def timeit(func):
@@ -27,6 +27,7 @@ class Explanation:
     def __init__(
         self,
         model,
+        device: torch.device,
         multi_label: bool = True,
         num_classes: int = 6,
         vectorize: bool = True,
@@ -37,6 +38,15 @@ class Explanation:
         self.vectorize = vectorize
         self.only_explain_true_labels = False
         self.only_explain_predictions = False
+        self.explain_true_label_and_preds = True
+
+        logger.debug(
+            f"Explaining the true labels: {self.only_explain_true_labels} \n"
+            f"Explaining the predictions: {self.only_explain_predictions} \n"
+            f"Explaining the true labels and predictions: {self.explain_true_label_and_preds} \n"
+        )
+
+        self.device = device
 
     def __call__(self, *args, **kwargs):
         return self.explain(*args, **kwargs)
@@ -92,49 +102,11 @@ class Explanation:
             computed attributions for each image and target pair in the batch.
         """
         if self.multi_label:
-            if self.vectorize:
-                return self._handle_mlc_explanation_vectorized(
-                    tensor_batch, prediction_batch, labels_batch
-                )
             return self._handle_mlc_explanation(
                 tensor_batch, prediction_batch, labels_batch
             )
 
         return self._handle_slc_explanation(tensor_batch, prediction_batch)
-
-    def visualize(self, attrs: torch.Tensor, image_tensor: torch.Tensor):
-        if len(attrs.shape) == 4:
-            attrs = attrs.squeeze(0)
-        if len(image_tensor.shape) == 4:
-            image_tensor = image_tensor.squeeze(0)
-
-        heatmap = np.transpose(attrs.cpu().detach().numpy(), (1, 2, 0))
-        image = np.transpose(image_tensor.cpu().detach().numpy(), (1, 2, 0))
-
-        # min max normalization
-        # heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
-        image = (image - image.min()) / (image.max() - image.min())
-
-        fig = viz.visualize_image_attr_multiple(
-            attr=heatmap,
-            original_image=image,
-            methods=["original_image", "heat_map"],
-            signs=["all", "positive"],
-            titles=[
-                f"Original Image for {self.attribution_name} on {self.model.__class__.__name__}",
-                f"Heat Map for {self.attribution_name} on {self.model.__class__.__name__}",
-            ],
-            show_colorbar=True,
-            outlier_perc=2,
-            use_pyplot=False,
-        )
-        return fig
-
-    def visualize_batch(self, attrs_batch, image_batch):
-        for i in range(attrs_batch.shape[0]):
-            attrs = attrs_batch[i]
-            image = image_batch[i]
-            self.visualize(attrs, image)
 
     def _handle_mlc_explanation_vectorized(
         self,
@@ -219,31 +191,43 @@ class Explanation:
             computed attributions for each image and target pair in the batch.
         """
         batchsize, _, height, width = tensor_batch.shape
-
         # create output tensor without channels (classes * batchsize) x 1 x height x width
-        all_attrs = torch.zeros((batchsize, self.num_classes, 1, height, width))
+        all_attrs = (
+            torch.zeros((batchsize, self.num_classes, 1, height, width))
+            .to(self.device)
+            .float()
+        )
         for batch_index in range(batchsize):
             image_tensor = tensor_batch[batch_index : batch_index + 1]
 
             for label_index in range(self.num_classes):
                 # we only want to explain the labels that are present in the image
+                positive_label = labels_batch[batch_index][label_index]
+                prediction = target_batch[batch_index][label_index]
+
                 if self.only_explain_true_labels:
-                    positive_label = labels_batch[batch_index][label_index]
                     if positive_label == 0:
                         continue
                 # we only want to explain the predictions that are present in the image
                 elif self.only_explain_predictions:
-                    prediction = target_batch[batch_index][label_index]
                     if prediction == 0:
                         continue
+                elif self.explain_true_label_and_preds:
+                    if positive_label == 0 and prediction == 0:
+                        continue
+
+                self.model.to(self.device)
+                image_tensor = image_tensor.to(self.device)
+                label_index = torch.tensor(label_index).unsqueeze(0).to(self.device)
 
                 attrs = self.explain(
-                    image_tensor, torch.tensor(label_index).unsqueeze(0)
+                    image_tensor,
+                    label_index,
                 )
                 # If attrs is 3 channel sum over channels
                 if len(attrs.shape) == 4 and attrs.shape[1] == 3:
                     attrs = attrs.sum(dim=1, keepdim=True)
-                all_attrs[batch_index, label_index] = attrs
+                all_attrs[batch_index, label_index] = attrs.float()
         return all_attrs
 
     def _handle_slc_explanation(

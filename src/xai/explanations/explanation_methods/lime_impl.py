@@ -46,16 +46,19 @@ class LimeImpl(Explanation):
             The attributions of the explanation method.
 
         """
-        if self.vectorize:
-            segments = _batchwise_slic(image_tensor, plot=False, n_segments=15, sigma=5)
 
-        else:
-            segments = slic_from_tensor(
-                image_tensor, plot=False, n_segments=15, sigma=5
-            ).unsqueeze(0)
+        segments = slic_from_tensor(
+            image_tensor, plot=False, n_segments=15, sigma=5
+        ).unsqueeze(0)
+
+        image_tensor = image_tensor.to(self.device)
+        target = target.to(self.device)
+        segments = segments.to(self.device)
 
         attrs = self.attributor.attribute(
-            image_tensor, target=target, feature_mask=segments
+            image_tensor,
+            target=target,
+            feature_mask=segments,
         )
         return attrs
 
@@ -101,7 +104,7 @@ def slic_from_tensor(
 
     if len(img_tensor.shape) == 4:
         img_tensor = img_tensor.squeeze(0)
-    img = img_tensor.permute(1, 2, 0).to(torch.double).numpy()
+    img = img_tensor.permute(1, 2, 0).cpu().to(torch.double).numpy()
 
     segments = slic(img, start_label=0, n_segments=n_segments, sigma=sigma)
 

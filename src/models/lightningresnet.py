@@ -39,7 +39,14 @@ class LightningResnet(LightningModule):
             padding=(1, 1),
             bias=False,
         )
+
+        # replace the last layer
         self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
+
+        # unfreeze the model
+        if not freeze:
+            for param in self.model.parameters():
+                param.requires_grad = True
 
         metrics = MetricCollection(
             {
@@ -63,9 +70,12 @@ class LightningResnet(LightningModule):
                 ),
             }
         )
-        self.valid_metrics = metrics.clone(
-            prefix="val_"
-        )  # todo uncomment when calculating LRP
+        print(metrics)
+        # self.valid_metrics = metrics.clone(
+        #     prefix="val_"
+        # )  # todo comment when calculating LRP
+        self.valid_metrics = None
+
         self.loss_name = loss_name
 
     def forward(self, x):
@@ -95,7 +105,9 @@ class LightningResnet(LightningModule):
         target = target.long()
         if stage:
             self.log(f"{stage}_loss", loss, prog_bar=True, sync_dist=True)
-            self.log_dict(self.valid_metrics(logits, target), sync_dist=True)
+            self.log_dict(
+                self.valid_metrics(logits, target), prog_bar=True, sync_dist=True
+            )
 
     def validation_step(self, batch, batch_idx):
         self.evaluate(batch, "val")
@@ -115,4 +127,4 @@ class LightningResnet(LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 
     def on_validation_epoch_end(self):
-        self.valid_metrics.reset()
+        pass  # self.valid_metrics.reset()
