@@ -23,7 +23,7 @@ def parse_config(config_path, project_root):
 
 
 def add_important_paths_to_cfg(config: dict, project_root: str):
-    for key in ["data", "logs", "results", "models"]:
+    for key in ["data", "logs", "results", "models", "visualization"]:
         config[f"{key}_path"] = os.path.join(project_root, key)
 
     config["model_path"] = os.path.join(project_root, config["model_path"])
@@ -32,5 +32,8 @@ def add_important_paths_to_cfg(config: dict, project_root: str):
     config[
         "experiment_name"
     ] = f'{config["dataset_name"]}_{config["model_name"]}_{timestamp}'
+    config["training_root_path"] = os.path.join(
+        config["models_path"], config["experiment_name"]
+    )
 
     return config

@@ -19,7 +19,9 @@ def train(
     # load datamodule
     data_module = load_data_module(cfg)
     logger.debug(f"Loaded data module {data_module}")
-
+    cfg["task"] = data_module.task
+    cfg["num_classes"] = data_module.num_classes
+    cfg["input_channels"] = data_module.dims[0]
     # load model
     model = get_model(
         cfg,
@@ -55,6 +57,7 @@ def train(
 
     # init trainer
     trainer = Trainer(
+        default_root_dir=cfg["training_root_path"],
         max_epochs=cfg["max_epochs"],
         callbacks=callbacks,
         accelerator="auto",
@@ -62,6 +65,11 @@ def train(
     )
 
     trainer.fit(model, data_module)
+    model.metrics_manager.plot(stage="val")
+
+    trainer.test(model, data_module)
+    model.metrics_manager.plot(stage="test")
+
     try:
         save_model(cfg, model)
     except Exception as e:
@@ -70,7 +78,7 @@ def train(
 
 def save_model(cfg: dict, model: torch.nn.Module):
     # get timestamp
-    model_name = f"epochs_ {cfg['max_epochs']}.pt"
-    model_path = os.path.join(cfg["models_path"], model_name)
+    model_name = f"epochs_{cfg['max_epochs']}.pt"
+    model_path = os.path.join(cfg["training_root_path"], model_name)
     torch.save(model.state_dict(), model_path)
     logger.debug(f"Saved model to {model_path}")

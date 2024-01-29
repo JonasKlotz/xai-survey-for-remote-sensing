@@ -74,6 +74,7 @@ class Caltech101DataModule(TorchVisDataModule):
     def __init__(self, cfg, train_transforms, target_transforms=None):
         self.num_classes = 101
         self.dims = (3, 224, 224)
+        self.task = "multiclass"
 
         super().__init__(cfg, train_transforms, target_transforms)
 

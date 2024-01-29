@@ -1,133 +1,139 @@
 import os
-import sys
-import logging
-from datetime import datetime
+from typing import Any
 
-from sklearn.metrics import f1_score, average_precision_score, accuracy_score
-
-
-def create_logger(log_dir_path, logging_level=10):
-    """
-    Creates a logger with a time stamp output folder in
-    :param logging_level: levels range from 50 - critical, 40 error .. to 10 - debug
-    :param log_dir_path: log directory
-    :return: logger
-    """
-    tick = datetime.now()
-
-    log_dir_path += f'/log_{tick.strftime("%d.%m-%H:%M")}'
-
-    logger = logging.getLogger("pytorch_logger")
-    logger.setLevel(logging_level)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    os.makedirs(log_dir_path, exist_ok=True)
-    output_file_handler = logging.FileHandler(os.path.join(log_dir_path, "run.log"))
-    output_file_handler.setFormatter(formatter)
-
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setFormatter(formatter)
-
-    logger.addHandler(output_file_handler)
-    logger.addHandler(stdout_handler)
-    return logger
+import torch
+import torchmetrics
+from matplotlib import pyplot as plt
+from torchmetrics import (
+    AveragePrecision,
+    Accuracy,
+    F1Score,
+    MetricCollection,
+)
 
 
-class MetricTracker(object):
-    """Computes and stores the average and current value."""
+class TrainingMetricsManager(torchmetrics.Metric):
+    def __init__(self, config: dict, **kwargs: Any):
+        super().__init__(**kwargs)
+        self.task = config["task"]
+        self.num_classes = config["num_classes"]
+        self.config = config
+        self._init_metrics()
 
-    def __init__(self):
-        self.reset()
+        self.save_path = f"{config.get('training_root_path')}/"
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
 
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
+    def __call__(self, stage="train", *args, **kwargs):
+        return self._get_tracker_for_stage(*args, **kwargs)
 
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = round(self.sum / self.count, 3)
+    def __repr__(self):
+        return self.val_metrics.__repr__()
+
+    def _init_metrics(self):
+        # self.confmat = torchmetrics.ConfusionMatrix(task=self.task, num_classes=self.num_classes, num_labels=self.num_classes)
+        # self.roc = torchmetrics.ROC(self.task, num_classes=self.num_classes, num_labels=self.num_classes)
+        metrics = MetricCollection(
+            {
+                "f1_score_macro": F1Score(
+                    task=self.task,
+                    average="macro",
+                    threshold=0.5,
+                    num_classes=self.num_classes,
+                    num_labels=self.num_classes,
+                ).to(self.config["device"]),
+                "f1_score_micro": F1Score(
+                    task=self.task,
+                    average="micro",
+                    threshold=0.5,
+                    num_classes=self.num_classes,
+                    num_labels=self.num_classes,
+                ).to(self.config["device"]),
+                "average_precision_macro": AveragePrecision(
+                    task=self.task,
+                    average="macro",
+                    num_classes=self.num_classes,
+                    num_labels=self.num_classes,
+                ).to(self.config["device"]),
+                "accuracy": Accuracy(
+                    task=self.task,
+                    threshold=0.5,
+                    num_classes=self.num_classes,
+                    num_labels=self.num_classes,
+                ).to(self.config["device"]),
+                # "confmat": self.confmat,
+                # "roc": self.roc,
+            }
+        )
+        self.val_metrics = metrics.clone(prefix="val_")
+        self.test_metrics = metrics.clone(prefix="test_")
+        self.train_metrics = MetricCollection(
+            {
+                "accuracy": Accuracy(
+                    task=self.task,
+                    threshold=0.5,
+                    num_classes=self.num_classes,
+                    num_labels=self.num_classes,
+                ).to(self.config["device"])
+            }
+        )
+
+        self.val_tracker = torchmetrics.wrappers.MetricTracker(self.val_metrics)
+        self.train_tracker = torchmetrics.wrappers.MetricTracker(self.train_metrics)
+        self.test_tracker = torchmetrics.wrappers.MetricTracker(self.test_metrics)
+
+    def compute(self, stage="train"):
+        return self._get_tracker_for_stage(stage).compute()
+
+    def update(self, preds: torch.Tensor, target: torch.Tensor = None, stage="train"):
+        return self._get_tracker_for_stage(stage).update(preds, target)
+
+    def reset(self, stage="train"):
+        return self._get_tracker_for_stage(stage).reset_all()
+
+    def plot(self, stage="test", *args, **kwargs):
+        tracker = self._get_tracker_for_stage(stage)
+        all_results = tracker.compute_all()
+
+        fig, ax = plt.subplots(1, 1, figsize=(20, 20), dpi=100)
+
+        tracker.plot(val=all_results, ax=ax)
+        if self.save_path is not None:
+            filename = f"{self.config.get('experiment_name')}_{stage}.png"
+            save_path = os.path.join(self.save_path, filename)
+            plt.savefig(save_path)
+        # plt.show()
+
+    def _get_tracker_for_stage(self, stage="train"):
+        if stage == "train":
+            return self.train_tracker
+        elif stage == "val":
+            return self.val_tracker
+        elif stage == "test":
+            return self.test_tracker
+        raise ValueError(f"Stage {stage} not supported.")
+
+    def increment(self, stage="train"):
+        self._get_tracker_for_stage(stage).increment()
+
+    def compute_all(self, stage="train"):
+        return self._get_tracker_for_stage(stage).compute_all()
 
 
-def calculate_metrics(y_true, y_pred, threshold=0.5):
-    """
-    Calculate both micro and macro for F1 and mAP score
-    """
-    y_pred_threshed = (y_pred > threshold).long()
+if __name__ == "__main__":
+    # test metricsManager
+    config = {
+        "task": "multiclass",
+        "num_classes": 10,
+        "save_path": "/home/jonasklotz/Studys/MASTERS/XAI/results/visualizations/train_plots/test.png",
+    }
+    metricsManager = TrainingMetricsManager(config)
 
-    y_true = y_true.cpu().numpy()
-    y_pred_threshed = y_pred_threshed.cpu().numpy()
-    y_pred = y_pred.cpu().numpy()
+    for _ in range(5):
+        metricsManager.increment()
+        for _ in range(5):
+            y = torch.randint(10, (10,))
+            y_hat = torch.randn(10, 10)
+            metricsManager.update(y_hat, y)
 
-    acc = round(accuracy_score(y_true=y_true, y_pred=y_pred_threshed), 3)
-    mif1 = round(
-        f1_score(
-            y_true=y_true, y_pred=y_pred_threshed, average="micro", zero_division=0
-        ),
-        3,
-    )
-    maf1 = round(
-        f1_score(
-            y_true=y_true, y_pred=y_pred_threshed, average="macro", zero_division=0
-        ),
-        3,
-    )
-    miMAP = round(
-        average_precision_score(y_true=y_true, y_score=y_pred, average="micro"), 3
-    )
-    maMAP = round(
-        average_precision_score(y_true=y_true, y_score=y_pred, average="macro"), 3
-    )
-    return mif1, maf1, miMAP, maMAP, acc
-
-
-class CSV_logger:
-    """
-    Class for logging metrics to a csv file
-    """
-
-    metric_names = [
-        "epoch",
-        "train_miAP",
-        "train_maAP",
-        "train_miF1",
-        "train_maF1",
-        "train_loss",
-        "valid_miAP",
-        "valid_maAP",
-        "valid_miF1",
-        "valid_maF1",
-        "valid_loss",
-        "test_miAP",
-        "test_maAP",
-        "test_miF1",
-        "test_maF1",
-        "test_loss",
-    ]
-
-    def __init__(self, file_name, dir_name, metric_names=None):
-        try:
-            os.makedirs(dir_name)
-        except OSError:
-            pass
-        if metric_names:
-            self.metric_names = metric_names
-
-        self.file_path = os.path.join(dir_name, f"{file_name}.csv")
-        csv_header = ",".join(self.metric_names)
-        with open(self.file_path, "a") as csv_file:
-            csv_file.write(csv_header)
-            csv_file.write("\n")
-
-    @staticmethod
-    def get_metric_names(metric_names):
-        return metric_names
-
-    def write_csv(self, metrics, new_line=False):
-        with open(self.file_path, "a") as csv_file:
-            for m in metrics:
-                csv_file.write(str(m) + ",")
-            if new_line:
-                csv_file.write("\n")
+    metricsManager.plot(stage="train")

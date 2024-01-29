@@ -21,12 +21,12 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  batch_size: 32
-  num_workers: 0
-  pin_memory: False
+  batch_size: 64
+  num_workers: 20
+  pin_memory: True
 
 # Training parameters
-max_epochs: 20
+max_epochs: 50
 learning_rate: 0.001
 momentum: 0.9
 weight_decay: 0.0005
