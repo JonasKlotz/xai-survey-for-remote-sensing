@@ -197,26 +197,17 @@ class Explanation:
             .to(self.device)
             .float()
         )
+        self.model.to(self.device)
         for batch_index in range(batchsize):
             image_tensor = tensor_batch[batch_index : batch_index + 1]
 
             for label_index in range(self.num_classes):
-                # we only want to explain the labels that are present in the image
-                positive_label = labels_batch[batch_index][label_index]
-                prediction = target_batch[batch_index][label_index]
+                # we only want to explain the labels that are present in the image or the predictions
+                if self._skip_explanation(
+                    batch_index, label_index, labels_batch, target_batch
+                ):
+                    continue
 
-                if self.only_explain_true_labels:
-                    if positive_label == 0:
-                        continue
-                # we only want to explain the predictions that are present in the image
-                elif self.only_explain_predictions:
-                    if prediction == 0:
-                        continue
-                elif self.explain_true_label_and_preds:
-                    if positive_label == 0 and prediction == 0:
-                        continue
-
-                self.model.to(self.device)
                 image_tensor = image_tensor.to(self.device)
                 label_index = torch.tensor(label_index).unsqueeze(0).to(self.device)
 
@@ -227,8 +218,22 @@ class Explanation:
                 # If attrs is 3 channel sum over channels
                 if len(attrs.shape) == 4 and attrs.shape[1] == 3:
                     attrs = attrs.sum(dim=1, keepdim=True)
+
                 all_attrs[batch_index, label_index] = attrs.float()
         return all_attrs
+
+    def _skip_explanation(self, batch_index, label_index, labels_batch, target_batch):
+        # we only want to explain the labels that are present in the image
+        positive_label = labels_batch[batch_index][label_index]
+        prediction = target_batch[batch_index][label_index]
+        if self.only_explain_true_labels:
+            return positive_label == 0
+        # we only want to explain the predictions that are present in the image
+        elif self.only_explain_predictions:
+            return prediction == 0
+        elif self.explain_true_label_and_preds:
+            return positive_label == 0 and prediction == 0
+        return False
 
     def _handle_slc_explanation(
         self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None

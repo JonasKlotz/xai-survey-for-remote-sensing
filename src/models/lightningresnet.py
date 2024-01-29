@@ -24,6 +24,7 @@ class LightningResnet(LightningModule):
         freeze=False,
         pretrained=False,
         loss_name="bce",
+        task="multilabel",
     ):
         super(LightningResnet, self).__init__()
         self.save_hyperparameters(ignore=["loss"])
@@ -48,33 +49,55 @@ class LightningResnet(LightningModule):
             for param in self.model.parameters():
                 param.requires_grad = True
 
-        metrics = MetricCollection(
-            {
-                "f1_score_macro": F1Score(
-                    task="multilabel",
-                    average="macro",
-                    threshold=0.5,
-                    num_labels=num_classes,
-                ),
-                "f1_score_micro": F1Score(
-                    task="multilabel",
-                    average="micro",
-                    threshold=0.5,
-                    num_labels=num_classes,
-                ),
-                "average_precision_macro": AveragePrecision(
-                    task="multilabel", average="macro", num_labels=num_classes
-                ),
-                "accuracy": Accuracy(
-                    task="multilabel", threshold=0.5, num_labels=num_classes
-                ),
-            }
-        )
+        if task == "multilabel":
+            metrics = MetricCollection(
+                {
+                    "f1_score_macro": F1Score(
+                        task="multilabel",
+                        average="macro",
+                        threshold=0.5,
+                        num_labels=num_classes,
+                    ),
+                    "f1_score_micro": F1Score(
+                        task="multilabel",
+                        average="micro",
+                        threshold=0.5,
+                        num_labels=num_classes,
+                    ),
+                    "average_precision_macro": AveragePrecision(
+                        task="multilabel", average="macro", num_labels=num_classes
+                    ),
+                    "accuracy": Accuracy(
+                        task="multilabel", threshold=0.5, num_labels=num_classes
+                    ),
+                }
+            )
+        elif task == "multiclass":
+            metrics = MetricCollection(
+                {
+                    "f1_score_macro": F1Score(
+                        task="multiclass",
+                        average="macro",
+                        num_classes=num_classes,
+                    ),
+                    "f1_score_micro": F1Score(
+                        task="multiclass",
+                        average="micro",
+                        num_classes=num_classes,
+                    ),
+                    "average_precision_macro": AveragePrecision(
+                        task="multiclass", average="macro", num_classes=num_classes
+                    ),
+                    "accuracy": Accuracy(task="multiclass", num_classes=num_classes),
+                }
+            )
+
+        self.task = task
         print(metrics)
         # self.valid_metrics = metrics.clone(
         #     prefix="val_"
         # )  # todo comment when calculating LRP
-        self.valid_metrics = None
+        self.valid_metrics = metrics  # None
 
         self.loss_name = loss_name
 
@@ -83,24 +106,22 @@ class LightningResnet(LightningModule):
 
     def training_step(self, batch, batch_idx):
         # for deepglobe:
-        images, target, idx, segments = batch
+        images, target, _ = batch
 
         y_hat = self.model(images)
-        # loss cannot be part of self as it would be interpreted as layer and need a ruling
 
-        loss = nn.BCEWithLogitsLoss()(y_hat, target)
+        loss, logits = self._calc_loss(y_hat, target)
 
         self.log("train_loss", loss, prog_bar=True, sync_dist=True)
         return loss
 
     def evaluate(self, batch, stage=None):
-        images, target, idx, segments = batch
+        print(batch.shape)
+        images, target, _ = batch
 
         y_hat = self.model(images)
-        logits = torch.sigmoid(y_hat)
 
-        # loss cannot be part of self as it would be interpreted as layer and need a ruling
-        loss = nn.BCEWithLogitsLoss()(y_hat, target)
+        loss, logits = self._calc_loss(y_hat, target)
 
         target = target.long()
         if stage:
@@ -128,3 +149,14 @@ class LightningResnet(LightningModule):
 
     def on_validation_epoch_end(self):
         pass  # self.valid_metrics.reset()
+
+    def _calc_loss(self, y_hat, target):
+        if self.task == "multilabel":
+            loss = nn.BCEWithLogitsLoss()(y_hat, target)
+            logits = torch.sigmoid(y_hat)
+        elif self.task == "multiclass":
+            loss = nn.CrossEntropyLoss()(y_hat, target)
+            logits = torch.softmax(y_hat, dim=1)
+        else:
+            raise ValueError(f"Task {self.task} not supported.")
+        return loss, logits

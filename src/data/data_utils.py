@@ -1,10 +1,12 @@
 import os
 
 import torch
+import tqdm
 from pytorch_lightning import LightningDataModule
 from torchvision import transforms
-import tqdm
+
 from data.datamodule import MNISTDataModule, DeepGlobeDataModule
+from data.torch_vis.torch_vis_datamodules import Caltech101DataModule
 from utility.cluster_logging import logger
 
 
@@ -67,9 +69,27 @@ def get_deepglobe_data_module(cfg):
     return data_module
 
 
+def get_caltech101_data_module(cfg):
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    # define transforms
+
+    train_transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std),
+        ]
+    )
+
+    datamodule = Caltech101DataModule(cfg, train_transform)
+    return datamodule
+
+
 dataset_cards = {
     "mnist": get_mnist_data_module,
     "deepglobe": get_deepglobe_data_module,
+    "caltech101": get_caltech101_data_module,
 }
 
 

@@ -5,8 +5,8 @@ visualize: False
 # General parameters
 model_name: 'resnet'
 layer_number: 34 # 18 34 50
-dataset_name: 'deepglobe'
-num_classes: 6
+dataset_name: 'caltech101'
+num_classes: 101
 input_channels: 3
 
 pretrained: False
@@ -21,16 +21,9 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  images_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/patches.lmdb"
-  labels_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/labels.parquet"
-  train_csv: "/home/jonas/splits/deepglobe_version2_train.csv"
-  val_csv: "/home/jonas/splits/deepglobe_version2_val.csv"
-  test_csv: "/home/jonas/splits/deepglobe_version2_test.csv"
-  segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
-
-  batch_size: 64
-  num_workers: 1
-  pin_memory: True
+  batch_size: 32
+  num_workers: 0
+  pin_memory: False
 
 # Training parameters
 max_epochs: 20
@@ -48,11 +41,6 @@ vectorize: False
 zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/explanations_2024-01-20_16-29-46.zarr' # If this is empty the most recent will be loaded "/home/jonasklotz/Studys/MASTERS/XAI/results/new_batches"
 
 model_path: 'models/resnet18_deepglobe_2024-01-19_12-03-44/epochs_20.pt'
-
-loss_name: 'BCEWithLogitsLoss'
-loss_explanation: 'deeplift'
-
-
 
 
 

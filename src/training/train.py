@@ -41,15 +41,17 @@ def train(
     ]
     multiGPU = False
     strategy = "auto"
-
-    if torch.cuda.device_count() > 1:
-        multiGPU = True
-        logger.debug(f"Using {torch.cuda.device_count()} GPUs")
+    if torch.cuda.is_available():
+        if torch.cuda.device_count() > 1:
+            multiGPU = True
+            logger.debug(f"Using {torch.cuda.device_count()} GPUs")
+        else:
+            logger.debug(f"Using {torch.cuda.device_count()} GPU")
+        if multiGPU:
+            model = torch.nn.parallel.DistributedDataParallel(model)
+            strategy = "ddp"
     else:
-        logger.debug(f"Using {torch.cuda.device_count()} GPU")
-    if multiGPU:
-        model = torch.nn.parallel.DistributedDataParallel(model)
-        strategy = "ddp"
+        strategy = None
 
     # init trainer
     trainer = Trainer(
