@@ -59,7 +59,7 @@ class Caltech101Dataset:
             targets = torch.tensor(targets)
 
         # todo: handle annotations
-        return features, targets, index
+        return {"features": features, "targets": targets, "index": index}
 
     def __len__(self):
         return len(self.dataset)

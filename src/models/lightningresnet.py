@@ -68,7 +68,8 @@ class LightningResnet(LightningModule):
         return predictions
 
     def training_step(self, batch, batch_idx):
-        images, target, _ = batch
+        images = batch["features"]
+        target = batch["targets"]
 
         y_hat = self.model(images)
 
@@ -82,7 +83,8 @@ class LightningResnet(LightningModule):
         return loss
 
     def evaluate(self, batch, stage=None):
-        images, target, _ = batch
+        images = batch["features"]
+        target = batch["targets"]
 
         y_hat = self.model(images)
         loss, logits = self._calc_loss(y_hat, target)

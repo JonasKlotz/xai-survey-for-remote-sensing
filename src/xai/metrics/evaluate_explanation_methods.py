@@ -43,6 +43,7 @@ def evaluate_explanation_methods(cfg: dict, load_precomputed: bool = True):
         )
 
     for batch in tqdm(data_loader):
+        #
         batch_dict = dict(zip(keys, batch))
         image_tensor = batch_dict.pop("x_data")
         label_tensor = batch_dict.pop("y_data")

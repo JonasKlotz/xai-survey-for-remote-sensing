@@ -85,8 +85,12 @@ class BaseDataset(Dataset):
         # divide by 255 to get values between 0 and 1
         patch = patch / 255
         patch = self.transform(patch) if self.transform is not None else patch
-
-        return patch, label, idx, segmentation_patch
+        return {
+            "features": patch,
+            "targets": label,
+            "index": idx,
+            "segmentations": segmentation_patch,
+        }
 
     def _extract_path_from_lmdb(self, idx, env, lmdb_path):
         """Extract patch from LMDB."""

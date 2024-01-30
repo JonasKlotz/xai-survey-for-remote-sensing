@@ -77,14 +77,10 @@ class ExplanationsManager:
         -------
 
         """
-        batch = [t.to(self.device) for t in batch]
-        if len(batch) == 3:
-            images, target, idx = batch
-            segments = torch.tensor([])
-        elif len(batch) == 4:
-            images, target, idx, segments = batch
-        else:
-            raise ValueError("Batch must contain either 3 or 4 tensors.")
+        images = batch["features"].to(self.device)
+        target = batch["targets"].to(self.device)
+        idx = batch["index"].to(self.device)
+        segments = batch.get("segments", torch.tensor([])).to(self.device)
 
         prediction_batch = self.model.prediction_step(images)
 
