@@ -39,7 +39,11 @@ def load_data_module(cfg: dict):
     logger.info(f"Loading data module {cfg['dataset_name']}")
     dataset_name = cfg["dataset_name"]
     if dataset_name in dataset_cards:
-        return dataset_cards[dataset_name](cfg)
+        data_module = dataset_cards[dataset_name](cfg)
+        cfg["task"] = data_module.task
+        cfg["num_classes"] = data_module.num_classes
+        cfg["input_channels"] = data_module.dims[0]
+        return data_module, cfg
     else:
         raise NotImplementedError(f"Dataset {dataset_name} not implemented yet")
 

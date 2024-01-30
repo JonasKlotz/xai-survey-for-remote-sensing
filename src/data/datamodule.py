@@ -214,6 +214,7 @@ class DeepGlobeDataModule(DataModule):
         self.dims = (3, 256, 256)
         self.cfg = cfg
         self.num_cls = 6
+        self.task = "multilabel"
         # self.init_transforms()
 
     def get_dataset(

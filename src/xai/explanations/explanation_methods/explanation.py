@@ -30,7 +30,7 @@ class Explanation:
         device: torch.device,
         multi_label: bool = True,
         num_classes: int = 6,
-        vectorize: bool = True,
+        vectorize: bool = False,
     ):
         self.model = model
         self.multi_label = multi_label
@@ -238,4 +238,12 @@ class Explanation:
     def _handle_slc_explanation(
         self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None
     ):
-        return self.explain(tensor_batch, target_batch)
+        # iterate over batch and explain each image
+        all_attrs = []
+        for batch_index in range(tensor_batch.shape[0]):
+            image_tensor = tensor_batch[batch_index : batch_index + 1]
+            target = target_batch[batch_index : batch_index + 1]
+            attrs = self.explain(image_tensor, target)
+            all_attrs.append(attrs)
+        all_attrs = torch.stack(all_attrs)
+        return all_attrs

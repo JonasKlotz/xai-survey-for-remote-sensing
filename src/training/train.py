@@ -17,11 +17,9 @@ def train(
     cfg: dict,
 ):
     # load datamodule
-    data_module = load_data_module(cfg)
+    data_module, cfg = load_data_module(cfg)
     logger.debug(f"Loaded data module {data_module}")
-    cfg["task"] = data_module.task
-    cfg["num_classes"] = data_module.num_classes
-    cfg["input_channels"] = data_module.dims[0]
+
     # load model
     model = get_model(
         cfg,

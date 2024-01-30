@@ -37,7 +37,6 @@ def get_lightning_resnet(
         lr=cfg["learning_rate"],
         batch_size=cfg["data"]["batch_size"],
         pretrained=pretrained,
-        task="multiclass",
         config=cfg,
     )
     if self_trained:

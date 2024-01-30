@@ -31,6 +31,7 @@ class ExplanationsManager:
 
         self.threshold: float = cfg["threshold"]
         self.device = cfg["device"]
+        self.task = cfg["task"]
 
         self._init_explanations()
 
@@ -46,6 +47,8 @@ class ExplanationsManager:
                 model=self.model,
                 vectorize=self.explanations_config["vectorize"],
                 device=self.device,
+                num_classes=self.explanations_config["num_classes"],
+                multi_label=self.task == "multilabel",
             )
 
         explanation_keys = [name + "_data" for name in list(self.explanations.keys())]
@@ -75,12 +78,15 @@ class ExplanationsManager:
 
         """
         batch = [t.to(self.device) for t in batch]
-        images, target, idx, segments = batch
+        if len(batch) == 3:
+            images, target, idx = batch
+            segments = torch.tensor([])
+        elif len(batch) == 4:
+            images, target, idx, segments = batch
+        else:
+            raise ValueError("Batch must contain either 3 or 4 tensors.")
 
-        y_hat = self.model(images)
-        logits = torch.sigmoid(y_hat)
-
-        prediction_batch = (logits > self.threshold).long()
+        prediction_batch = self.model.prediction_step(images)
 
         tmp_storage_dict = {
             "x_data": images,

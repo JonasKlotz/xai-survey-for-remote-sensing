@@ -21,8 +21,8 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  batch_size: 64
-  num_workers: 20
+  batch_size: 4
+  num_workers: 4
   pin_memory: True
 
 # Training parameters
@@ -40,7 +40,7 @@ vectorize: False
 # whether to load the batches from a specific path
 zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/explanations_2024-01-20_16-29-46.zarr' # If this is empty the most recent will be loaded "/home/jonasklotz/Studys/MASTERS/XAI/results/new_batches"
 
-model_path: 'models/resnet18_deepglobe_2024-01-19_12-03-44/epochs_20.pt'
+model_path: 'models/caltech101_resnet_2024-01-30_12-19-49/epochs_50.pt'
 
 
 

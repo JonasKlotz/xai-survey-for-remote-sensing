@@ -16,19 +16,9 @@ def generate_explanations(cfg: dict):
     logger.debug("Generating explanations")
     logger.debug(f"Using CUDA: {torch.cuda.is_available()}")
     logger.debug(f"Using device: {cfg['device']}")
+    cfg["method"] = "explain"
 
-    # load model
-    model = get_model(
-        cfg,
-        num_classes=cfg["num_classes"],
-        input_channels=cfg["input_channels"],  # data_module.dims[0],
-        self_trained=True,
-    ).to(cfg["device"])
-
-    model.eval()
-    explanation_manager = ExplanationsManager(cfg, model)
-
-    if cfg["debug"]:
+    if cfg["debug"] and cfg["dataset_name"] == "deepglobe":
         # model = model.double()
         data_loader, _ = get_zarr_dataloader(
             cfg,
@@ -42,10 +32,21 @@ def generate_explanations(cfg: dict):
 
     else:
         # load datamodule
-        data_module = load_data_module(cfg)
+        data_module, cfg = load_data_module(cfg)
         data_loader = get_loader_for_datamodule(data_module, loader_name="test")
 
         logger.debug(f"Samples in test loader: {len(data_loader)}")
+
+    # load model
+    model = get_model(
+        cfg,
+        num_classes=cfg["num_classes"],
+        input_channels=cfg["input_channels"],  # data_module.dims[0],
+        self_trained=True,
+    ).to(cfg["device"])
+
+    model.eval()
+    explanation_manager = ExplanationsManager(cfg, model)
 
     for batch in tqdm.tqdm(data_loader):
         explanation_manager.explain_batch(batch)

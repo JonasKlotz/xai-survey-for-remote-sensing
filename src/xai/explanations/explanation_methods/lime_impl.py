@@ -48,7 +48,11 @@ class LimeImpl(Explanation):
         """
 
         segments = slic_from_tensor(
-            image_tensor, plot=False, n_segments=15, sigma=5
+            image_tensor,
+            plot=False,
+            n_segments=15,
+            sigma=5,
+            multi_label=self.multi_label,
         ).unsqueeze(0)
 
         image_tensor = image_tensor.to(self.device)
@@ -99,17 +103,16 @@ def slic_from_tensor(
     title="",
     n_segments=50,
     sigma=5,
+    multi_label=True,
 ):
     """Superpixel segmentation using SLIC algorithm"""
 
     if len(img_tensor.shape) == 4:
         img_tensor = img_tensor.squeeze(0)
+
     img = img_tensor.permute(1, 2, 0).cpu().to(torch.double).numpy()
 
     segments = slic(img, start_label=0, n_segments=n_segments, sigma=sigma)
-
-    if plot:
-        _plot_slic(img, n_segments, save_path, segments, title)
 
     segments = torch.from_numpy(segments)
 

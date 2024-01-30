@@ -19,12 +19,11 @@ class LightningResnet(LightningModule):
         freeze=False,
         pretrained=False,
         loss_name="bce",
-        task="multilabel",
         config: dict = None,
     ):
         super(LightningResnet, self).__init__()
         self.save_hyperparameters(ignore=["loss"])
-
+        self.task = config["task"]
         self.model = get_resnet(resnet_layers, pretrained=pretrained)
 
         # replace the first conv layer
@@ -45,14 +44,28 @@ class LightningResnet(LightningModule):
             for param in self.model.parameters():
                 param.requires_grad = True
 
-        self.metrics_manager = TrainingMetricsManager(config)
-
-        self.task = task
+        if config.get("method") != "explain":
+            self.metrics_manager = TrainingMetricsManager(config)
+        else:
+            self.metrics_manager = None
 
         self.loss_name = loss_name
 
     def forward(self, x):
         return self.model(x)
+
+    def prediction_step(self, images):
+        y_hat = self.model(images)
+        if self.task == "multiclass":
+            logits = torch.softmax(y_hat, dim=1)
+            predictions = torch.argmax(logits, dim=1)
+        elif self.task == "multilabel":
+            logits = torch.sigmoid(y_hat)
+            predictions = (logits > self.threshold).long()
+        else:
+            raise ValueError(f"Task {self.task} not supported.")
+
+        return predictions
 
     def training_step(self, batch, batch_idx):
         images, target, _ = batch
