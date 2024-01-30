@@ -29,12 +29,12 @@ data:
   segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
 
   batch_size: 64
-  num_workers: 1
+  num_workers: 4
   pin_memory: True
 
 # Training parameters
 max_epochs: 20
-learning_rate: 0.001
+learning_rate: 0.01
 momentum: 0.9
 weight_decay: 0.0005
 optimizer: 'sgd'

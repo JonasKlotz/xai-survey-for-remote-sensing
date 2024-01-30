@@ -59,7 +59,7 @@ class ExplanationsManager:
             "s_data",
             "index_data",
         ] + explanation_keys
-        zarr_storage_path = f"{self.explanations_config['results_path']}/explanations_{self.explanations_config['timestamp']}.zarr"
+        zarr_storage_path = f"{self.explanations_config['results_path']}/{self.explanations_config['experiment_name']}.zarr"
         self.storage_handler = ZarrGroupHandler(
             path=zarr_storage_path,
             keys=storage_keys,
@@ -138,7 +138,6 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
     explanation_method_name = explain_func_kwargs.pop("explanation_method_name")
     explanation_method = _explanation_methods[explanation_method_name]
     explanation = explanation_method(model)
-    # todo differentiate between batch and single
     attrs = (
         explanation.explain_batch(tensor_batch=inputs, prediction_batch=targets)
         .detach()
