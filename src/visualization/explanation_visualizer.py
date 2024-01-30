@@ -99,6 +99,36 @@ class ExplanationVisualizer:
         # self.channels_to_visualize = cfg["channels_to_visualize"]
         # self.strategy = cfg["strategy"]
 
+    def visualize(
+        self,
+        attrs: Union[torch.Tensor, dict[torch.Tensor]],
+        image_tensor: torch.Tensor,
+        segmentation_tensor: torch.Tensor = None,
+        label_tensor: torch.Tensor = None,
+        predictions_tensor: torch.Tensor = None,
+        show=True,
+        task: str = "multilabel",
+    ):
+        if task == "multilabel":
+            # here we can either supply the labels or the predictions
+            self.visualize_multi_label_classification(
+                attrs=attrs,
+                image_tensor=image_tensor,
+                label_tensor=label_tensor,
+                segmentation_tensor=segmentation_tensor,
+                predictions_tensor=predictions_tensor,
+                show=show,
+            )
+        else:
+            self.visualize_single_label_classification(
+                attrs_dict=attrs,
+                image_tensor=image_tensor,
+                label_tensor=label_tensor,
+                segmentation_tensor=segmentation_tensor,
+                predictions_tensor=predictions_tensor,
+                show=show,
+            )
+
     def visualize_multi_label_classification(
         self,
         attrs: Union[torch.Tensor, dict[torch.Tensor]],
@@ -145,54 +175,6 @@ class ExplanationVisualizer:
 
         if show:
             fig.show()
-
-    def create_data_for_plot(self, attrs, image_tensor, segmentations):
-        """
-        Create data for plot.
-
-        Parameters
-        ----------
-        attrs : torch.Tensor
-            Attributes tensor.
-        image_tensor : torch.Tensor
-            Image tensor.
-        segmentations : torch.Tensor
-            Segmentations tensor.
-
-        Returns
-        -------
-        list
-            List of data for plot.
-        """
-        _assert_single_image_and_attrs_shape(attrs[0], image_tensor)
-        image = self._preprocess_image(image_tensor)
-        attrs = [self._preprocess_attrs(attr) for attr in attrs]
-        # squeeze batch dimension in attrs
-        attrs = [attr.squeeze() for attr in attrs]
-        attrs_titles = [f"{self.index_to_name[i]}" for i in range(len(attrs))]
-        # extract attrs that are not nan
-        attrs_titles = [
-            title
-            for title, attr in zip(attrs_titles, attrs)
-            if not np.isnan(attr).all()
-        ]
-        attrs = [attr for attr in attrs if not np.isnan(attr).all()]
-        n_attrs = len(attrs)
-        data = []
-        titles = []
-        # Add Image and flip to fix orientation
-        data.append(go.Image(z=np.flipud(image)))
-        titles.append("Image")
-        # Add Segmentation
-        segmentation_fig = self.plot_segmentation(segmentations)
-        titles.append("Segmentation")
-        for trace in segmentation_fig.data:
-            data.append(trace)
-        # Add Attrs
-        titles += attrs_titles
-        for i in range(n_attrs):
-            data.append(go.Heatmap(z=attrs[i], colorscale="RdBu_r"))
-        return data, titles
 
     def _create_data_for_dict_plot(self, attrs_dict: dict, image_tensor, segmentations):
         """
@@ -351,104 +333,6 @@ class ExplanationVisualizer:
         subplot_titles = [item for sublist in subplot_titles for item in sublist]
         return subplot_titles
 
-    def _create_fig_from_data(self, data, plot_title="Explanation", titles=None):
-        """
-        Create figure from data.
-
-        Parameters
-        ----------
-        data : list
-            List of data for plot.
-        plot_title : str, optional
-            Title of the plot.
-        titles : list, optional
-            List of titles.
-
-        Returns
-        -------
-        plotly.graph_objects.Figure
-            Figure object.
-        """
-        # Create a subplot layout with 1 row and the number of non-empty plots
-        non_empty_plots = [plot for plot in data if not isinstance(plot, go.Scatter)]
-        empty_plots = [plot for plot in data if (isinstance(plot, go.Scatter))]
-        # Define explicit column widths to control subplot sizes and reduce unwanted margins
-        num_plots = len(non_empty_plots)
-
-        # Define the domain for each subplot (equally divided)
-        # Define the horizontal domain for each subplot (equally divided)
-        domain_step = 1.0 / num_plots
-        domains = [
-            [i * domain_step, (i + 1) * domain_step] for i in range(num_plots)
-        ]  # Slight gap between plots
-
-        fig = make_subplots(
-            rows=1,
-            cols=num_plots,
-        )
-
-        # Add each plot to the subplot and update axes
-        for i, plot in enumerate(non_empty_plots, start=1):
-            fig.add_trace(plot, row=1, col=i)
-
-            # Update x-axis for each subplot
-            fig.update_xaxes(
-                showline=False,
-                showgrid=False,
-                zeroline=False,
-                showticklabels=False,
-                row=1,
-                col=i,
-                domain=domains[i - 1],
-            )
-            # No need to update y-axis domain, only adjust appearance
-            fig.update_yaxes(
-                showline=False,
-                showgrid=False,
-                zeroline=False,
-                showticklabels=False,
-                row=1,
-                col=i,
-            )
-
-            # Additional adjustments specifically for images
-            if isinstance(plot, go.Image):
-                fig.update_xaxes(scaleanchor="x", scaleratio=1, row=1, col=i)
-                fig.update_yaxes(scaleanchor="x", scaleratio=1, row=1, col=i)
-
-        # Add empty plots to add legends
-        for i, plot in enumerate(empty_plots, start=1):
-            fig.add_trace(plot, row=1, col=len(non_empty_plots))
-        # Customize the layout as needed
-        fig.update_layout(
-            legend=dict(orientation="h", yanchor="bottom", y=1, xanchor="right", x=1)
-        )
-
-        # Add annotations for titles at the bottom of each subplot
-        for i, title in enumerate(titles, start=1):
-            # Calculate the midpoint of each subplot's domain
-            midpoint = (domains[i - 1][0] + domains[i - 1][1]) / 2
-
-            fig.add_annotation(
-                dict(
-                    text=title,  # Subplot title text
-                    xref="paper",
-                    yref="paper",
-                    x=midpoint,  # Set x to the midpoint of the subplot's domain
-                    y=-0.1,  # Adjust y position
-                    showarrow=False,
-                    font=dict(size=12),
-                )
-            )
-
-        fig.update_layout(
-            height=self.size,
-            width=self.size * num_plots,
-            margin=dict(t=40, b=40),
-            title_text=plot_title,
-        )
-        return fig
-
     def save_last_fig(self, name, format="svg"):
         """
         Save the last figure.
@@ -506,6 +390,10 @@ class ExplanationVisualizer:
         if not isinstance(attrs, torch.Tensor):
             attrs = torch.tensor(attrs)
 
+        # if 3 channels sum over channels
+        if len(attrs.shape) == 3:
+            attrs = attrs.sum(axis=0)
+
         attrs = _min_max_normalize(attrs)
         attrs = _tensor_to_numpy(attrs)
         return attrs
@@ -537,6 +425,11 @@ class ExplanationVisualizer:
             Mean and standard deviation.
         """
         if self.cfg["dataset_name"] == "deepglobe":
+            mean = torch.tensor([0.4095, 0.3808, 0.2836])
+            std = torch.tensor([0.1509, 0.1187, 0.1081])
+
+            return mean, std
+        elif self.cfg["dataset_name"] == "caltech101":
             mean = torch.tensor([0.485, 0.456, 0.406])
             std = torch.tensor([0.229, 0.224, 0.225])
             return mean, std
@@ -604,6 +497,68 @@ class ExplanationVisualizer:
             yaxis=dict(title="", showgrid=False, showticklabels=False),
         )
         # fig.show()
+        return fig
+
+    def visualize_single_label_classification(
+        self,
+        attrs_dict: Union[torch.Tensor, dict[torch.Tensor]],
+        image_tensor: torch.Tensor,
+        segmentation_tensor: torch.Tensor = None,
+        label_tensor: torch.Tensor = None,
+        predictions_tensor: torch.Tensor = None,
+        show=True,
+    ):
+        data = {}
+
+        image = self._preprocess_image(image_tensor)
+        # Add Image and flip to fix orientation
+        data["Image"] = go.Image(z=image)
+
+        if segmentation_tensor is not None:
+            # Add Segmentation
+            segmentation_fig = self.plot_segmentation(segmentation_tensor)
+            segmentation_list = []
+            for trace in segmentation_fig.data:
+                segmentation_list.append(trace)
+            data["Segmentation"] = segmentation_list
+
+        for key, attrs in attrs_dict.items():
+            attr = self._preprocess_attrs(attrs)
+            # squeeze batch dimension in attrs
+
+            attr = attr.squeeze()
+
+            data[key] = go.Heatmap(z=np.flipud(attr), colorscale="RdBu_r")
+
+        num_plots = len(data.keys())
+        cols = num_plots
+        rows = 1
+        titles = list(data.keys())
+
+        fig = make_subplots(
+            rows=rows,
+            cols=cols,
+            subplot_titles=titles,
+        )
+
+        # Add each plot to the subplot and update axes
+        for i, (key, plot) in enumerate(data.items(), start=1):
+            fig.add_trace(plot, row=1, col=i)
+            remove_axis(fig, row=1, col=i)
+
+        fig.update_layout(
+            height=self.size * rows,
+            width=self.size * cols,
+            margin=dict(t=60, b=60),
+            title_text=f"Explanation for true label {label_tensor.item()} "
+            f"and predicted label {predictions_tensor.item()}",
+        )
+        self.last_fig = fig
+
+        # Show the figure
+        if show:
+            fig.show()
+
         return fig
 
 

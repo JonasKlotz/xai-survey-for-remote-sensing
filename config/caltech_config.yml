@@ -38,8 +38,7 @@ threshold: 0.5
 vectorize: False
 
 # whether to load the batches from a specific path
-zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/explanations_2024-01-20_16-29-46.zarr' # If this is empty the most recent will be loaded "/home/jonasklotz/Studys/MASTERS/XAI/results/new_batches"
-
+zarr_path: 'results/explanations_2024-01-30_13-58-21.zarr'
 model_path: 'models/caltech101_resnet_2024-01-30_12-19-49/epochs_50.pt'
 
 

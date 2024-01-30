@@ -25,6 +25,7 @@ class LightningResnet(LightningModule):
         self.save_hyperparameters(ignore=["loss"])
         self.task = config["task"]
         self.model = get_resnet(resnet_layers, pretrained=pretrained)
+        self.threshold = config["threshold"]
 
         # replace the first conv layer
         self.model.conv1 = nn.Conv2d(
@@ -44,7 +45,7 @@ class LightningResnet(LightningModule):
             for param in self.model.parameters():
                 param.requires_grad = True
 
-        if config.get("method") != "explain":
+        if config.get("method") == "train":
             self.metrics_manager = TrainingMetricsManager(config)
         else:
             self.metrics_manager = None

@@ -27,6 +27,7 @@ def add_important_paths_to_cfg(config: dict, project_root: str):
         config[f"{key}_path"] = os.path.join(project_root, key)
 
     config["model_path"] = os.path.join(project_root, config["model_path"])
+    config["zarr_path"] = os.path.join(project_root, config["zarr_path"])
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     config["timestamp"] = timestamp
     config[
@@ -35,5 +36,13 @@ def add_important_paths_to_cfg(config: dict, project_root: str):
     config["training_root_path"] = os.path.join(
         config["models_path"], config["experiment_name"]
     )
+    config = _add_task(config)
+    return config
 
+
+def _add_task(config):
+    if config["dataset_name"] == "deepglobe":
+        config["task"] = "multilabel"
+    else:
+        config["task"] = "multiclass"
     return config

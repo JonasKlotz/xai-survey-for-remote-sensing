@@ -5,8 +5,10 @@ import tqdm
 from pytorch_lightning import LightningDataModule
 from torchvision import transforms
 
+from data.constants import DEEPGLOBE_IDX2NAME
 from data.datamodule import MNISTDataModule, DeepGlobeDataModule
 from data.torch_vis.torch_vis_datamodules import Caltech101DataModule
+from data.torch_vis.torchvis_CONSTANTS import CALTECH101_IDX2NAME, MNIST_IDX2NAME
 from utility.cluster_logging import logger
 
 
@@ -139,3 +141,17 @@ def calculate_dataset_distribution(cfg, data_loader):
     logger.info(f"Mean: {mean}")
     logger.info(f"Std: {std}")
     return label_counts, pixel_counts, mean, std
+
+
+def get_index_to_name(cfg):
+    """
+    This function returns the index to name mapping of the dataset
+    """
+    if cfg["dataset_name"] == "deepglobe":
+        return DEEPGLOBE_IDX2NAME
+    elif cfg["dataset_name"] == "caltech101":
+        return CALTECH101_IDX2NAME
+    elif cfg["dataset_name"] == "mnist":
+        return MNIST_IDX2NAME
+    else:
+        raise ValueError(f"Dataset {cfg['dataset_name']} not supported.")
