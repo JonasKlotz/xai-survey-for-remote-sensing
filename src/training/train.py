@@ -37,7 +37,7 @@ def train(
         # GradientAccumulationScheduler(scheduling={0: 4, 4: 2, 6: 1}),
         StochasticWeightAveraging(swa_lrs=1e-2),
         ModelCheckpoint(
-            dirpath=cfg["models_path"],
+            dirpath=cfg["training_root_path"],
             filename="{epoch}-{val_loss:.2f}",
         ),
     ]
