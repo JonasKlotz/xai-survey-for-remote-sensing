@@ -22,6 +22,7 @@ class LightningBaseModel(LightningModule):
         self.save_hyperparameters(ignore=["loss"])
         self.task = config["task"]
         self.threshold = config["threshold"]
+        self.max_epochs = config["max_epochs"]
 
         # Hyperparameters
         self.learning_rate = config["learning_rate"]
@@ -98,7 +99,10 @@ class LightningBaseModel(LightningModule):
             momentum=self.momentum,
             weight_decay=5e-4,
         )
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1)
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=int(self.max_epochs * 0.2) - 1,
+        )
 
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 

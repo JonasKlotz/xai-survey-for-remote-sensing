@@ -31,6 +31,7 @@ class Explanation:
         multi_label: bool = True,
         num_classes: int = 6,
         vectorize: bool = False,
+        model_name: str = None,
     ):
         self.model = model
         self.multi_label = multi_label

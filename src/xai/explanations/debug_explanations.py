@@ -41,27 +41,16 @@ def debug_explanations(cfg: dict):
         logger.debug(f"Samples in test loader: {len(data_loader)}")
 
     # load model
+    # model = get_model(cfg, self_trained=False).to(cfg["device"])
+    # # load model
     model = get_model(cfg, self_trained=True).to(cfg["device"])
-
-    # from torchvision import models
-    # model = models.vgg16(weights=VGG16_Weights.DEFAULT)
-    # num_classes = 101
-    # input_channels = 3
-    # model.features[0] = torch.nn.Conv2d(
-    #     input_channels,
-    #     64,
-    #     kernel_size=(7, 7),
-    #     stride=(1, 1),
-    #     padding=(1, 1),
-    #     bias=False,
-    # )
-    # model.classifier[-1] = torch.nn.Linear(4096, num_classes)
 
     model.eval()
     explanation_manager = ExplanationsManager(cfg, model)
     index2name = get_index_to_name(cfg)
     explanation_visualizer = ExplanationVisualizer(cfg, model, index2name)
 
+    i = 0
     for batch in tqdm.tqdm(data_loader):
         batch_dict = explanation_manager.explain_batch(batch)
         batch_dict = {k: v.squeeze() for k, v in batch_dict.items()}
@@ -84,4 +73,7 @@ def debug_explanations(cfg: dict):
             show=True,
             task=cfg["task"],
         )
+        i += 1
+        if i > 10:
+            break
         print("Done")

@@ -51,6 +51,7 @@ class ExplanationsManager:
                 device=self.device,
                 num_classes=self.explanations_config["num_classes"],
                 multi_label=self.task == "multilabel",
+                model_name=self.explanations_config["model_name"],
             )
         if not self.save:
             self.storage_handler = None

@@ -13,11 +13,11 @@ pretrained: False
 
 # Explanation parameters
 explanation_methods:
-  #- 'lime'
+  - 'lime'
   - 'lrp'
-  #- 'integrated_gradients'
-  #- 'gradcam'
-  #- 'deeplift'
+  - 'integrated_gradients'
+  - 'gradcam'
+  - 'deeplift'
 
 # Dataset parameters
 data:
@@ -27,7 +27,7 @@ data:
 
 
 # Training parameters
-max_epochs: 50
+max_epochs: 20
 learning_rate: 0.05
 momentum: 0.9
 weight_decay: 0.0005
@@ -40,7 +40,7 @@ vectorize: False
 
 # whether to load the batches from a specific path
 zarr_path: 'results/explanations_2024-01-30_13-58-21.zarr'
-model_path: 'models/caltech101_resnet_2024-01-30_12-19-49/epochs_50.pt'
+model_path: 'models/caltech101_vgg_2024-01-31_17-14-04/final_model.pt'
 
 
 
