@@ -6,8 +6,8 @@ from pytorch_lightning import LightningDataModule
 from torchvision import transforms
 
 from data.constants import DEEPGLOBE_IDX2NAME
-from data.datamodule import MNISTDataModule, DeepGlobeDataModule
-from data.torch_vis.torch_vis_datamodules import Caltech101DataModule
+from data.datamodule import DeepGlobeDataModule
+from data.torch_vis.torch_vis_datamodules import Caltech101DataModule, MNISTDataModule
 from data.torch_vis.torchvis_CONSTANTS import CALTECH101_IDX2NAME, MNIST_IDX2NAME
 from utility.cluster_logging import logger
 

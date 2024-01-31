@@ -7,6 +7,7 @@ from pytorch_lightning.callbacks import (
     ModelCheckpoint,
 )
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
+from pytorch_lightning.tuner.tuning import Tuner
 
 from data.data_utils import load_data_module
 from models.get_models import get_model
@@ -46,6 +47,7 @@ def train(
         else:
             logger.debug(f"Using {torch.cuda.device_count()} GPU")
         if multiGPU:
+            # currently i do not want to use ddp
             model = torch.nn.parallel.DistributedDataParallel(model)
             strategy = "ddp"
     else:
@@ -59,7 +61,9 @@ def train(
         accelerator="auto",
         strategy=strategy,
         gradient_clip_val=1,
+        log_every_n_steps=20,
     )
+    tune_trainer(cfg, data_module, model, trainer, tune_learning_rate=True)
 
     trainer.fit(model, data_module)
     model.metrics_manager.plot(stage="val")
@@ -71,6 +75,28 @@ def train(
         save_model(cfg, model)
     except Exception as e:
         logger.error(f"Failed to save model: {e}")
+
+
+def tune_trainer(
+    cfg, data_module, model, trainer, tune_batch_size=False, tune_learning_rate=False
+):
+    tuner = Tuner(trainer)
+
+    if tune_batch_size:
+        tuner.scale_batch_size(model, datamodule=data_module)
+
+    if tune_learning_rate:
+        # Run learning rate finder
+        lr_finder = tuner.lr_find(model, datamodule=data_module)
+
+        # Plot with
+        fig = lr_finder.plot(suggest=True)
+        fig.savefig(os.path.join(cfg["training_root_path"], "lr_finder.png"))
+
+        # Pick point based on plot, or get suggestion
+        new_lr = lr_finder.suggestion()
+        logger.debug(f"New learning rate: {new_lr}")
+        model.learning_rate = new_lr
 
 
 def save_model(cfg: dict, model: torch.nn.Module):
