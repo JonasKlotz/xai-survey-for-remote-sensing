@@ -5,8 +5,6 @@ from typing import Union
 
 import torch
 
-from utility.cluster_logging import logger
-
 
 def timeit(func):
     @wraps(func)
@@ -40,12 +38,6 @@ class Explanation:
         self.only_explain_true_labels = False
         self.only_explain_predictions = False
         self.explain_true_label_and_preds = True
-
-        logger.debug(
-            f"Explaining the true labels: {self.only_explain_true_labels} \n"
-            f"Explaining the predictions: {self.only_explain_predictions} \n"
-            f"Explaining the true labels and predictions: {self.explain_true_label_and_preds} \n"
-        )
 
         self.device = device
 

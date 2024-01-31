@@ -22,6 +22,11 @@ def parse_config(config_path, project_root):
     return configs
 
 
+def save_config_to_yaml(config: dict, path: str):
+    with open(path, "w") as f:
+        yaml.dump(config, f)
+
+
 def add_important_paths_to_cfg(config: dict, project_root: str):
     for key in ["data", "logs", "results", "models", "visualization"]:
         config[f"{key}_path"] = os.path.join(project_root, key)

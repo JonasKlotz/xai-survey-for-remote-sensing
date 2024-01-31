@@ -1,13 +1,12 @@
 ---
 # Description: General configuration file for the project
-visualize: False
 
 # General parameters
 model_name: 'vgg'
-layer_number: 34 # 18 34 50
-dataset_name: 'caltech101'
-num_classes: 101
+dataset_name: 'deepglobe'
+num_classes: 6
 input_channels: 3
+
 
 pretrained: False
 
@@ -21,13 +20,20 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  batch_size: 128 # optimal: 128
+  images_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/patches.lmdb"
+  labels_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/labels.parquet"
+  train_csv: "/home/jonas/splits/deepglobe_version2_train.csv"
+  val_csv: "/home/jonas/splits/deepglobe_version2_val.csv"
+  test_csv: "/home/jonas/splits/deepglobe_version2_test.csv"
+  segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
+
+  batch_size: 128
   num_workers: 8
   pin_memory: True
 
 
 # Training parameters
-max_epochs: 20
+max_epochs: 50
 learning_rate: 0.05
 momentum: 0.9
 weight_decay: 0.0005
@@ -40,7 +46,7 @@ vectorize: False
 
 # whether to load the batches from a specific path
 zarr_path: 'results/explanations_2024-01-30_13-58-21.zarr'
-model_path: 'models/caltech101_vgg_final/final_model.pt'
+model_path: 'models/caltech101_vgg_2024-01-31_17-14-04/final_model.pt'
 
 
 

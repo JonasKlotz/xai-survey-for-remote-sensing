@@ -8,7 +8,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 import pytorch_lightning as pl  # noqa: E402
 import torch.multiprocessing  # noqa: E402
 
-from config_utils import parse_config  # noqa: E402
+from config_utils import parse_config, save_config_to_yaml  # noqa: E402
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
@@ -73,6 +73,8 @@ def main(
 
     if debug_explanations_bool:
         debug_explanations(general_config)
+
+    save_config_to_yaml(general_config, general_config["cgf_save_path"])
 
 
 if __name__ == "__main__":

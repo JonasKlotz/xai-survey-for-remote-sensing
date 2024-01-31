@@ -101,7 +101,7 @@ class LightningBaseModel(LightningModule):
         )
         lr_scheduler = torch.optim.lr_scheduler.StepLR(
             optimizer,
-            step_size=int(self.max_epochs * 0.2) - 1,
+            step_size=int(self.max_epochs * 0.3),
         )
 
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}

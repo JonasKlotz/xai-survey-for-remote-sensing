@@ -26,7 +26,7 @@ def train(
     # load model
     model = get_model(cfg, pretrained=True)
     logger.debug("Start Training")
-    prefix_name = f"{cfg['model_name']}{cfg['layer_number']}_{cfg['dataset_name']}_{cfg['timestamp']}"
+    prefix_name = f"{cfg['model_name']}_{cfg['dataset_name']}_{cfg['timestamp']}"
     cfg["models_path"] = os.path.join(cfg["models_path"], prefix_name)
 
     callbacks = [
@@ -75,6 +75,8 @@ def train(
         save_model(cfg, model)
     except Exception as e:
         logger.error(f"Failed to save model: {e}")
+
+    cfg["cgf_save_path"] = os.path.join(cfg["training_root_path"], "config.yml")
 
 
 def tune_trainer(
