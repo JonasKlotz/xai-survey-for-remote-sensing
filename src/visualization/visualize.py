@@ -12,12 +12,7 @@ def visualize(cfg: dict):
     cfg["method"] = "visualize"
 
     # load model
-    model = get_model(
-        cfg,
-        num_classes=cfg["num_classes"],
-        input_channels=cfg["input_channels"],  # data_module.dims[0],
-        self_trained=True,
-    )
+    model = get_model(cfg, self_trained=True)
 
     if cfg["debug"]:
         model = model.double()

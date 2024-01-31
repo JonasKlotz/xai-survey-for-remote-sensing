@@ -23,12 +23,7 @@ def evaluate_explanation_methods(cfg: dict, load_precomputed: bool = True):
     data_loader, keys = get_zarr_dataloader(
         cfg,
     )
-    model = get_model(
-        cfg,
-        num_classes=cfg["num_classes"],
-        input_channels=cfg["input_channels"],  # data_module.dims[0],
-        self_trained=True,
-    )
+    model = get_model(cfg, self_trained=True)
     model.eval()
 
     metrics_manager_dict = {}

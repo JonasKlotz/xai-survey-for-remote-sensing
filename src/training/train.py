@@ -16,20 +16,18 @@ from utility.cluster_logging import logger
 def train(
     cfg: dict,
 ):
+    cfg["method"] = "train"
+
     # load datamodule
     data_module, cfg = load_data_module(cfg)
     logger.debug(f"Loaded data module {data_module}")
 
     # load model
-    model = get_model(
-        cfg,
-        num_classes=data_module.num_classes,
-        input_channels=data_module.dims[0],
-        pretrained=True,
-    )
+    model = get_model(cfg, pretrained=True)
     logger.debug("Start Training")
     prefix_name = f"{cfg['model_name']}{cfg['layer_number']}_{cfg['dataset_name']}_{cfg['timestamp']}"
     cfg["models_path"] = os.path.join(cfg["models_path"], prefix_name)
+
     callbacks = [
         TQDMProgressBar(refresh_rate=20),
         # GradientAccumulationScheduler(scheduling={0: 4, 4: 2, 6: 1}),
@@ -60,6 +58,7 @@ def train(
         callbacks=callbacks,
         accelerator="auto",
         strategy=strategy,
+        gradient_clip_val=1,
     )
 
     trainer.fit(model, data_module)
@@ -76,7 +75,7 @@ def train(
 
 def save_model(cfg: dict, model: torch.nn.Module):
     # get timestamp
-    model_name = f"epochs_{cfg['max_epochs']}.pt"
+    model_name = "final_model.pt"
     model_path = os.path.join(cfg["training_root_path"], model_name)
     torch.save(model.state_dict(), model_path)
     logger.debug(f"Saved model to {model_path}")

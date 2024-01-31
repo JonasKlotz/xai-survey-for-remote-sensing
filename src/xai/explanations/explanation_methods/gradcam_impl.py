@@ -13,11 +13,11 @@ class GradCamImpl(Explanation):
         super().__init__(model, **kwargs)
 
         if model.hparams.resnet_layers == 18:
-            layer = model.model.layer4[1].conv2
+            layer = model.backbone.layer4[1].conv2
         elif model.hparams.resnet_layers == 34:
-            layer = model.model.layer4[2].conv2
+            layer = model.backbone.layer4[2].conv2
         elif model.hparams.resnet_layers == 50:
-            layer = model.model.layer4[2].conv3
+            layer = model.backbone.layer4[2].conv3
         self.attributor = GuidedGradCam(model, layer)
 
     def explain(

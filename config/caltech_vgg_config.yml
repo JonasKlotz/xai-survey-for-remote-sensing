@@ -3,7 +3,7 @@
 visualize: False
 
 # General parameters
-model_name: 'resnet'
+model_name: 'vgg'
 layer_number: 34 # 18 34 50
 dataset_name: 'caltech101'
 num_classes: 101
@@ -22,11 +22,12 @@ explanation_methods:
 # Dataset parameters
 data:
   batch_size: 32
-  num_workers: 0
+  num_workers: 8
   pin_memory: True
 
+
 # Training parameters
-max_epochs: 50
+max_epochs: 20
 learning_rate: 0.01
 momentum: 0.9
 weight_decay: 0.0005

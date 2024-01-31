@@ -22,8 +22,10 @@ class ExplanationsManager:
         self,
         cfg: dict,
         model: torch.nn.Module,
+        save=True,
     ):
         self.explanations_config = cfg
+        self.save = save
         self.explanations = {}
         self.explanations_zarr_handler = {}
         self.model = model
@@ -50,6 +52,9 @@ class ExplanationsManager:
                 num_classes=self.explanations_config["num_classes"],
                 multi_label=self.task == "multilabel",
             )
+        if not self.save:
+            self.storage_handler = None
+            return
 
         explanation_keys = [name + "_data" for name in list(self.explanations.keys())]
         storage_keys = [
@@ -94,12 +99,14 @@ class ExplanationsManager:
 
         # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():
+            # todo dimensions wrong????
             batch_attrs = explanation.explain_batch(images, prediction_batch, target)
 
             # save it to zarr
             tmp_storage_dict["a_" + explanation_name + "_data"] = batch_attrs
 
-        self.storage_handler.append(tmp_storage_dict)
+        if self.storage_handler is not None:
+            self.storage_handler.append(tmp_storage_dict)
 
         return tmp_storage_dict
 

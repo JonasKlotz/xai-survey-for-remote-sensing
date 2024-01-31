@@ -129,6 +129,27 @@ class ExplanationVisualizer:
                 show=show,
             )
 
+    def visualize_batch(
+        self,
+        attrs: Union[torch.Tensor, dict[torch.Tensor]],
+        image_tensor: torch.Tensor,
+        segmentation_tensor: torch.Tensor = None,
+        label_tensor: torch.Tensor = None,
+        predictions_tensor: torch.Tensor = None,
+        show=True,
+        task: str = "multilabel",
+    ):
+        for i in range(len(image_tensor)):
+            self.visualize(
+                attrs=attrs[i],
+                image_tensor=image_tensor[i],
+                label_tensor=label_tensor[i],
+                segmentation_tensor=segmentation_tensor[i],
+                predictions_tensor=predictions_tensor[i],
+                show=show,
+                task=task,
+            )
+
     def visualize_multi_label_classification(
         self,
         attrs: Union[torch.Tensor, dict[torch.Tensor]],

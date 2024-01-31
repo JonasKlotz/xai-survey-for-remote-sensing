@@ -38,12 +38,7 @@ def generate_explanations(cfg: dict):
         logger.debug(f"Samples in test loader: {len(data_loader)}")
 
     # load model
-    model = get_model(
-        cfg,
-        num_classes=cfg["num_classes"],
-        input_channels=cfg["input_channels"],  # data_module.dims[0],
-        self_trained=True,
-    ).to(cfg["device"])
+    model = get_model(cfg, self_trained=True).to(cfg["device"])
 
     model.eval()
     explanation_manager = ExplanationsManager(cfg, model)

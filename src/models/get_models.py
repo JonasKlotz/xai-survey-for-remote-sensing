@@ -1,21 +1,20 @@
 import torch
 
-from models.lightningresnet import LightningResnet
+
+from models.lightning_models import LightningResnet, LightningVGG
 from utility.cluster_logging import logger
 
 
-def get_model(
-    config: dict,
-    num_classes: int,
-    input_channels: int,
-    self_trained: bool = False,
-    pretrained: bool = False,
-):
+def get_model(config: dict, self_trained: bool = False, pretrained: bool = False):
     if config["model_name"] == "resnet":
         return get_lightning_resnet(
             config,
-            num_classes,
-            input_channels,
+            self_trained=self_trained,
+            pretrained=pretrained,
+        )
+    elif config["model_name"] == "vgg":
+        return get_lightning_vgg(
+            config,
             self_trained=self_trained,
             pretrained=pretrained,
         )
@@ -25,18 +24,31 @@ def get_model(
 
 def get_lightning_resnet(
     cfg: dict,
-    num_classes: int,
-    input_channels: int,
     self_trained: bool,
     pretrained: bool,
 ):
     model = LightningResnet(
-        num_classes=num_classes,
-        input_channels=input_channels,
-        resnet_layers=cfg["layer_number"],
-        lr=cfg["learning_rate"],
-        batch_size=cfg["data"]["batch_size"],
-        pretrained=pretrained,
+        config=cfg,
+    )
+    if self_trained:
+        state_dict = load_model(cfg)
+        model.load_state_dict(
+            state_dict,
+            strict=False,
+        )
+
+    logger.debug(
+        f"Loaded model {cfg['model_name']}, pretrained from imagenet: {pretrained}, self trained: {self_trained}"
+    )
+    return model
+
+
+def get_lightning_vgg(
+    cfg: dict,
+    self_trained: bool,
+    pretrained: bool,
+):
+    model = LightningVGG(
         config=cfg,
     )
     if self_trained:

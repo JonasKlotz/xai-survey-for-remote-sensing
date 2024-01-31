@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 import pytorch_lightning as pl  # noqa: E402
@@ -18,6 +19,7 @@ from src.xai.explanations.generate_explanations import generate_explanations  # 
 from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods  # noqa: E402
 from utility.cluster_logging import logger  # noqa: E402
 from visualization.visualize import visualize  # noqa: E402
+from xai.explanations.debug_explanations import debug_explanations  # noqa: E402
 
 # Fix all seeds with lightning
 pl.seed_everything(42)
@@ -34,6 +36,7 @@ def main(
     evaluations=False,
     visualizations=False,
     debug=False,
+    debug_explanations_bool=False,
 ):
     logger.debug("In main")
     general_config = parse_config(config_path, project_root)
@@ -68,6 +71,9 @@ def main(
     if evaluations:
         evaluate_explanation_methods(general_config)
 
+    if debug_explanations_bool:
+        debug_explanations(general_config)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -75,6 +81,10 @@ if __name__ == "__main__":
     parser.add_argument("--training", action="store_true", help="Enable training")
     parser.add_argument(
         "--explanations", action="store_true", help="Generate explanations"
+    )
+
+    parser.add_argument(
+        "--debug-explanations", action="store_true", help="Debug explanations"
     )
     parser.add_argument(
         "--evaluations", action="store_true", help="Evaluate explanation methods"
@@ -106,4 +116,5 @@ if __name__ == "__main__":
         evaluations=args.evaluations,
         visualizations=args.visualizations,
         debug=args.debug,
+        debug_explanations_bool=args.debug_explanations,
     )

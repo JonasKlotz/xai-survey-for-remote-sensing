@@ -3,7 +3,6 @@ import os
 from abc import abstractmethod
 
 import pytorch_lightning as pl
-import torch
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
@@ -11,18 +10,14 @@ from torchvision.datasets import MNIST
 
 
 # from data.utils import add_mixed_noise
-from src.data.constants import ACTIVE_CLASSES
-from src.data.constants import BAND_99TH_PERCENTILES, EUROSAT_99TH_PERCENTILES
-from src.data.constants import BAND_NORM_STATS, EUROSAT_NORM_STATS
-from src.data.dataset import (
+from data.constants import ACTIVE_CLASSES
+from data.constants import BAND_99TH_PERCENTILES, EUROSAT_99TH_PERCENTILES
+from data.constants import BAND_NORM_STATS, EUROSAT_NORM_STATS
+from data.dataset import (
     Ben19Dataset,
     DeepGlobeDataset,
     EuroSATDataset,
 )
-
-DATA_PATH = os.path.join(os.getcwd(), "..", "..", "data")
-BATCH_SIZE = 256 if torch.cuda.is_available() else 64
-NUM_WORKERS = 4 if torch.cuda.is_available() else 0
 
 
 class DataModule(pl.LightningDataModule):
@@ -297,9 +292,7 @@ class EuroSATDataModule(DataModule):
 
 
 class MNISTDataModule(LightningDataModule):
-    def __init__(
-        self, data_dir: str = DATA_PATH, num_workers=NUM_WORKERS, batch_size=BATCH_SIZE
-    ):
+    def __init__(self, data_dir: str, num_workers, batch_size):
         super().__init__()
         self.data_dir = data_dir
         self.transform = transforms.Compose(
