@@ -39,7 +39,7 @@ threshold: 0.5
 vectorize: False
 
 # whether to load the batches from a specific path
-zarr_path: 'results/explanations_2024-01-30_13-58-21.zarr'
+zarr_path: 'results/caltech101_vgg_final.zarr'
 model_path: 'models/caltech101_vgg_final/final_model.pt'
 
 

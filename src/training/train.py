@@ -76,8 +76,6 @@ def train(
     except Exception as e:
         logger.error(f"Failed to save model: {e}")
 
-    cfg["cgf_save_path"] = os.path.join(cfg["training_root_path"], "config.yml")
-
 
 def tune_trainer(
     cfg, data_module, model, trainer, tune_batch_size=False, tune_learning_rate=False

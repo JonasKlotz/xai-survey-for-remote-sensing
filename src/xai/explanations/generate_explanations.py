@@ -46,8 +46,6 @@ def generate_explanations(cfg: dict):
     for batch in tqdm.tqdm(data_loader):
         explanation_manager.explain_batch(batch)
 
-    config["cgf_save_path"] = f"{config['results_path']}/{config['experiment_name']}"
-
 
 if __name__ == "__main__":
     import argparse
