@@ -8,7 +8,7 @@ from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
 class GradCamImpl(Explanation):
-    attribution_name = "GradCam"
+    attribution_name = "gradcam"
 
     def __init__(self, model, layer=None, **kwargs):
         super().__init__(model, **kwargs)

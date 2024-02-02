@@ -10,7 +10,7 @@ from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
 class LimeImpl(Explanation):
-    attribution_name = "LIME"
+    attribution_name = "lime"
 
     def __init__(self, model, **kwargs):
         super().__init__(model, **kwargs)
@@ -46,14 +46,14 @@ class LimeImpl(Explanation):
             The attributions of the explanation method.
 
         """
-
-        segments = slic_from_tensor(
-            image_tensor,
-            plot=False,
-            n_segments=15,
-            sigma=5,
-            multi_label=self.multilabel,
-        ).unsqueeze(0)
+        if len(image_tensor.shape) == 4:
+            segments = _batchwise_slic(image_tensor, n_segments=15, sigma=5)
+        else:
+            segments = slic_from_tensor(
+                image_tensor,
+                n_segments=15,
+                sigma=5,
+            ).unsqueeze(0)
 
         image_tensor = image_tensor.to(self.device)
         target = target.to(self.device)
@@ -67,7 +67,7 @@ class LimeImpl(Explanation):
         return attrs
 
 
-def _batchwise_slic(img_tensor_batch: torch.Tensor, plot=False, n_segments=50, sigma=5):
+def _batchwise_slic(img_tensor_batch: torch.Tensor, n_segments=50, sigma=5):
     """
     Apply SLIC algorithm to a batch of images.
 
@@ -89,25 +89,19 @@ def _batchwise_slic(img_tensor_batch: torch.Tensor, plot=False, n_segments=50, s
     """
     segments_batch = []
     for img_tensor in img_tensor_batch:
-        segments = slic_from_tensor(
-            img_tensor, plot=plot, n_segments=n_segments, sigma=sigma
-        )
+        segments = slic_from_tensor(img_tensor, n_segments=n_segments, sigma=sigma)
         segments_batch.append(segments)
     return torch.stack(segments_batch)
 
 
 def slic_from_tensor(
     img_tensor: torch.Tensor,
-    plot=True,
-    save_path=None,
-    title="",
     n_segments=50,
     sigma=5,
-    multi_label=True,
 ):
     """Superpixel segmentation using SLIC algorithm"""
 
-    if len(img_tensor.shape) == 4:
+    if len(img_tensor.shape) == 4:  # i think this should never be the case
         img_tensor = img_tensor.squeeze(0)
 
     img = img_tensor.permute(1, 2, 0).cpu().to(torch.double).numpy()
