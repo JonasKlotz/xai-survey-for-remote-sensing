@@ -10,8 +10,8 @@ from src.xai.explanations.explanation_methods.explanation import Explanation
 class GradCamImpl(Explanation):
     attribution_name = "gradcam"
 
-    def __init__(self, model, layer=None, **kwargs):
-        super().__init__(model, **kwargs)
+    def __init__(self, model, device, layer=None, **kwargs):
+        super().__init__(model, device, **kwargs)
         if isinstance(model, LightningResnet):
             if model.hparams.resnet_layers == 18:
                 layer = model.backbone.layer4[1].conv2

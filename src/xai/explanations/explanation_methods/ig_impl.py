@@ -9,8 +9,8 @@ from src.xai.explanations.explanation_methods.explanation import Explanation
 class IntegratedGradientsImpl(Explanation):
     attribution_name = "integrated_gradients"
 
-    def __init__(self, model, **kwargs):
-        super().__init__(model, **kwargs)
+    def __init__(self, model, device, **kwargs):
+        super().__init__(model, device, **kwargs)
 
         self.attributor = IntegratedGradients(model)
 

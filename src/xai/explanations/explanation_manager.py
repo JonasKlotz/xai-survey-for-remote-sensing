@@ -146,11 +146,10 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
     model = model.float()
 
     explanation_method_name = explain_func_kwargs.pop("explanation_method_name")
+    device = explain_func_kwargs.pop("device")
     explanation_method = _explanation_methods[explanation_method_name]
-    explanation = explanation_method(model)
-    attrs = (
-        explanation.explain_batch(tensor_batch=inputs, target_batch=targets)
-        .detach()
-        .numpy()
+    explanation = explanation_method(model, device=device, **explain_func_kwargs)
+
+    return explanation.explain_batch(tensor_batch=inputs, target_batch=targets).numpy(
+        force=True
     )
-    return attrs

@@ -16,7 +16,7 @@ class MetricsManager:
         explanation: callable,
         metrics_config: dict = None,
         aggregate=True,
-        device_string=None,
+        device=None,
         log=False,
         log_dir=None,
         image_shape=(3, 224, 224),
@@ -34,7 +34,7 @@ class MetricsManager:
             model to evaluate
         aggregate : bool
             whether to aggregate the results of the metrics
-        device_string : str
+        device : str
             device string for the model
         log : bool
             whether to log the results
@@ -54,7 +54,7 @@ class MetricsManager:
 
         self.metrics_config = metrics_config
 
-        self.device_string = device_string
+        self.device = device
         self.log = log
         self.log_dir = log_dir
         if self.log:
@@ -89,6 +89,7 @@ class MetricsManager:
         self.explain_func = explanation_wrapper
         self.explain_func_kwargs = {
             "explanation_method_name": explanation.attribution_name,
+            "device": self.device,
         }
 
         self.general_args = {
@@ -212,13 +213,14 @@ class MetricsManager:
         time = {}
         for key in metrics.keys():
             start_time = datetime.datetime.now()
+            print()
             results[key] = metrics[key](
                 model=self.model,
                 x_batch=x_batch,
                 y_batch=y_batch,
                 a_batch=a_batch,
                 s_batch=s_batch,
-                device=self.device_string,
+                device=self.device,
                 softmax=True,
                 channel_first=True,
                 explain_func=self.explain_func,

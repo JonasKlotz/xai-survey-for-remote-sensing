@@ -25,7 +25,7 @@ class Explanation:
     def __init__(
         self,
         model,
-        device: torch.device = "cpu",
+        device: torch.device,
         multilabel: bool = False,
         num_classes: int = 6,
         vectorize: bool = False,

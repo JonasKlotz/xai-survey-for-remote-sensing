@@ -27,25 +27,26 @@ def evaluate_explanation_methods(
     model = get_model(cfg, self_trained=True).to(cfg["device"])
     model.eval()
     # todo debug check does the model apply softmax?
-
     metrics_manager_dict = {}
     for explanation_name in cfg["explanation_methods"]:
+        # Initialize the explanation method
+        explanation = _explanation_methods[explanation_name](
+            model,
+            device=cfg["device"],
+            multilabel=False,  # todo adapt to multilabel
+            num_classes=cfg["num_classes"],
+        )
+        # Initialize the metrics manager for the explanation method
         metrics_manager_dict[explanation_name] = MetricsManager(
             model=model,
             metrics_config=metrics_cfg,
-            explanation=_explanation_methods[explanation_name](
-                model,
-                device=cfg["device"],
-                multilabel=False,  # todo adapt to multilabel
-                num_classes=cfg["num_classes"],
-            ),
+            explanation=explanation,
             aggregate=True,
-            device_string=cfg["device"],
-            log=False,
+            device=cfg["device"],
+            log=True,
             log_dir=cfg["results_path"],
             task=cfg["task"],
         )
-        break
 
     for batch in tqdm(data_loader):
         #
@@ -61,8 +62,11 @@ def evaluate_explanation_methods(
 
         for explanation_name in cfg["explanation_methods"]:
             # sum a_batch from 3 dim to 1
+            # todo: this is only necessary for the current zarr, as the a_batch is saved as 3 channel image however
+            # the metrics manager expects a 1 channel image. Changed for the next zarrs
             a_batch = batch_dict["a_" + explanation_name + "_data"].squeeze(dim=1)
             a_batch = torch.sum(a_batch, dim=1).numpy(force=True)  # sum over channels
+
             results, time = metrics_manager_dict[explanation_name].evaluate_batch(
                 x_batch=image_tensor,
                 y_batch=predicted_label_tensor,

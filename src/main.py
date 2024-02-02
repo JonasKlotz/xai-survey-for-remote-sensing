@@ -53,7 +53,7 @@ def main(
         )
 
     general_config["device"] = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
+        "cuda:0" if torch.cuda.is_available() else "cpu"
     )
 
     # plot_dataset_distribution_zarr(general_config)

@@ -12,8 +12,8 @@ from src.xai.explanations.explanation_methods.explanation import Explanation
 class LimeImpl(Explanation):
     attribution_name = "lime"
 
-    def __init__(self, model, **kwargs):
-        super().__init__(model, **kwargs)
+    def __init__(self, model, device, **kwargs):
+        super().__init__(model, device, **kwargs)
 
         self.similarity_func = get_exp_kernel_similarity_function(
             "euclidean", kernel_width=500
@@ -54,10 +54,10 @@ class LimeImpl(Explanation):
                 n_segments=15,
                 sigma=5,
             ).unsqueeze(0)
-
         image_tensor = image_tensor.to(self.device)
         target = target.to(self.device)
         segments = segments.to(self.device)
+        self.model = self.model.to(self.device)
 
         attrs = self.attributor.attribute(
             image_tensor,
