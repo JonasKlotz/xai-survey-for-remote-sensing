@@ -1,0 +1,23 @@
+# Metrics
+faithfulness:
+  region_perturb:
+  selectivity:
+  infidelity:
+
+robustness:
+  relative_input_stability:
+  relative_output_stability:
+
+randomization:
+  model_parameter_randomisation:
+  random_logits:
+
+complexity:
+  sparseness:
+  complexity:
+  effective_complexity:
+
+axiomatic:
+  completeness:
+  non_sensitivity:
+  # input_invariance: # this one is difficult to implement as quantus implementation is not made for wrapper models

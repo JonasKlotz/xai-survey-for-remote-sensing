@@ -136,6 +136,11 @@ class LightningBaseModel(LightningModule):
             raise ValueError(f"Task {self.task} not supported.")
         return loss, normalized_probabilities
 
+    @property
+    def out_channels(self):
+        # dirty hack for quantus input invariance metric, as we have a model wrapper this is necessary
+        return self.backbone.features[0].out_channels
+
 
 class LightningResnet(LightningBaseModel):
     def __init__(

@@ -25,14 +25,14 @@ class Explanation:
     def __init__(
         self,
         model,
-        device: torch.device,
-        multi_label: bool = True,
+        device: torch.device = "cpu",
+        multilabel: bool = False,
         num_classes: int = 6,
         vectorize: bool = False,
         model_name: str = None,
     ):
         self.model = model
-        self.multi_label = multi_label
+        self.multilabel = multilabel
         self.num_classes = num_classes
         self.vectorize = vectorize
         self.only_explain_true_labels = False
@@ -66,8 +66,8 @@ class Explanation:
     def explain_batch(
         self,
         tensor_batch: torch.Tensor,
-        prediction_batch: torch.Tensor,
-        labels_batch: torch.Tensor,
+        target_batch: torch.Tensor,
+        labels_batch: torch.Tensor = None,
     ):
         """
         Explain a batch of images.
@@ -84,22 +84,30 @@ class Explanation:
         ----------
         tensor_batch : torch.Tensor
             A batch of image tensors of shape (batchsize, channels, height, width).
-        prediction_batch : torch.Tensor, optional
+        target_batch : torch.Tensor, optional
             The corresponding targets for each image in the batch. If not provided,
             the method will compute attributions for all classes.
 
         Returns
         -------
         all_attrs : torch.Tensor
-            A tensor of shape (batchsize, num_classes, 1, height, width) containing the
+            A tensor of shape (batchsize, 1, height, width) containing the
             computed attributions for each image and target pair in the batch.
         """
-        if self.multi_label:
+        if self.multilabel:
+            # todo: to fix the MLC explanation for the metrics we need to change the shape of the output
+            # currently it is (batchsize, num_classes, 1, height, width) but it should be (batchsize, 1, height, width)
+            # this is because the metrics expect the shape to be (batchsize, 1, height, width)
+            # thus we need to expand the input beforehand.
+            # before we we use this method we expand the x_data to (batchsize * num_classes, channels, height, width)
+            # and the y_data to (batchsize * num_classes, 1) and then we can use this method
+            # then we have the same problem, how do we now which attributions belong to which input
+
             return self._handle_mlc_explanation(
-                tensor_batch, prediction_batch, labels_batch
+                tensor_batch, target_batch, labels_batch
             )
 
-        return self._handle_slc_explanation(tensor_batch, prediction_batch)
+        return self._handle_slc_explanation(tensor_batch, target_batch)
 
     def _handle_mlc_explanation_vectorized(
         self,
@@ -231,12 +239,10 @@ class Explanation:
     def _handle_slc_explanation(
         self, tensor_batch: torch.Tensor, target_batch: Union[int, torch.Tensor] = None
     ):
-        # iterate over batch and explain each image
-        all_attrs = []
-        for batch_index in range(tensor_batch.shape[0]):
-            image_tensor = tensor_batch[batch_index : batch_index + 1]
-            target = target_batch[batch_index : batch_index + 1]
-            attrs = self.explain(image_tensor, target)
-            all_attrs.append(attrs)
-        all_attrs = torch.stack(all_attrs)
-        return all_attrs
+        attrs = self.explain(tensor_batch, target_batch)
+
+        # If attrs is 3 channel sum over channels
+        if len(attrs.shape) == 4 and attrs.shape[1] == 3:
+            attrs = attrs.sum(dim=1, keepdim=True)
+
+        return attrs

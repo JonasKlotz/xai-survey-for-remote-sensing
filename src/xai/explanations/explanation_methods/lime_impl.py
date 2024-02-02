@@ -52,7 +52,7 @@ class LimeImpl(Explanation):
             plot=False,
             n_segments=15,
             sigma=5,
-            multi_label=self.multi_label,
+            multi_label=self.multilabel,
         ).unsqueeze(0)
 
         image_tensor = image_tensor.to(self.device)

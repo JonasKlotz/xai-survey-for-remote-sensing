@@ -16,9 +16,14 @@ def parse_config(config_path, project_root):
     -------
 
     """
+    configs = load_yaml(config_path)
+    configs = add_important_paths_to_cfg(configs, project_root)
+    return configs
+
+
+def load_yaml(config_path):
     with open(config_path, "r") as f:
         configs = yaml.load(f, Loader=yaml.FullLoader)
-    configs = add_important_paths_to_cfg(configs, project_root)
     return configs
 
 
@@ -31,8 +36,10 @@ def add_important_paths_to_cfg(config: dict, project_root: str):
     for key in ["data", "logs", "results", "models", "visualization"]:
         config[f"{key}_path"] = os.path.join(project_root, key)
 
-    config["model_path"] = os.path.join(project_root, config["model_path"])
-    config["zarr_path"] = os.path.join(project_root, config["zarr_path"])
+    if "model_path" in config:
+        config["model_path"] = os.path.join(project_root, config["model_path"])
+    if "zarr_path" in config:
+        config["zarr_path"] = os.path.join(project_root, config["zarr_path"])
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     config["timestamp"] = timestamp
     config[

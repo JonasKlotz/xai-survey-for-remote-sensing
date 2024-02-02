@@ -8,7 +8,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 import pytorch_lightning as pl  # noqa: E402
 import torch.multiprocessing  # noqa: E402
 
-from config_utils import parse_config, save_config_to_yaml  # noqa: E402
+from config_utils import parse_config, load_yaml  # noqa: E402
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
@@ -31,6 +31,7 @@ torch.multiprocessing.set_sharing_strategy(
 
 def main(
     config_path,
+    metrics_config_path,
     training=False,
     explanations=False,
     evaluations=False,
@@ -69,12 +70,11 @@ def main(
         generate_explanations(general_config)
 
     if evaluations:
-        evaluate_explanation_methods(general_config)
+        metrics_config = load_yaml(metrics_config_path)
+        evaluate_explanation_methods(general_config, metrics_config)
 
     if debug_explanations_bool:
         debug_explanations(general_config)
-
-    save_config_to_yaml(general_config, general_config["cgf_save_path"])
 
 
 if __name__ == "__main__":
@@ -109,6 +109,16 @@ if __name__ == "__main__":
         default=default_config_path,
         help="Path to the config folder",
     )
+
+    parser.add_argument(
+        "--metrics_config_path",
+        type=str,
+        default=os.path.join(
+            project_root, "config/metrics_configs/all_metrics_config.yml"
+        ),
+        help="Path to the metrics config file",
+    )
+
     args = parser.parse_args()
 
     main(
@@ -119,4 +129,5 @@ if __name__ == "__main__":
         visualizations=args.visualizations,
         debug=args.debug,
         debug_explanations_bool=args.debug_explanations,
+        metrics_config_path=args.metrics_config_path,
     )

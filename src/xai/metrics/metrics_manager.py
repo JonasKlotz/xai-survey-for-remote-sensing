@@ -1,9 +1,12 @@
+import datetime
+
 import numpy as np
 import quantus
 import torch
 
 from utility.csv_logger import CSVLogger
 from xai.explanations.explanation_manager import explanation_wrapper
+from xai.metrics.metrics_utiliies import custom_aggregation_function
 
 
 class MetricsManager:
@@ -11,13 +14,16 @@ class MetricsManager:
         self,
         model: torch.nn.Module,
         explanation: callable,
+        metrics_config: dict = None,
         aggregate=True,
         device_string=None,
         log=False,
         log_dir=None,
-        image_shape=(1, 28, 28),
+        image_shape=(3, 224, 224),
         sentinel_value=np.nan,
         softmax=True,
+        num_classes=101,
+        task="multiclass",
     ):
         """
         Metrics Manager for evaluating metrics
@@ -44,6 +50,9 @@ class MetricsManager:
         self.model = model
         self.nr_runs = 10
         self.aggregate = aggregate
+        self.task = task
+
+        self.metrics_config = metrics_config
 
         self.device_string = device_string
         self.log = log
@@ -56,6 +65,14 @@ class MetricsManager:
         self.channels = image_shape[0]
         self.height = image_shape[1]
         self.width = image_shape[2]
+
+        self.patch_size = int(
+            self.height / 8
+        )  # todo: make this configurable? Also this can lead to errors?
+        self.features_in_step = int(self.height / 8)
+        self.num_samples = 1
+
+        self.num_classes = num_classes
 
         self.sentinel_value = sentinel_value
         self.softmax = softmax
@@ -78,20 +95,40 @@ class MetricsManager:
             "return_aggregate": self.aggregate,
             "disable_warnings": self.disable_warnings,
             "display_progressbar": False,
+            "aggregate_func": custom_aggregation_function,
         }
+
         # load metrics
         self._load_metrics()
 
     def _load_metrics(self):
         """Load all metrics"""
-        self._load_faithfulness_metrics()
-        self._load_robustness_metrics()
-        self._load_localization_metrics()
-        self._load_complexity_metrics()
-        self._load_randomization_metrics()
-        self._load_axiomatic_metrics()
+        self.categorized_metrics = {
+            "faithfulness": self._load_faithfulness_metrics(),
+            "robustness": self._load_robustness_metrics(),
+            "localization": self._load_localization_metrics(),
+            "complexity": self._load_complexity_metrics(),
+            "randomization": self._load_randomization_metrics(),
+            "axiomatic": self._load_axiomatic_metrics(),
+        }
+        # remove empty categories
+        self.categorized_metrics = {
+            k: v for k, v in self.categorized_metrics.items() if v is not None
+        }
 
     def evaluate_batch(
+        self,
+        x_batch: np.ndarray,
+        y_batch: np.ndarray,
+        a_batch: np.ndarray,
+        s_batch: np.ndarray = None,
+    ):
+        if self.task == "multilabel":
+            return self.evaluate_batch_mlc(x_batch, y_batch, a_batch, s_batch)
+        else:
+            return self.evaluate_batch_slc(x_batch, y_batch, a_batch, s_batch)
+
+    def evaluate_batch_slc(
         self,
         x_batch: np.ndarray,
         y_batch: np.ndarray,
@@ -111,7 +148,7 @@ class MetricsManager:
         a_batch : np.ndarray
             batch of attributions
         s_batch: np.ndarray
-            batch of segmentations
+            batch of segmentations. Careful when the segmentation is None localization metrics will fail.
 
 
         Returns
@@ -120,26 +157,19 @@ class MetricsManager:
             dictionary containing all results
         """
         all_results = {}
+        time_spend = {}
 
-        all_metrics_categories = [
-            self.faithfulness_metrics,
-            self.robustness_metrics,
-            self.localization_metrics,
-            self.complexity_metrics,
-            self.randomization_metrics,
-            self.axiomatic_metrics,
-        ]
-
-        for metrics_category in all_metrics_categories:
-            results = self._evaluate_category(
+        for category_name, metrics_category in self.categorized_metrics.items():
+            results, time = self._evaluate_category(
                 metrics_category, x_batch, y_batch, a_batch, s_batch
             )
             all_results.update(results)
+            time_spend.update(time)
 
         if self.log:
             self.csv_logger.update(all_results)
 
-        return all_results
+        return all_results, time_spend
 
     def evaluate_batch_mlc(
         self,
@@ -148,36 +178,6 @@ class MetricsManager:
         a_batch: torch.tensor,
         s_batch: torch.tensor = None,
     ):
-        x_batch = (
-            x_batch.unsqueeze(1).expand(-1, 6, -1, -1, -1).reshape(-1, 3, 120, 120)
-        )
-        # expand s_batch
-        if s_batch is not None:
-            s_batch = (
-                s_batch.unsqueeze(1)
-                .expand(
-                    -1,
-                    6,
-                    -1,
-                    -1,
-                )
-                .reshape(-1, 1, 120, 120)
-            )
-        # get indices where y_batch is not 0 (i.e. the labels that are present) batchsize x 1 where 1 from 0 to 5
-        _ = torch.where(y_batch != 0)[1]
-
-        # flatten a batch and y batch
-        y_batch = y_batch.flatten(start_dim=0, end_dim=1)
-        a_batch = a_batch.flatten(start_dim=0, end_dim=1)
-
-        # filter out all indices where the label is 0
-        tmp_indices = torch.where(y_batch != 0)[0]
-        y_batch = y_batch[tmp_indices]
-        a_batch = a_batch[tmp_indices]
-        x_batch = x_batch[tmp_indices]
-        if s_batch is not None:
-            s_batch = s_batch[tmp_indices]
-
         pass
 
     def _evaluate_category(
@@ -209,50 +209,64 @@ class MetricsManager:
             dictionary containing the results
         """
         results = {}
+        time = {}
         for key in metrics.keys():
-            try:
-                results[key] = metrics[key](
-                    model=self.model,
-                    x_batch=x_batch,
-                    y_batch=y_batch,
-                    a_batch=a_batch,
-                    s_batch=s_batch,
-                    device=self.device_string,
-                    softmax=True,
-                    explain_func=self.explain_func,
-                    explain_func_kwargs=self.explain_func_kwargs,
-                )
-                print(f"{key}: {results[key]}")
-            except Exception as e:
-                print(f"Error while evaluating {key}: {e}")
-                results[key] = self.sentinel_value
+            start_time = datetime.datetime.now()
+            results[key] = metrics[key](
+                model=self.model,
+                x_batch=x_batch,
+                y_batch=y_batch,
+                a_batch=a_batch,
+                s_batch=s_batch,
+                device=self.device_string,
+                softmax=True,
+                channel_first=True,
+                explain_func=self.explain_func,
+                explain_func_kwargs=self.explain_func_kwargs,
+            )
+            time[key] = datetime.datetime.now() - start_time
+            print(f"Time spent on {key}: {time[key]}\n" f"Results: {results[key]}")
+            # except Exception as e:
+            #     print(f"Error while evaluating {key}: {e}")
+            #     results[key] = self.sentinel_value
 
-        return results
+        return results, time
 
     def _load_faithfulness_metrics(self):
         """Load all faithfulness metrics"""
-        self.faithfulness_metrics = {
+        if "faithfulness" not in self.metrics_config:
+            return
+        faithfulness_metrics = {
             "faithfulness_corr": quantus.FaithfulnessCorrelation(
                 nr_runs=self.nr_runs, subset_size=224, **self.general_args
             ),
             "faithfulness_estimate": quantus.FaithfulnessEstimate(
-                features_in_step=28, **self.general_args
+                features_in_step=self.features_in_step, **self.general_args
             ),
             "monotonicity": quantus.Monotonicity(
-                features_in_step=28, **self.general_args
+                features_in_step=self.features_in_step, **self.general_args
             ),
             "monotonicity_correlation": quantus.MonotonicityCorrelation(
-                nr_samples=10, features_in_step=28, **self.general_args
+                nr_samples=self.num_samples,
+                features_in_step=self.features_in_step,
+                **self.general_args,
             ),
             "pixel_flipping": quantus.PixelFlipping(
-                features_in_step=28, **self.general_args
+                features_in_step=self.features_in_step, **self.general_args
             ),
             "region_perturb": quantus.RegionPerturbation(
-                patch_size=4, regions_evaluation=10, normalise=True, **self.general_args
+                patch_size=self.patch_size,
+                regions_evaluation=10,
+                normalise=True,
+                **self.general_args,
             ),
-            "selectivity": quantus.Selectivity(patch_size=4, **self.general_args),
+            "selectivity": quantus.Selectivity(
+                patch_size=self.patch_size, **self.general_args
+            ),
             "sensitivity_n": quantus.SensitivityN(
-                features_in_step=28, n_max_percentage=0.8, **self.general_args
+                features_in_step=self.features_in_step,
+                n_max_percentage=0.8,
+                **self.general_args,
             ),
             "irof": quantus.IROF(
                 segmentation_method="slic", perturb_baseline="mean", **self.general_args
@@ -260,7 +274,7 @@ class MetricsManager:
             "infidelity": quantus.Infidelity(
                 perturb_baseline="uniform",
                 n_perturb_samples=5,
-                perturb_patch_sizes=[4],
+                perturb_patch_sizes=[self.patch_size],
                 **self.general_args,
             ),
             "road": quantus.ROAD(
@@ -271,50 +285,66 @@ class MetricsManager:
             ),
             "sufficiency": quantus.Sufficiency(threshold=0.6, **self.general_args),
         }
+        return {
+            k: v
+            for k, v in faithfulness_metrics.items()
+            if k in self.metrics_config["faithfulness"]
+        }
 
     def _load_robustness_metrics(self):
         """Load all robustness metrics"""
-        self.robustness_metrics = {
+        if "robustness" not in self.metrics_config:
+            return
+        robustness_metrics = {
             "local_lipschitz_estimate": quantus.LocalLipschitzEstimate(
-                nr_samples=10, perturb_std=0.2, perturb_mean=0.0, **self.general_args
+                nr_samples=self.num_samples,
+                perturb_std=0.2,
+                perturb_mean=0.0,
+                **self.general_args,
             ),
             "max_sensitivity": quantus.MaxSensitivity(
-                nr_samples=10,
+                nr_samples=self.num_samples,
                 lower_bound=0.2,
                 perturb_func=quantus.uniform_noise,
-                similarity_func=quantus.difference,
+                similarity_func=quantus.ssim,
                 **self.general_args,
             ),
             "average_sensitivity": quantus.AvgSensitivity(
-                nr_samples=10,
+                nr_samples=self.num_samples,
                 lower_bound=0.2,
                 perturb_func=quantus.uniform_noise,
-                similarity_func=quantus.difference,
+                similarity_func=quantus.ssim,
                 **self.general_args,
             ),
             "continuity": quantus.Continuity(
-                patch_size=7,
+                patch_size=self.patch_size,
                 nr_steps=10,
                 perturb_baseline="uniform",
-                similarity_func=quantus.correlation_spearman,
+                similarity_func=quantus.ssim,
                 **self.general_args,
             ),
             "consistency": quantus.Consistency(**self.general_args),
             "relative_input_stability": quantus.RelativeInputStability(
-                nr_samples=5, **self.general_args
+                nr_samples=self.num_samples, **self.general_args
             ),
             "relative_output_stability": quantus.RelativeOutputStability(
-                nr_samples=5, **self.general_args
+                nr_samples=self.num_samples, **self.general_args
             ),
             "relative_representation_stability": quantus.RelativeRepresentationStability(
-                nr_samples=5, **self.general_args
+                nr_samples=self.num_samples, **self.general_args
             ),
+        }
+        return {
+            k: v
+            for k, v in robustness_metrics.items()
+            if k in self.metrics_config["robustness"]
         }
 
     def _load_localization_metrics(self):
         """Load all localization metrics"""
-
-        self.localization_metrics = {
+        if "localization" not in self.metrics_config:
+            return
+        localization_metrics = {
             "pointing_game": quantus.PointingGame(**self.general_args),
             "attribution_localisation": quantus.AttributionLocalisation(
                 **self.general_args
@@ -328,38 +358,67 @@ class MetricsManager:
             ),
             "auc": quantus.AUC(**self.general_args),
         }
+        return {
+            k: v
+            for k, v in localization_metrics.items()
+            if k in self.metrics_config["localization"]
+        }
 
     def _load_randomization_metrics(self):
         """Load all randomization metrics"""
-        self.randomization_metrics = {
+        if "randomization" not in self.metrics_config:
+            return
+        randomization_metrics = {
             "model_parameter_randomisation": quantus.MPRT(
                 layer_order="bottom_up",
-                similarity_func=quantus.correlation_spearman,
+                similarity_func=quantus.ssim,
                 return_average_correlation=True,
                 **self.general_args,
             ),
             "random_logits": quantus.RandomLogit(
-                num_classes=10, similarity_func=quantus.ssim, **self.general_args
+                num_classes=self.num_classes,
+                similarity_func=quantus.ssim,
+                **self.general_args,
             ),
+        }
+        return {
+            k: v
+            for k, v in randomization_metrics.items()
+            if k in self.metrics_config["randomization"]
         }
 
     def _load_complexity_metrics(self):
         """Load all complexity metrics"""
-        self.complexity_metrics = {
+        if "complexity" not in self.metrics_config:
+            return
+        complexity_metrics = {
             "sparseness": quantus.Sparseness(**self.general_args),
             "complexity": quantus.Complexity(**self.general_args),
             "effective_complexity": quantus.EffectiveComplexity(**self.general_args),
         }
+        return {
+            k: v
+            for k, v in complexity_metrics.items()
+            if k in self.metrics_config["complexity"]
+        }
 
     def _load_axiomatic_metrics(self):
         """Load all axiomatic metrics"""
-        self.axiomatic_metrics = {
+        if "axiomatic" not in self.metrics_config:
+            return
+        axiomatic_metrics = {
             "completeness": quantus.Completeness(**self.general_args),
             "non_sensitivity": quantus.NonSensitivity(
-                n_samples=10,
+                n_samples=1,
+                features_in_step=224,  # here we need a high number as otherwise the metric is too slow
                 perturb_baseline="black",
                 perturb_func=quantus.baseline_replacement_by_indices,
                 **self.general_args,
-            ),
+            ),  # complexity for metric = n_samples*(h*w/features_in_step) * model predict time
             "input_invariance": quantus.InputInvariance(**self.general_args),
+        }
+        return {
+            k: v
+            for k, v in axiomatic_metrics.items()
+            if k in self.metrics_config["axiomatic"]
         }

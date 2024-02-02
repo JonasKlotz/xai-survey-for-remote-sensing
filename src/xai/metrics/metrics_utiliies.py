@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 
 
-def aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
+def custom_aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
     """Aggregates the input to a single value.
 
     Parameters
@@ -17,13 +17,20 @@ def aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
     aggregated: float
         The aggregated value.
     """
-    if isinstance(input_, list) or isinstance(input_, np.ndarray):
+    """
+    Aggregations:
+    - Region Perturbation: (batchsize x regions_evaluation) 
+    """
+    if isinstance(input_, list):
+        aggregated = np.mean([np.mean(a) for a in input_])
+
+    elif isinstance(input_, np.ndarray):
         aggregated = np.mean(input_)
 
     elif isinstance(input_, dict):
         aggregated = 0
         for key, value in input_.items():
-            aggregated = aggregation_function(value)
+            aggregated = custom_aggregation_function(value)
     else:
         raise ValueError(f"Input type {type(input_)} not supported.")
     return aggregated

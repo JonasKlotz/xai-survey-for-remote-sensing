@@ -12,7 +12,7 @@ from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
 class LRPImpl(Explanation):
-    attribution_name = "LRP"
+    attribution_name = "lrp"
 
     def __init__(self, model, **kwargs):
         super().__init__(model, **kwargs)

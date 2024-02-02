@@ -50,7 +50,7 @@ class ExplanationsManager:
                 vectorize=self.explanations_config["vectorize"],
                 device=self.device,
                 num_classes=self.explanations_config["num_classes"],
-                multi_label=self.task == "multilabel",
+                multilabel=self.task == "multilabel",
                 model_name=self.explanations_config["model_name"],
             )
         if not self.save:
@@ -116,14 +116,16 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
     """
     Wrapper for explanation methods.
 
+    The main purpose of this wrapper is to adapt the explanation to the interface of the quantus framework.
+
     Parameters
     ----------
     model: torch.nn.Module
         The model to explain.
     inputs: torch.Tensor
-        The input to explain.
+        Batch of images to explain.
     targets: torch.Tensor
-        The target to explain.
+        Targets of the batch.
     explain_func_kwargs: dict
         Keyword arguments for the explanation method.
 
@@ -131,6 +133,10 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
     -------
     attrs: torch.Tensor
         The attributions of the explanation method.
+    """
+    """
+    Batch 2,3,h,w
+        - RIS, ROS
     """
     # if numpy array convert to tensor
     if isinstance(inputs, np.ndarray):
@@ -143,7 +149,7 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
     explanation_method = _explanation_methods[explanation_method_name]
     explanation = explanation_method(model)
     attrs = (
-        explanation.explain_batch(tensor_batch=inputs, prediction_batch=targets)
+        explanation.explain_batch(tensor_batch=inputs, target_batch=targets)
         .detach()
         .numpy()
     )
