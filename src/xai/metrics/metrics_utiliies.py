@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 
 import numpy as np
 import plotly.express as px
@@ -33,6 +33,26 @@ def custom_aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
             aggregated = custom_aggregation_function(value)
     else:
         raise ValueError(f"Input type {type(input_)} not supported.")
+    return aggregated
+
+
+def aggregate_continuity_metric(input_: List[dict]) -> float:
+    """Aggregates the continuity metric.
+
+    Parameters
+    ----------
+    input_: List[dict]
+        The input to aggregate.
+
+    Returns
+    -------
+    aggregated: float
+        The aggregated value.
+    """
+    aggregated = 0
+    for input_dict in input_:
+        for key, value in input_dict.items():
+            aggregated += custom_aggregation_function(value)
     return aggregated
 
 

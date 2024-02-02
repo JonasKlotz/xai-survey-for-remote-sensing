@@ -1,5 +1,4 @@
 import os
-from datetime import datetime
 from typing import List
 
 
@@ -38,9 +37,10 @@ class CSVLogger:
         self._init_log_file()
 
     def _init_log_file(self):
-        complete_filename = (
-            f"{self.filename}_{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
-        )
+        complete_filename = f"{self.filename}.csv"
+        # create log directory if it does not exist
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
         self.log_file_path = os.path.join(self.log_dir, complete_filename)
 
         if not self.append and self.column_names is not None:

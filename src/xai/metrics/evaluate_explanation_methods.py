@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import torch
 import yaml
 from tqdm import tqdm
@@ -26,6 +28,8 @@ def evaluate_explanation_methods(
     )
     model = get_model(cfg, self_trained=True).to(cfg["device"])
     model.eval()
+
+    log_dir = cfg["results_path"] + "/metrics/" + cfg["experiment_name"]
     # todo debug check does the model apply softmax?
     metrics_manager_dict = {}
     for explanation_name in cfg["explanation_methods"]:
@@ -44,10 +48,10 @@ def evaluate_explanation_methods(
             aggregate=True,
             device=cfg["device"],
             log=True,
-            log_dir=cfg["results_path"],
+            log_dir=log_dir,
             task=cfg["task"],
         )
-
+    start_time = datetime.now()
     for batch in tqdm(data_loader):
         #
         batch_dict = dict(zip(keys, batch))
@@ -67,15 +71,15 @@ def evaluate_explanation_methods(
             a_batch = batch_dict["a_" + explanation_name + "_data"].squeeze(dim=1)
             a_batch = torch.sum(a_batch, dim=1).numpy(force=True)  # sum over channels
 
-            results, time = metrics_manager_dict[explanation_name].evaluate_batch(
+            _, _ = metrics_manager_dict[explanation_name].evaluate_batch(
                 x_batch=image_tensor,
                 y_batch=predicted_label_tensor,
                 a_batch=a_batch,
                 s_batch=segments_tensor,
             )
-            logger.debug(f"Results: {results}")
-            logger.debug(f"Time: {time}")
-            break
+        break  # todo remove this break
+    end_time = datetime.now()
+    logger.debug(f"Time for evaluation: {end_time - start_time}")
 
 
 def main():

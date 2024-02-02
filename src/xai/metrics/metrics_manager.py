@@ -6,7 +6,10 @@ import torch
 
 from utility.csv_logger import CSVLogger
 from xai.explanations.explanation_manager import explanation_wrapper
-from xai.metrics.metrics_utiliies import custom_aggregation_function
+from xai.metrics.metrics_utiliies import (
+    custom_aggregation_function,
+    aggregate_continuity_metric,
+)
 
 
 class MetricsManager:
@@ -58,7 +61,9 @@ class MetricsManager:
         self.log = log
         self.log_dir = log_dir
         if self.log:
-            self.csv_logger = CSVLogger(log_dir=self.log_dir)
+            self.csv_logger = CSVLogger(
+                log_dir=self.log_dir, filename=explanation.attribution_name
+            )
 
         self.disable_warnings = True
 
@@ -308,14 +313,14 @@ class MetricsManager:
                 nr_samples=self.num_samples,
                 lower_bound=0.2,
                 perturb_func=quantus.uniform_noise,
-                similarity_func=quantus.ssim,
+                similarity_func=quantus.difference,
                 **self.general_args,
             ),
             "average_sensitivity": quantus.AvgSensitivity(
                 nr_samples=self.num_samples,
                 lower_bound=0.2,
                 perturb_func=quantus.uniform_noise,
-                similarity_func=quantus.ssim,
+                similarity_func=quantus.difference,
                 **self.general_args,
             ),
             "continuity": quantus.Continuity(
@@ -323,7 +328,10 @@ class MetricsManager:
                 nr_steps=10,
                 perturb_baseline="uniform",
                 similarity_func=quantus.ssim,
-                **self.general_args,
+                return_aggregate=self.aggregate,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                aggregate_func=aggregate_continuity_metric,  # todo: Not sure if this is the right way for the aggregation
             ),
             "consistency": quantus.Consistency(**self.general_args),
             "relative_input_stability": quantus.RelativeInputStability(

@@ -29,7 +29,7 @@ class Explanation:
         multilabel: bool = False,
         num_classes: int = 6,
         vectorize: bool = False,
-        model_name: str = None,
+        normalize: bool = False,
     ):
         self.model = model
         self.multilabel = multilabel
@@ -38,6 +38,8 @@ class Explanation:
         self.only_explain_true_labels = False
         self.only_explain_predictions = False
         self.explain_true_label_and_preds = True
+
+        self.normalize = normalize
 
         self.device = device
 
@@ -94,6 +96,10 @@ class Explanation:
             A tensor of shape (batchsize, 1, height, width) containing the
             computed attributions for each image and target pair in the batch.
         """
+        labels_batch, target_batch, tensor_batch = self._move_to_device(
+            labels_batch, target_batch, tensor_batch
+        )
+
         if self.multilabel:
             # todo: to fix the MLC explanation for the metrics we need to change the shape of the output
             # currently it is (batchsize, num_classes, 1, height, width) but it should be (batchsize, 1, height, width)
@@ -108,6 +114,17 @@ class Explanation:
             )
 
         return self._handle_slc_explanation(tensor_batch, target_batch)
+
+    def _move_to_device(self, labels_batch, target_batch, tensor_batch):
+        tensor_batch = tensor_batch.to(self.device)
+        labels_batch = (
+            labels_batch.to(self.device) if labels_batch is not None else None
+        )
+        target_batch = (
+            target_batch.to(self.device) if target_batch is not None else None
+        )
+        self.model.to(self.device)
+        return labels_batch, target_batch, tensor_batch
 
     def _handle_mlc_explanation_vectorized(
         self,
@@ -245,4 +262,13 @@ class Explanation:
         if len(attrs.shape) == 4 and attrs.shape[1] == 3:
             attrs = attrs.sum(dim=1, keepdim=True)
 
+        # min max normalization
+        if self.normalize:
+            attrs = self._normalize(attrs)
+
+        # relu to remove negative attributions
+        attrs = torch.relu(attrs)
         return attrs
+
+    def _normalize(self, attrs):
+        return (attrs - attrs.min()) / (attrs.max() - attrs.min())

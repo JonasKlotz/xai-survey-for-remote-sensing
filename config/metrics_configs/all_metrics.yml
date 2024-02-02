@@ -15,7 +15,7 @@ faithfulness:
 
 robustness:
   local_lipschitz_estimate:
-  max_sensitivity:
+   max_sensitivity: #
   average_sensitivity:
   continuity:
   consistency:
