@@ -40,6 +40,9 @@ def main(
     debug_explanations_bool=False,
 ):
     logger.debug("In main")
+    config_path = os.path.join(project_root, config_path)
+    metrics_config_path = os.path.join(project_root, metrics_config_path)
+
     general_config = parse_config(config_path, project_root)
     general_config["debug"] = debug
 
