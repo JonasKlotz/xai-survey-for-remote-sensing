@@ -90,6 +90,7 @@ class Caltech101DataModule(TorchVisDataModule):
         return Caltech101Dataset(
             dataset_path=dataset_path,
             transform=train_transforms,
+            target_type=["category", "annotation"],
             target_transform=target_transforms,
         )
 
