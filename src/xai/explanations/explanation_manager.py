@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 from data.zarr_handler import ZarrGroupHandler
@@ -109,46 +108,3 @@ class ExplanationsManager:
             self.storage_handler.append(tmp_storage_dict)
 
         return tmp_storage_dict
-
-
-def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
-    """
-    Wrapper for explanation methods.
-
-    The main purpose of this wrapper is to adapt the explanation to the interface of the quantus framework.
-
-    Parameters
-    ----------
-    model: torch.nn.Module
-        The model to explain.
-    inputs: torch.Tensor
-        Batch of images to explain.
-    targets: torch.Tensor
-        Targets of the batch.
-    explain_func_kwargs: dict
-        Keyword arguments for the explanation method.
-
-    Returns
-    -------
-    attrs: torch.Tensor
-        The attributions of the explanation method.
-    """
-    """
-    Batch 2,3,h,w
-        - RIS, ROS
-    """
-    # if numpy array convert to tensor
-    if isinstance(inputs, np.ndarray):
-        inputs = torch.from_numpy(inputs).float()
-    if isinstance(targets, np.ndarray):
-        targets = torch.from_numpy(targets)
-    model = model.float()
-
-    explanation_method_name = explain_func_kwargs.pop("explanation_method_name")
-    device = explain_func_kwargs.pop("device")
-    explanation_method = _explanation_methods[explanation_method_name]
-    explanation = explanation_method(model, device=device, **explain_func_kwargs)
-
-    return explanation.explain_batch(tensor_batch=inputs, target_batch=targets).numpy(
-        force=True
-    )
