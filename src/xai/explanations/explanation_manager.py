@@ -51,7 +51,6 @@ class ExplanationsManager:
                 device=self.device,
                 num_classes=self.explanations_config["num_classes"],
                 multilabel=self.task == "multilabel",
-                model_name=self.explanations_config["model_name"],
             )
         if not self.save:
             self.storage_handler = None
@@ -86,7 +85,7 @@ class ExplanationsManager:
         images = batch["features"].to(self.device)
         target = batch["targets"].to(self.device)
         idx = batch["index"].to(self.device)
-        segments = batch.get("segments", torch.tensor([])).to(self.device)
+        segments = batch.get("segmentations", torch.tensor([])).to(self.device)
 
         prediction_batch = self.model.prediction_step(images)
 

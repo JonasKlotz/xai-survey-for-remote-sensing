@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage import feature, transform
-from foolbox.utils import samples
 
 
 def plot_heatmap(
@@ -133,23 +132,6 @@ def generate_heatmap_pytorch(model, image, target, patchsize):
 
         logits = np.hstack(logits_list)
         return logits.reshape((224, 224))
-
-
-def get_fool_sample(
-    dataset="imagenet",
-    index=1,
-    batchsize=1,
-    shape=(224, 224),
-    data_format="channels_first",
-):
-    sample, label = samples(
-        dataset=dataset,
-        index=index,
-        batchsize=batchsize,
-        shape=shape,
-        data_format=data_format,
-    )
-    return sample, label
 
 
 def preprocess_sample(sample):
