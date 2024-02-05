@@ -1,15 +1,15 @@
 # Metrics
-faithfulness:
-  region_perturb:
-  selectivity:
-  infidelity:
-
-robustness:
-  relative_input_stability:
-  relative_output_stability:
+#faithfulness:
+#  region_perturb:
+#  selectivity:
+#  infidelity:
+#
+#robustness:
+#  relative_input_stability:
+#  relative_output_stability:
 
 randomization:
-  model_parameter_randomisation:
+  #model_parameter_randomisation:
   random_logits:
 
 complexity:

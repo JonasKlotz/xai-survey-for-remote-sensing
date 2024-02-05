@@ -51,8 +51,11 @@ class Caltech101Dataset:
         label = torch.tensor(target_tuple[0])
         contour = target_tuple[1]
         bbox = target_tuple[2]
+        features.show()
 
-        segmentation_mask = generate_segmentation_mask_caltech(features, contour, bbox)
+        segmentation_mask = generate_segmentation_mask_caltech(
+            features, contour, bbox, index
+        )
 
         # some images (e.g. class car side) are grayscale, convert them to RGB
         if features.mode != "RGB":
@@ -133,16 +136,20 @@ def caltech_getitem(self, index: int) -> Tuple[Any, Any]:
     return img, target
 
 
-def generate_segmentation_mask_caltech(image, contour, bbox):
+def generate_segmentation_mask_caltech(image, contour, bbox, index):
     """Generate a segmentation mask from the object contour and bbox."""
     contour += bbox.T[[2, 0], :]
-    # create new black image with the same size ( greyscale)
+    # create new black image with the same size (greyscale)
     greyscale_image = Image.new("L", image.size, 0)
 
     draw = ImageDraw.Draw(greyscale_image)
-    draw.polygon(
-        list(map(tuple, contour.T.astype("int64").tolist())),
-        outline="white",
-        fill="white",
-    )
+    try:
+        draw.polygon(
+            list(map(tuple, contour.T.astype("int64").tolist())),
+            outline="white",
+            fill="white",
+        )
+    except TypeError:
+        # contour empty?
+        print(f"Contour empty for index {index}")
     return greyscale_image

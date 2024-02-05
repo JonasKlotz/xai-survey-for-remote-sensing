@@ -3,7 +3,7 @@ import os
 import sys
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
 import pytorch_lightning as pl  # noqa: E402
 import torch.multiprocessing  # noqa: E402
@@ -11,8 +11,12 @@ import torch.multiprocessing  # noqa: E402
 from config_utils import parse_config, load_yaml  # noqa: E402
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 sys.path.append(project_root)
 print(f"Added {project_root} to path.")
+quantus_path = os.path.join(project_root, "src/xai/metrics/Quantus")
+sys.path.append(quantus_path)
+print(f"Added {quantus_path} to path.")
 
 from src.training.train import train  # noqa: E402
 from src.xai.explanations.generate_explanations import generate_explanations  # noqa: E402

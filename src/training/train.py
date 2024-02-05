@@ -51,7 +51,7 @@ def train(
             model = torch.nn.parallel.DistributedDataParallel(model)
             strategy = "ddp"
     else:
-        strategy = None
+        strategy = "auto"
 
     # init trainer
     trainer = Trainer(

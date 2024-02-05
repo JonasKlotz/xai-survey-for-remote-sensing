@@ -12,10 +12,10 @@ pretrained: False
 
 # Explanation parameters
 explanation_methods:
-  - 'lime'
-  - 'lrp'
-  - 'integrated_gradients'
-  - 'gradcam'
+#  - 'lime'
+#  - 'lrp'
+#  - 'integrated_gradients'
+#  - 'gradcam'
   - 'deeplift'
 
 # Dataset parameters
@@ -27,8 +27,8 @@ data:
   test_csv: "/home/jonas/splits/deepglobe_version2_test.csv"
   segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
 
-  batch_size: 128
-  num_workers: 8
+  batch_size: 2 #128
+  num_workers: 0 # 8
   pin_memory: True
 
 
@@ -45,7 +45,7 @@ threshold: 0.5
 vectorize: False
 
 # whether to load the batches from a specific path
-zarr_path: 'results/explanations_2024-01-30_13-58-21.zarr'
+zarr_path: 'results/deepglobe_vgg_final.zarr'
 model_path: 'models/deepglobe_vgg_final/final_model.pt'
 
 
