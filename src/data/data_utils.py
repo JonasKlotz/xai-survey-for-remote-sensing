@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 import torch
 import tqdm
@@ -155,3 +156,18 @@ def get_index_to_name(cfg):
         return MNIST_IDX2NAME
     else:
         raise ValueError(f"Dataset {cfg['dataset_name']} not supported.")
+
+
+def reverse_one_hot_encoding(batches: List[torch.Tensor]):
+    """
+    This function takes a one hot encoded tensor and returns the class index.
+
+    It works for both multi-class and multi-label classification. The list can contain multiple batches with different shapes.
+    so creating a numpy array or tensor is not possible. Therefore, we use a list comprehension to iterate over the batches.
+    """
+    result = [
+        torch.tensor(batch) if not isinstance(batch, torch.Tensor) else batch
+        for batch in batches
+    ]
+    result = [torch.nonzero(batch, as_tuple=False)[:, 0] for batch in result]
+    return result

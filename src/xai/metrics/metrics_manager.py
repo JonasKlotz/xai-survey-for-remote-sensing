@@ -1,11 +1,11 @@
 import datetime
 
 import numpy as np
-import quantus
+import src.xai.metrics.Quantus.quantus as quantus
 import torch
 
 from utility.csv_logger import CSVLogger
-from xai.explanations.explanation_manager import explanation_wrapper
+from xai.explanations.quantus_explanation_wrapper import explanation_wrapper
 from xai.metrics.metrics_utiliies import (
     custom_aggregation_function,
     aggregate_continuity_metric,
@@ -81,6 +81,7 @@ class MetricsManager:
 
         self.sentinel_value = sentinel_value
         self.softmax = softmax
+        self.multi_label = self.task == "multilabel"
 
         self.categories = [
             "faithfulness",
@@ -95,6 +96,7 @@ class MetricsManager:
         self.explain_func_kwargs = {
             "explanation_method_name": explanation.attribution_name,
             "device": self.device,
+            "multi_label": self.multi_label,
         }
 
         self.general_args = {
@@ -102,6 +104,7 @@ class MetricsManager:
             "disable_warnings": self.disable_warnings,
             "display_progressbar": False,
             "aggregate_func": custom_aggregation_function,
+            "multi_label": self.multi_label,
         }
 
         # load metrics
@@ -184,7 +187,20 @@ class MetricsManager:
         a_batch: torch.tensor,
         s_batch: torch.tensor = None,
     ):
-        pass
+        all_results = {}
+        time_spend = {}
+
+        for category_name, metrics_category in self.categorized_metrics.items():
+            results, time = self._evaluate_category(
+                metrics_category, x_batch, y_batch, a_batch, s_batch
+            )
+            all_results.update(results)
+            time_spend.update(time)
+
+        if self.log:
+            self.csv_logger.update(all_results)
+
+        return all_results, time_spend
 
     def _evaluate_category(
         self,
@@ -218,7 +234,7 @@ class MetricsManager:
         time = {}
         for key in metrics.keys():
             start_time = datetime.datetime.now()
-            print()
+            print(f"Start evaluating {key}")
             results[key] = metrics[key](
                 model=self.model,
                 x_batch=x_batch,
@@ -245,7 +261,7 @@ class MetricsManager:
             return
         faithfulness_metrics = {
             "faithfulness_corr": quantus.FaithfulnessCorrelation(
-                nr_runs=self.nr_runs, subset_size=224, **self.general_args
+                nr_runs=self.nr_runs, subset_size=self.height, **self.general_args
             ),
             "faithfulness_estimate": quantus.FaithfulnessEstimate(
                 features_in_step=self.features_in_step, **self.general_args
@@ -420,7 +436,7 @@ class MetricsManager:
             "completeness": quantus.Completeness(**self.general_args),
             "non_sensitivity": quantus.NonSensitivity(
                 n_samples=1,
-                features_in_step=224,  # here we need a high number as otherwise the metric is too slow
+                features_in_step=self.height,  # here we need a high number as otherwise the metric is too slow
                 perturb_baseline="black",
                 perturb_func=quantus.baseline_replacement_by_indices,
                 **self.general_args,

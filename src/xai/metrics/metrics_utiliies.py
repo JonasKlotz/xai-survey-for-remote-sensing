@@ -22,18 +22,24 @@ def custom_aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
     - Region Perturbation: (batchsize x regions_evaluation) 
     """
     if isinstance(input_, list):
-        aggregated = np.mean([np.mean(a) for a in input_])
+        return np.mean(
+            [
+                custom_aggregation_function(value)
+                for value in input_
+                if value is not None
+            ]
+        )
 
     elif isinstance(input_, np.ndarray):
-        aggregated = np.mean(input_)
+        return np.mean(input_)
 
     elif isinstance(input_, dict):
         aggregated = 0
         for key, value in input_.items():
             aggregated = custom_aggregation_function(value)
-    else:
-        raise ValueError(f"Input type {type(input_)} not supported.")
-    return aggregated
+        return aggregated
+
+    return input_
 
 
 def aggregate_continuity_metric(input_: List[dict]) -> float:
