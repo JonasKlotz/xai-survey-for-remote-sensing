@@ -1,0 +1,4 @@
+[submodule "src/xai/metrics/Quantus"]
+	path = src/xai/metrics/Quantus
+	url = git@github.com:JonasKlotz/Quantus.git
+	branch = multilabel-classification-quantus
