@@ -13,7 +13,8 @@ from xai.metrics.metrics_manager import MetricsManager
 
 
 def evaluate_explanation_methods(
-    cfg: dict, metrics_cfg: dict, load_precomputed: bool = True
+    cfg: dict,
+    metrics_cfg: dict,
 ):
     """
     Evaluate Explanation Methods
@@ -36,7 +37,7 @@ def evaluate_explanation_methods(
             segments_tensor,
             batch_dict,
         ) = _parse_batch(batch, keys)
-        # skip if we have a single label
+        # todo: remove: skip if we have a single label
         if np.sum(predicted_label_tensor) <= len(predicted_label_tensor):
             continue
 

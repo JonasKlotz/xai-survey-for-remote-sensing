@@ -433,7 +433,10 @@ class MetricsManager:
         if "axiomatic" not in self.metrics_config:
             return
         axiomatic_metrics = {
-            "completeness": quantus.Completeness(**self.general_args),
+            "completeness": quantus.Completeness(
+                **self.general_args,
+                output_func=np.sum,
+            ),
             "non_sensitivity": quantus.NonSensitivity(
                 n_samples=1,
                 features_in_step=self.height,  # here we need a high number as otherwise the metric is too slow
