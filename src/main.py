@@ -63,6 +63,10 @@ def main(
         "cuda:0" if torch.cuda.is_available() else "cpu"
     )
 
+    general_config["load_from_zarr"] = (
+        debug and general_config["dataset_name"] == "deepglobe"
+    )
+
     # plot_dataset_distribution_zarr(general_config)
     # plot_pixel_distribution_zarr(general_config)
 

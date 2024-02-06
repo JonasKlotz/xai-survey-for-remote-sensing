@@ -114,7 +114,7 @@ class ZarrGroupDataset(Dataset):
 
         for array_name in keys:
             items.append(self.zarr_group[array_name][index])
-        return items
+        return {k: v for k, v in zip(keys, items)}
 
     def __len__(self):
         array_sizes = [
@@ -148,7 +148,8 @@ def get_zarr_dataloader(
         num_workers=cfg["data"]["num_workers"],
         shuffle=False,
     )
-    return dataloader, dataset.get_keys()
+    dataloader.zarr_keys = dataset.get_keys()
+    return dataloader
 
 
 def load_batches(cfg: dict):

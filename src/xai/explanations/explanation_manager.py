@@ -46,10 +46,9 @@ class ExplanationsManager:
                 explanation_name
             ](
                 model=self.model,
-                vectorize=self.explanations_config["vectorize"],
                 device=self.device,
                 num_classes=self.explanations_config["num_classes"],
-                multilabel=self.task == "multilabel",
+                multi_label=self.task == "multilabel",
             )
         if not self.save:
             self.storage_handler = None
@@ -81,17 +80,17 @@ class ExplanationsManager:
         -------
 
         """
-        images = batch["features"].to(self.device)
+        features = batch["features"].to(self.device)
         target = batch["targets"].to(self.device)
         idx = batch["index"].to(self.device)
         segments = batch.get("segmentations", torch.tensor([])).to(self.device)
 
-        prediction_batch = self.model.prediction_step(images)
+        predictions = self.model.prediction_step(features)
 
         tmp_storage_dict = {
-            "x_data": images,
+            "x_data": features,
             "y_data": target,
-            "y_pred_data": prediction_batch,
+            "y_pred_data": predictions,
             "s_data": segments,
             "index_data": idx,
         }
@@ -99,7 +98,7 @@ class ExplanationsManager:
         # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():
             # todo dimensions wrong????
-            batch_attrs = explanation.explain_batch(images, prediction_batch, target)
+            batch_attrs = explanation.explain_batch(features, predictions)
 
             # save it to zarr
             tmp_storage_dict["a_" + explanation_name + "_data"] = batch_attrs

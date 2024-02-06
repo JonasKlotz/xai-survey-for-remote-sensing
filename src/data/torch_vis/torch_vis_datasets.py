@@ -51,7 +51,6 @@ class Caltech101Dataset:
         label = torch.tensor(target_tuple[0])
         contour = target_tuple[1]
         bbox = target_tuple[2]
-        features.show()
 
         segmentation_mask = generate_segmentation_mask_caltech(
             features, contour, bbox, index

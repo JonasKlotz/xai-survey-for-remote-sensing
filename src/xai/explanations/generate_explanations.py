@@ -3,10 +3,8 @@ import tqdm
 import yaml
 
 from data.data_utils import (
-    get_loader_for_datamodule,
-    load_data_module,
+    get_dataloader_from_cfg,
 )
-from data.zarr_handler import get_zarr_dataloader
 from models.get_models import get_model
 from utility.cluster_logging import logger
 from xai.explanations.explanation_manager import ExplanationsManager
@@ -18,24 +16,7 @@ def generate_explanations(cfg: dict):
     logger.debug(f"Using device: {cfg['device']}")
     cfg["method"] = "explain"
 
-    if cfg["debug"] and cfg["dataset_name"] == "deepglobe":
-        # model = model.double()
-        data_loader, _ = get_zarr_dataloader(
-            cfg,
-            filter_keys=[
-                "x_data",
-                "y_data",
-                "index_data",
-                "s_data",
-            ],  # we only need the actual data
-        )
-
-    else:
-        # load datamodule
-        data_module, cfg = load_data_module(cfg)
-        data_loader = get_loader_for_datamodule(data_module, loader_name="test")
-
-        logger.debug(f"Samples in test loader: {len(data_loader)}")
+    cfg, data_loader = get_dataloader_from_cfg(cfg)
 
     # load model
     model = get_model(cfg, self_trained=True).to(cfg["device"])

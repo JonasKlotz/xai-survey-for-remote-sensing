@@ -23,7 +23,7 @@ def debug_explanations(cfg: dict):
 
     if cfg["debug"] and cfg["dataset_name"] == "deepglobe":
         # model = model.double()
-        data_loader, _ = get_zarr_dataloader(
+        data_loader = get_zarr_dataloader(
             cfg,
             filter_keys=[
                 "x_data",

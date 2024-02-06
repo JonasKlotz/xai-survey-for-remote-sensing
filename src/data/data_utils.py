@@ -10,6 +10,7 @@ from data.constants import DEEPGLOBE_IDX2NAME
 from data.datamodule import DeepGlobeDataModule
 from data.torch_vis.torch_vis_datamodules import Caltech101DataModule, MNISTDataModule
 from data.torch_vis.torchvis_CONSTANTS import CALTECH101_IDX2NAME, MNIST_IDX2NAME
+from data.zarr_handler import get_zarr_dataloader
 from utility.cluster_logging import logger
 
 
@@ -171,3 +172,20 @@ def reverse_one_hot_encoding(batches: List[torch.Tensor]):
     ]
     result = [torch.nonzero(batch, as_tuple=False)[:, 0] for batch in result]
     return result
+
+
+def get_dataloader_from_cfg(cfg, filter_keys=None):
+    if cfg["load_from_zarr"]:
+        logger.debug(f"Loading dataloader from zarr {cfg["zarr_path"]}")
+        data_loader = get_zarr_dataloader(cfg, filter_keys)
+
+    else:
+        # load datamodule
+        logger.debug(
+            f"Loading dataloader from regular datamodule {cfg["dataset_name"]}"
+        )
+        data_module, cfg = load_data_module(cfg)
+        data_loader = get_loader_for_datamodule(data_module, loader_name="test")
+
+    logger.debug(f"Samples in test loader: {len(data_loader)}")
+    return cfg, data_loader

@@ -19,9 +19,10 @@ def visualize(cfg: dict):
 
     cfg["data"]["batch_size"] = 1  # we only want to visualize one sample at a time
     # no filter keys as we need all data
-    data_loader, keys = get_zarr_dataloader(
+    data_loader = get_zarr_dataloader(
         cfg,
     )
+    keys = data_loader.zarr_keys
     index2name = get_index_to_name(cfg)
     explanation_visualizer = ExplanationVisualizer(cfg, model, index2name)
     cfg[

@@ -234,7 +234,6 @@ class MetricsManager:
         time = {}
         for key in metrics.keys():
             start_time = datetime.datetime.now()
-            print(f"Start evaluating {key}")
             results[key] = metrics[key](
                 model=self.model,
                 x_batch=x_batch,
@@ -248,10 +247,6 @@ class MetricsManager:
                 explain_func_kwargs=self.explain_func_kwargs,
             )
             time[key] = datetime.datetime.now() - start_time
-            print(f"Time spent on {key}: {time[key]}\n" f"Results: {results[key]}")
-            # except Exception as e:
-            #     print(f"Error while evaluating {key}: {e}")
-            #     results[key] = self.sentinel_value
 
         return results, time
 
