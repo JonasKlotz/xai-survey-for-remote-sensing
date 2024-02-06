@@ -130,9 +130,17 @@ class MetricsManager:
         s_batch: np.ndarray = None,
     ):
         if self.task == "multilabel":
-            return self.evaluate_batch_mlc(x_batch, y_batch, a_batch, s_batch)
+            all_results, time_spend = self.evaluate_batch_mlc(
+                x_batch, y_batch, a_batch, s_batch
+            )
         else:
-            return self.evaluate_batch_slc(x_batch, y_batch, a_batch, s_batch)
+            all_results, time_spend = self.evaluate_batch_slc(
+                x_batch, y_batch, a_batch, s_batch
+            )
+
+        if self.log:
+            self.csv_logger.update(all_results)
+        return all_results, time_spend
 
     def evaluate_batch_slc(
         self,
@@ -172,9 +180,6 @@ class MetricsManager:
             all_results.update(results)
             time_spend.update(time)
 
-        if self.log:
-            self.csv_logger.update(all_results)
-
         return all_results, time_spend
 
     def evaluate_batch_mlc(
@@ -193,9 +198,6 @@ class MetricsManager:
             )
             all_results.update(results)
             time_spend.update(time)
-
-        if self.log:
-            self.csv_logger.update(all_results)
 
         return all_results, time_spend
 
@@ -389,7 +391,7 @@ class MetricsManager:
             return
         randomization_metrics = {
             "model_parameter_randomisation": quantus.MPRT(
-                layer_order="bottom_up",
+                layer_order="top_down",
                 similarity_func=quantus.ssim,
                 return_average_correlation=True,
                 **self.general_args,

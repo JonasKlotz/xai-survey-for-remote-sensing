@@ -3,7 +3,7 @@ import os
 import sys
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 import pytorch_lightning as pl  # noqa: E402
 import torch.multiprocessing  # noqa: E402

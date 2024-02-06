@@ -26,6 +26,7 @@ def evaluate_explanation_methods(
     logger.debug("Running the metrics for the attributions")
     cfg["method"] = "explain"
     cfg["data"]["num_workers"] = 0
+
     image_shape = (3, 120, 120) if cfg["dataset_name"] == "deepglobe" else (3, 224, 224)
     one_hot_encoding = cfg["dataset_name"] == "deepglobe"
 
@@ -52,12 +53,15 @@ def evaluate_explanation_methods(
         ) = parse_batch(batch)
 
         if predicted_label_tensor is None:
-            predicted_label_tensor = model.prediction_step(image_tensor)
+            predicted_label_tensor = model.prediction_step(
+                image_tensor.to(cfg["device"])
+            )
 
         if attributions_dict is None:
             attributions_dict = explanation_manager.explain_batch(batch)
 
         if one_hot_encoding:
+            # The quantus framework expects the targets not to be one-hot-encoded.
             predicted_label_tensor = reverse_one_hot_encoding(predicted_label_tensor)
 
         evaluate_metrics_batch(
@@ -136,7 +140,7 @@ def evaluate_metrics_batch(
         a_batch = attributions_dict["a_" + explanation_name + "_data"]
 
         a_batch = _to_numpy_array(a_batch)
-
+        print(explanation_name)
         results, time_spend = metrics_manager_dict[explanation_name].evaluate_batch(
             x_batch=image_tensor,
             y_batch=predicted_label_tensor,

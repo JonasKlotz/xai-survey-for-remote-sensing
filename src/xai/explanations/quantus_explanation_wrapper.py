@@ -49,4 +49,7 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
     attributions = explanation.explain_batch(
         tensor_batch=inputs, target_batch=targets
     ).numpy(force=True)
+    if np.all((attributions == 0)):
+        print(f"All zero for method {explanation_method_name}")
+
     return attributions
