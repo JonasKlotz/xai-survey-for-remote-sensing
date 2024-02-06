@@ -15,13 +15,14 @@ def generate_explanations(cfg: dict):
     logger.debug(f"Using CUDA: {torch.cuda.is_available()}")
     logger.debug(f"Using device: {cfg['device']}")
     cfg["method"] = "explain"
+    cfg["data"]["num_workers"] = 0
 
     cfg, data_loader = get_dataloader_from_cfg(cfg)
 
     # load model
     model = get_model(cfg, self_trained=True).to(cfg["device"])
-
     model.eval()
+
     explanation_manager = ExplanationsManager(cfg, model)
 
     for batch in tqdm.tqdm(data_loader):

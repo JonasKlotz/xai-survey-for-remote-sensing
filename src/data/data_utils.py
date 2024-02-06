@@ -176,16 +176,19 @@ def reverse_one_hot_encoding(batches: List[torch.Tensor]):
 
 def get_dataloader_from_cfg(cfg, filter_keys=None):
     if cfg["load_from_zarr"]:
-        logger.debug(f"Loading dataloader from zarr {cfg["zarr_path"]}")
+        logger.debug(f"Loading dataloader from zarr: {cfg["zarr_path"]}")
         data_loader = get_zarr_dataloader(cfg, filter_keys)
 
     else:
         # load datamodule
         logger.debug(
-            f"Loading dataloader from regular datamodule {cfg["dataset_name"]}"
+            f"Loading dataloader from regular datamodule: {cfg["dataset_name"]}"
         )
         data_module, cfg = load_data_module(cfg)
         data_loader = get_loader_for_datamodule(data_module, loader_name="test")
 
-    logger.debug(f"Samples in test loader: {len(data_loader)}")
+    logger.debug(
+        f"Samples in test loader: {len(data_loader)}, \n"
+        f"with batchsize {cfg["data"]["batch_size"]}"
+    )
     return cfg, data_loader

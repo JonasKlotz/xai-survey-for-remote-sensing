@@ -21,8 +21,8 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  batch_size: 8 # optimal training: 128
-  num_workers: 4
+  batch_size: 2 # optimal training: 128
+  num_workers: 0
   pin_memory: False
 
 

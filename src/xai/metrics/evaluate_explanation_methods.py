@@ -24,12 +24,10 @@ def evaluate_explanation_methods(
 
     """
     logger.debug("Running the metrics for the attributions")
-
-    cfg["data"]["batch_size"] = 2
-
+    cfg["method"] = "explain"
+    cfg["data"]["num_workers"] = 0
     image_shape = (3, 120, 120) if cfg["dataset_name"] == "deepglobe" else (3, 224, 224)
-
-    # batchsize should not be 1 as we squeeze the batch dimension in the metrics manager
+    one_hot_encoding = cfg["dataset_name"] == "deepglobe"
 
     cfg, data_loader = get_dataloader_from_cfg(cfg)
 
@@ -44,8 +42,6 @@ def evaluate_explanation_methods(
         model=model,
     )
 
-    one_hot_encoding = cfg["dataset_name"] == "deepglobe"
-
     start_time = datetime.now()
     for batch in tqdm(data_loader):
         (
@@ -57,15 +53,12 @@ def evaluate_explanation_methods(
 
         if predicted_label_tensor is None:
             predicted_label_tensor = model.prediction_step(image_tensor)
-            logger.info("Generated predictions")
 
         if attributions_dict is None:
             attributions_dict = explanation_manager.explain_batch(batch)
-            logger.info("Generated attributions")
 
         if one_hot_encoding:
             predicted_label_tensor = reverse_one_hot_encoding(predicted_label_tensor)
-            logger.info("Reversed one hot encoding of prediction vector")
 
         evaluate_metrics_batch(
             cfg,
@@ -114,15 +107,11 @@ def setup_metrics_manager(
         # Initialize the metrics manager for the explanation method
         metrics_manager_dict[explanation_name] = MetricsManager(
             model=model,
+            cfg=cfg,
             metrics_config=metrics_cfg,
             explanation=explanation,
-            aggregate=True,
-            device=cfg["device"],
-            log=True,
             log_dir=log_dir,
-            task=cfg["task"],
             image_shape=image_shape,
-            num_classes=cfg["num_classes"],
         )
     explanation_manager = ExplanationsManager(cfg, model)
     return metrics_manager_dict, explanation_manager

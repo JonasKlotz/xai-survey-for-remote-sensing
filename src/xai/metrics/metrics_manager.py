@@ -1,9 +1,9 @@
 import datetime
 
 import numpy as np
-import src.xai.metrics.Quantus.quantus as quantus
 import torch
 
+import src.xai.metrics.Quantus.quantus as quantus
 from utility.csv_logger import CSVLogger
 from xai.explanations.quantus_explanation_wrapper import explanation_wrapper
 from xai.metrics.metrics_utiliies import (
@@ -17,16 +17,13 @@ class MetricsManager:
         self,
         model: torch.nn.Module,
         explanation: callable,
+        cfg: dict,
         metrics_config: dict = None,
         aggregate=True,
-        device=None,
-        log=False,
         log_dir=None,
         image_shape=(3, 224, 224),
         sentinel_value=np.nan,
         softmax=True,
-        num_classes=101,
-        task="multiclass",
     ):
         """
         Metrics Manager for evaluating metrics
@@ -53,14 +50,16 @@ class MetricsManager:
         self.model = model
         self.nr_runs = 10
         self.aggregate = aggregate
-        self.task = task
 
         self.metrics_config = metrics_config
 
-        self.device = device
-        self.log = log
+        self.task = cfg["task"]
+        self.device = cfg["device"]
+        self.num_classes = cfg["num_classes"]
+
         self.log_dir = log_dir
-        if self.log:
+        if self.log_dir:
+            self.log = True
             self.csv_logger = CSVLogger(
                 log_dir=self.log_dir, filename=explanation.attribution_name
             )
@@ -76,8 +75,6 @@ class MetricsManager:
         )  # todo: make this configurable? Also this can lead to errors?
         self.features_in_step = int(self.height / 8)
         self.num_samples = 1
-
-        self.num_classes = num_classes
 
         self.sentinel_value = sentinel_value
         self.softmax = softmax
@@ -342,7 +339,8 @@ class MetricsManager:
                 return_aggregate=self.aggregate,
                 disable_warnings=self.disable_warnings,
                 display_progressbar=False,
-                aggregate_func=aggregate_continuity_metric,  # todo: Not sure if this is the right way for the aggregation
+                aggregate_func=aggregate_continuity_metric,
+                # todo: Not sure if this is the right way for the aggregation
             ),
             "consistency": quantus.Consistency(**self.general_args),
             "relative_input_stability": quantus.RelativeInputStability(
