@@ -14,7 +14,7 @@ complexity:
   effective_complexity:
 
 randomization:
-   model_parameter_randomisation:
+   # model_parameter_randomisation:
    random_logits:
 
 

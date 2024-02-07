@@ -140,7 +140,7 @@ def evaluate_metrics_batch(
         a_batch = attributions_dict["a_" + explanation_name + "_data"]
 
         a_batch = _to_numpy_array(a_batch)
-        print(explanation_name)
+
         results, time_spend = metrics_manager_dict[explanation_name].evaluate_batch(
             x_batch=image_tensor,
             y_batch=predicted_label_tensor,

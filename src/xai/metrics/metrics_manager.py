@@ -60,8 +60,11 @@ class MetricsManager:
         self.log_dir = log_dir
         if self.log_dir:
             self.log = True
-            self.csv_logger = CSVLogger(
+            self.metric_csv_logger = CSVLogger(
                 log_dir=self.log_dir, filename=explanation.attribution_name
+            )
+            self.time_csv_logger = CSVLogger(
+                log_dir=self.log_dir, filename=f"{explanation.attribution_name}_time"
             )
 
         self.disable_warnings = True
@@ -71,9 +74,9 @@ class MetricsManager:
         self.width = image_shape[2]
 
         self.patch_size = int(
-            self.height / 8
+            self.height / 4
         )  # todo: make this configurable? Also this can lead to errors?
-        self.features_in_step = int(self.height / 8)
+        self.features_in_step = int(self.height / 4)
         self.num_samples = 1
 
         self.sentinel_value = sentinel_value
@@ -129,76 +132,19 @@ class MetricsManager:
         a_batch: np.ndarray,
         s_batch: np.ndarray = None,
     ):
-        if self.task == "multilabel":
-            all_results, time_spend = self.evaluate_batch_mlc(
-                x_batch, y_batch, a_batch, s_batch
+        all_results = {}
+        time_spend = {}
+
+        for category_name, metrics_category in self.categorized_metrics.items():
+            results, time = self._evaluate_category(
+                metrics_category, x_batch, y_batch, a_batch, s_batch
             )
-        else:
-            all_results, time_spend = self.evaluate_batch_slc(
-                x_batch, y_batch, a_batch, s_batch
-            )
+            all_results.update(results)
+            time_spend.update(time)
 
         if self.log:
-            self.csv_logger.update(all_results)
-        return all_results, time_spend
-
-    def evaluate_batch_slc(
-        self,
-        x_batch: np.ndarray,
-        y_batch: np.ndarray,
-        a_batch: np.ndarray,
-        s_batch: np.ndarray = None,
-    ):
-        """Evaluate a batch of images
-
-        If self.log is true, the results are logged to a csv file
-
-        Parameters
-        ----------
-        x_batch : np.ndarray
-            batch of images
-        y_batch : np.ndarray
-            batch of targets
-        a_batch : np.ndarray
-            batch of attributions
-        s_batch: np.ndarray
-            batch of segmentations. Careful when the segmentation is None localization metrics will fail.
-
-
-        Returns
-        -------
-        all_results : dict
-            dictionary containing all results
-        """
-        all_results = {}
-        time_spend = {}
-
-        for category_name, metrics_category in self.categorized_metrics.items():
-            results, time = self._evaluate_category(
-                metrics_category, x_batch, y_batch, a_batch, s_batch
-            )
-            all_results.update(results)
-            time_spend.update(time)
-
-        return all_results, time_spend
-
-    def evaluate_batch_mlc(
-        self,
-        x_batch: torch.tensor,
-        y_batch: torch.tensor,
-        a_batch: torch.tensor,
-        s_batch: torch.tensor = None,
-    ):
-        all_results = {}
-        time_spend = {}
-
-        for category_name, metrics_category in self.categorized_metrics.items():
-            results, time = self._evaluate_category(
-                metrics_category, x_batch, y_batch, a_batch, s_batch
-            )
-            all_results.update(results)
-            time_spend.update(time)
-
+            self.metric_csv_logger.update(all_results)
+            self.time_csv_logger.update(time_spend)
         return all_results, time_spend
 
     def _evaluate_category(
@@ -391,9 +337,11 @@ class MetricsManager:
             return
         randomization_metrics = {
             "model_parameter_randomisation": quantus.MPRT(
-                layer_order="top_down",
+                # layer_order="top_down",
+                skip_layers=True,
+                return_last_correlation=True,
                 similarity_func=quantus.ssim,
-                return_average_correlation=True,
+                return_average_correlation=False,
                 **self.general_args,
             ),
             "random_logits": quantus.RandomLogit(
