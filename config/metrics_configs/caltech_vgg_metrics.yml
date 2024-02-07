@@ -1,17 +1,17 @@
 # Metrics
-#faithfulness:
-#  region_perturb:
-#  selectivity:
-#  infidelity:
-#
-#robustness:
-#  relative_input_stability:
-#  relative_output_stability:
-#
-#complexity:
-#  sparseness:
-#  complexity:
-#  effective_complexity:
+faithfulness:
+  region_perturb:
+  selectivity:
+  infidelity:
+
+robustness:
+  relative_input_stability:
+  relative_output_stability:
+
+complexity:
+  sparseness:
+  complexity:
+  effective_complexity:
 
 randomization:
    model_parameter_randomisation:
