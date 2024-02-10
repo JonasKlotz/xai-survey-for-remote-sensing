@@ -8,6 +8,9 @@ num_classes: 6
 input_channels: 3
 
 
+# Currently only for metrics
+use_multiprocessing: False
+
 pretrained: False
 
 # Explanation parameters

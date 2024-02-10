@@ -1,6 +1,7 @@
 import os
 from typing import List
 
+import numpy as np
 import torch
 import tqdm
 from pytorch_lightning import LightningDataModule
@@ -192,3 +193,27 @@ def get_dataloader_from_cfg(cfg, filter_keys=None):
         f"with batchsize {cfg["data"]["batch_size"]}"
     )
     return cfg, data_loader
+
+
+def _parse_segments(cfg, segments_tensor):
+    # The quantus framework expects the segments to be boolean tensors.
+    if cfg["dataset_name"] == "caltech101":
+        # threshold the segments
+        segments_tensor = segments_tensor > 0.5
+    elif cfg["dataset_name"] == "deepglobe":
+        # create tensor empty with shape (batchsize, num_classes, 1, 120, 120) from (batchsize, 1, 120, 120)
+        unsqueezed_segments = np.zeros(
+            shape=(
+                segments_tensor.shape[0],
+                cfg["num_classes"],
+                segments_tensor.shape[1],
+                segments_tensor.shape[2],
+            )
+        )
+        print(unsqueezed_segments.shape)
+        for class_index in range(cfg["num_classes"]):
+            unsqueezed_segments[:, class_index, :, :] = segments_tensor == class_index
+        segments_tensor = unsqueezed_segments
+    else:
+        raise ValueError("Unknown dataset")
+    return segments_tensor

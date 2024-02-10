@@ -7,6 +7,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 import pytorch_lightning as pl  # noqa: E402
 import torch.multiprocessing  # noqa: E402
+import multiprocessing as mp  # noqa: E402
 
 from config_utils import parse_config, load_yaml  # noqa: E402
 
@@ -28,9 +29,14 @@ from xai.explanations.debug_explanations import debug_explanations  # noqa: E402
 # Fix all seeds with lightning
 pl.seed_everything(42)
 
+
 torch.multiprocessing.set_sharing_strategy(
     "file_system"
 )  # handle too many open files error
+try:
+    mp.set_start_method("spawn")
+except RuntimeError:
+    pass
 
 
 def main(

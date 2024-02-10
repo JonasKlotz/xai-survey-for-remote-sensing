@@ -57,16 +57,6 @@ class MetricsManager:
         self.device = cfg["device"]
         self.num_classes = cfg["num_classes"]
 
-        self.log_dir = log_dir
-        if self.log_dir:
-            self.log = True
-            self.metric_csv_logger = CSVLogger(
-                log_dir=self.log_dir, filename=explanation.attribution_name
-            )
-            self.time_csv_logger = CSVLogger(
-                log_dir=self.log_dir, filename=f"{explanation.attribution_name}_time"
-            )
-
         self.disable_warnings = True
 
         self.channels = image_shape[0]
@@ -109,6 +99,25 @@ class MetricsManager:
 
         # load metrics
         self._load_metrics()
+
+        column_names = []
+        for category_name, metrics_category in self.metrics_config.items():
+            for key in metrics_category.keys():
+                column_names.append(key)
+
+        self.log_dir = log_dir
+        if self.log_dir:
+            self.log = True
+            self.metric_csv_logger = CSVLogger(
+                log_dir=self.log_dir,
+                filename=explanation.attribution_name,
+                column_names=column_names,
+            )
+            self.time_csv_logger = CSVLogger(
+                log_dir=self.log_dir,
+                filename=f"{explanation.attribution_name}_time",
+                column_names=column_names,
+            )
 
     def _load_metrics(self):
         """Load all metrics"""

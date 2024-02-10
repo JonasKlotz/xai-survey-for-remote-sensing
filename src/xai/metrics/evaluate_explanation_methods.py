@@ -1,3 +1,4 @@
+import multiprocessing as mp
 from datetime import datetime
 from typing import Union, List, Dict
 
@@ -5,7 +6,11 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from data.data_utils import reverse_one_hot_encoding, get_dataloader_from_cfg
+from data.data_utils import (
+    reverse_one_hot_encoding,
+    get_dataloader_from_cfg,
+    _parse_segments,
+)
 from models.get_models import get_model
 from utility.cluster_logging import logger
 from xai.explanations.explanation_manager import (
@@ -65,20 +70,27 @@ def evaluate_explanation_methods(
             predicted_label_tensor = reverse_one_hot_encoding(predicted_label_tensor)
 
         if segments_tensor is not None:
-            # The quantus framework expects the segments to be boolean tensors.
-            segments_tensor = segments_tensor > 0.5  # threshold the segments
+            # parse the segments
+            segments_tensor = _parse_segments(cfg, segments_tensor)
 
-        all_results, all_time_spend = evaluate_metrics_batch(
-            cfg,
-            metrics_manager_dict,
-            image_tensor,
-            predicted_label_tensor,
-            segments_tensor,
-            attributions_dict,
-        )
-        print(all_results)
-        print(all_time_spend)
-        break
+        if cfg["use_multiprocessing"]:
+            evaluate_metrics_batch_mp(
+                cfg,
+                metrics_manager_dict,
+                image_tensor,
+                predicted_label_tensor,
+                segments_tensor,
+                attributions_dict,
+            )
+        else:
+            evaluate_metrics_batch(
+                cfg,
+                metrics_manager_dict,
+                image_tensor,
+                predicted_label_tensor,
+                segments_tensor,
+                attributions_dict,
+            )
 
     end_time = datetime.now()
     logger.debug(f"Time for evaluation: {end_time - start_time}")
@@ -144,10 +156,7 @@ def evaluate_metrics_batch(
     all_time_spend = {}
 
     for explanation_name in cfg["explanation_methods"]:
-        a_batch = attributions_dict["a_" + explanation_name + "_data"]
-
-        a_batch = _to_numpy_array(a_batch)
-
+        a_batch = _to_numpy_array(attributions_dict["a_" + explanation_name + "_data"])
         results, time_spend = metrics_manager_dict[explanation_name].evaluate_batch(
             x_batch=image_tensor,
             y_batch=predicted_label_tensor,
@@ -158,6 +167,33 @@ def evaluate_metrics_batch(
         all_time_spend[explanation_name] = time_spend
 
     return all_results, all_time_spend
+
+
+def evaluate_metrics_batch_mp(
+    cfg: dict,
+    metrics_manager_dict: dict,
+    image_tensor: Union[np.ndarray, torch.Tensor],
+    predicted_label_tensor: Union[List, np.ndarray, torch.Tensor],
+    segments_tensor: Union[np.ndarray, torch.Tensor],
+    attributions_dict: Dict[str, Union[np.ndarray, torch.Tensor]],
+):
+    processes = []
+    for explanation_name in cfg["explanation_methods"]:
+        p = mp.Process(
+            target=metrics_manager_dict[explanation_name].evaluate_batch,
+            args=(
+                np.copy(_to_numpy_array(image_tensor)),
+                np.copy(_to_numpy_array(predicted_label_tensor)),
+                np.copy(
+                    _to_numpy_array(
+                        attributions_dict["a_" + explanation_name + "_data"]
+                    )
+                ),
+                np.copy(_to_numpy_array(segments_tensor)),
+            ),
+        )
+        p.start()
+        processes.append(p)
 
 
 def _parse_dataloader_batch(batch: dict):
