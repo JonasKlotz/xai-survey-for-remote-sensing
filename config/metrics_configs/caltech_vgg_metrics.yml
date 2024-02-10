@@ -1,23 +1,30 @@
-# Metrics
-faithfulness:
-  region_perturb:
-  selectivity:
-  infidelity:
+## Metrics
+#faithfulness:
+#  region_perturb:
+#  selectivity:
+#  infidelity:
+#
+#robustness:
+#  relative_input_stability:
+#  relative_output_stability:
+#
+#complexity:
+#  sparseness:
+#  complexity:
+#  effective_complexity:
+#
+#randomization:
+#   random_logits:
+#
+#
+#axiomatic:
+#  completeness:
+#  non_sensitivity:
 
-robustness:
-  relative_input_stability:
-  relative_output_stability:
-
-complexity:
-  sparseness:
-  complexity:
-  effective_complexity:
-
-randomization:
-   # model_parameter_randomisation:
-   random_logits:
-
-
-axiomatic:
-  completeness:
-  non_sensitivity:
+localization:
+  pointing_game:
+  attribution_localisation:
+  top_k_intersection:
+  relevance_rank_accuracy:
+  relevance_mass_accuracy:
+  auc:

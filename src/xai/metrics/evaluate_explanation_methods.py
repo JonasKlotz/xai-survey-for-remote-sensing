@@ -64,7 +64,11 @@ def evaluate_explanation_methods(
             # The quantus framework expects the targets not to be one-hot-encoded.
             predicted_label_tensor = reverse_one_hot_encoding(predicted_label_tensor)
 
-        evaluate_metrics_batch(
+        if segments_tensor is not None:
+            # The quantus framework expects the segments to be boolean tensors.
+            segments_tensor = segments_tensor > 0.5  # threshold the segments
+
+        all_results, all_time_spend = evaluate_metrics_batch(
             cfg,
             metrics_manager_dict,
             image_tensor,
@@ -72,6 +76,9 @@ def evaluate_explanation_methods(
             segments_tensor,
             attributions_dict,
         )
+        print(all_results)
+        print(all_time_spend)
+        break
 
     end_time = datetime.now()
     logger.debug(f"Time for evaluation: {end_time - start_time}")

@@ -312,11 +312,12 @@ class MetricsManager:
         if "localization" not in self.metrics_config:
             return
         localization_metrics = {
+            "focus": quantus.Focus(**self.general_args),
             "pointing_game": quantus.PointingGame(**self.general_args),
             "attribution_localisation": quantus.AttributionLocalisation(
                 **self.general_args
             ),
-            "top_k_intersection": quantus.TopKIntersection(**self.general_args, k=5),
+            "top_k_intersection": quantus.TopKIntersection(**self.general_args, k=100),
             "relevance_rank_accuracy": quantus.RelevanceRankAccuracy(
                 **self.general_args
             ),
