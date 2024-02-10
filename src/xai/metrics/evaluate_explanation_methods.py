@@ -47,6 +47,8 @@ def evaluate_explanation_methods(
         model=model,
     )
 
+    max_batches = 200
+    i = 0
     start_time = datetime.now()
     for batch in tqdm(data_loader):
         (
@@ -69,7 +71,7 @@ def evaluate_explanation_methods(
             predicted_label_tensor = reverse_one_hot_encoding(predicted_label_tensor)
 
         if segments_tensor is not None:
-            # parse the segments
+            # parse the segments to quantus format
             segments_tensor = _parse_segments(cfg, segments_tensor)
 
         evaluate_metrics_batch(
@@ -80,6 +82,9 @@ def evaluate_explanation_methods(
             segments_tensor,
             attributions_dict,
         )
+        i += 1
+        if i >= max_batches:
+            break
 
     end_time = datetime.now()
     logger.debug(f"Time for evaluation: {end_time - start_time}")

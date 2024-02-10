@@ -24,6 +24,7 @@ data:
   batch_size: 1 # optimal training: 128
   num_workers: 0
   pin_memory: False
+  force_shuffle: True # shuffle also test loader
 
 
 # Training parameters
