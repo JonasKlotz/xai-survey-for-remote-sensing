@@ -1,4 +1,3 @@
-import multiprocessing as mp
 from datetime import datetime
 from typing import Union, List, Dict
 
@@ -73,24 +72,14 @@ def evaluate_explanation_methods(
             # parse the segments
             segments_tensor = _parse_segments(cfg, segments_tensor)
 
-        if cfg["use_multiprocessing"]:
-            evaluate_metrics_batch_mp(
-                cfg,
-                metrics_manager_dict,
-                image_tensor,
-                predicted_label_tensor,
-                segments_tensor,
-                attributions_dict,
-            )
-        else:
-            evaluate_metrics_batch(
-                cfg,
-                metrics_manager_dict,
-                image_tensor,
-                predicted_label_tensor,
-                segments_tensor,
-                attributions_dict,
-            )
+        evaluate_metrics_batch(
+            cfg,
+            metrics_manager_dict,
+            image_tensor,
+            predicted_label_tensor,
+            segments_tensor,
+            attributions_dict,
+        )
 
     end_time = datetime.now()
     logger.debug(f"Time for evaluation: {end_time - start_time}")
@@ -167,33 +156,6 @@ def evaluate_metrics_batch(
         all_time_spend[explanation_name] = time_spend
 
     return all_results, all_time_spend
-
-
-def evaluate_metrics_batch_mp(
-    cfg: dict,
-    metrics_manager_dict: dict,
-    image_tensor: Union[np.ndarray, torch.Tensor],
-    predicted_label_tensor: Union[List, np.ndarray, torch.Tensor],
-    segments_tensor: Union[np.ndarray, torch.Tensor],
-    attributions_dict: Dict[str, Union[np.ndarray, torch.Tensor]],
-):
-    processes = []
-    for explanation_name in cfg["explanation_methods"]:
-        p = mp.Process(
-            target=metrics_manager_dict[explanation_name].evaluate_batch,
-            args=(
-                np.copy(_to_numpy_array(image_tensor)),
-                np.copy(_to_numpy_array(predicted_label_tensor)),
-                np.copy(
-                    _to_numpy_array(
-                        attributions_dict["a_" + explanation_name + "_data"]
-                    )
-                ),
-                np.copy(_to_numpy_array(segments_tensor)),
-            ),
-        )
-        p.start()
-        processes.append(p)
 
 
 def _parse_dataloader_batch(batch: dict):

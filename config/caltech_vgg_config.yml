@@ -9,11 +9,6 @@ dataset_name: 'caltech101'
 num_classes: 101
 input_channels: 3
 
-
-# Currently only for metrics
-use_multiprocessing: True
-
-
 pretrained: False
 
 # Explanation parameters
