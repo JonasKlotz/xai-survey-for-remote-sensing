@@ -32,6 +32,7 @@ def evaluate_explanation_methods(
     cfg["data"]["num_workers"] = 0
 
     image_shape = (3, 120, 120) if cfg["dataset_name"] == "deepglobe" else (3, 224, 224)
+
     one_hot_encoding = cfg["dataset_name"] == "deepglobe"
 
     cfg, data_loader = get_dataloader_from_cfg(cfg)
@@ -47,8 +48,9 @@ def evaluate_explanation_methods(
         model=model,
     )
 
-    max_batches = 200
+    # max_iterations = 200 // cfg["data"]["batch_size"]
     i = 0
+
     start_time = datetime.now()
     for batch in tqdm(data_loader):
         (
@@ -73,18 +75,22 @@ def evaluate_explanation_methods(
         if segments_tensor is not None:
             # parse the segments to quantus format
             segments_tensor = _parse_segments(cfg, segments_tensor)
+        try:
+            evaluate_metrics_batch(
+                cfg,
+                metrics_manager_dict,
+                image_tensor,
+                predicted_label_tensor,
+                segments_tensor,
+                attributions_dict,
+            )
+        except Exception as e:
+            logger.error(f"Error in batch {i}: {e}")
+            continue
 
-        evaluate_metrics_batch(
-            cfg,
-            metrics_manager_dict,
-            image_tensor,
-            predicted_label_tensor,
-            segments_tensor,
-            attributions_dict,
-        )
-        i += 1
-        if i >= max_batches:
-            break
+        i += cfg["data"]["batch_size"]
+        # if i >= max_iterations:
+        #     break
 
     end_time = datetime.now()
     logger.debug(f"Time for evaluation: {end_time - start_time}")
