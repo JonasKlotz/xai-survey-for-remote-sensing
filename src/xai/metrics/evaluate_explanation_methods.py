@@ -9,6 +9,7 @@ from data.data_utils import (
     reverse_one_hot_encoding,
     get_dataloader_from_cfg,
     _parse_segments,
+    parse_batch,
 )
 from models.get_models import get_model
 from utility.cluster_logging import logger
@@ -24,16 +25,30 @@ def evaluate_explanation_methods(
     metrics_cfg: dict,
 ):
     """
-    Evaluate Explanation Methods
+    Evaluate Explanation Methods.
 
+    Parameters
+    ----------
+    cfg : dict
+        Configuration dictionary containing all the necessary parameters.
+    metrics_cfg : dict
+        Configuration dictionary containing all the necessary parameters for metrics.
     """
     logger.debug("Running the metrics for the attributions")
     cfg["method"] = "explain"
+
+    # enforce single batch size and no workers
     cfg["data"]["num_workers"] = 0
+    cfg["data"]["batch_size"] = 1
 
     image_shape = (3, 120, 120) if cfg["dataset_name"] == "deepglobe" else (3, 224, 224)
 
     one_hot_encoding = cfg["dataset_name"] == "deepglobe"
+    multilabel = cfg["task"] == "multilabel"
+
+    recompute_attributions = True
+    skip_wrong_predictions = False
+    skip_samples_with_single_label = False
 
     cfg, data_loader = get_dataloader_from_cfg(cfg)
 
@@ -48,15 +63,17 @@ def evaluate_explanation_methods(
         model=model,
     )
 
-    # max_iterations = 200 // cfg["data"]["batch_size"]
+    max_iterations = 200 // cfg["data"]["batch_size"]
     i = 0
 
     start_time = datetime.now()
     for batch in tqdm(data_loader):
         (
             image_tensor,
+            true_labels,
             predicted_label_tensor,
             segments_tensor,
+            _,
             attributions_dict,
         ) = parse_batch(batch)
 
@@ -65,7 +82,22 @@ def evaluate_explanation_methods(
                 image_tensor.to(cfg["device"])
             )
 
-        if attributions_dict is None:
+        # Cast all to NP
+        image_tensor = _to_numpy_array(image_tensor)
+        segments_tensor = _to_numpy_array(segments_tensor)
+        predicted_label_tensor = _to_numpy_array(predicted_label_tensor)
+        true_labels = _to_numpy_array(true_labels)
+
+        if _skip_batch(
+            multilabel,
+            predicted_label_tensor,
+            skip_samples_with_single_label,
+            skip_wrong_predictions,
+            true_labels,
+        ):
+            continue
+
+        if attributions_dict is None or recompute_attributions:
             attributions_dict = explanation_manager.explain_batch(batch)
 
         if one_hot_encoding:
@@ -75,37 +107,27 @@ def evaluate_explanation_methods(
         if segments_tensor is not None:
             # parse the segments to quantus format
             segments_tensor = _parse_segments(cfg, segments_tensor)
-        try:
-            evaluate_metrics_batch(
-                cfg,
-                metrics_manager_dict,
-                image_tensor,
-                predicted_label_tensor,
-                segments_tensor,
-                attributions_dict,
-            )
-        except Exception as e:
-            logger.error(f"Error in batch {i}: {e}")
-            continue
+
+        # try:
+        evaluate_metrics_batch(
+            cfg,
+            metrics_manager_dict,
+            image_tensor,
+            predicted_label_tensor,
+            segments_tensor,
+            attributions_dict,
+        )
+
+        # except Exception as e:
+        #     logger.error(f"Error in batch {i}: {e}")
+        #     continue
 
         i += cfg["data"]["batch_size"]
-        # if i >= max_iterations:
-        #     break
+        if i >= max_iterations:
+            break
 
     end_time = datetime.now()
     logger.debug(f"Time for evaluation: {end_time - start_time}")
-
-
-def parse_batch(batch: dict):
-    # batch can either come from the zarr or from the dataloader
-    if "features" in batch.keys():
-        # we have a batch form dataloaders
-        return _parse_dataloader_batch(batch)
-    elif "x_data" in batch.keys():
-        # we parse it as zarr batch
-        return _parse_zarr_batch(batch)
-
-    raise ValueError("Batch cannot be parsed...")
 
 
 def setup_metrics_manager(
@@ -114,6 +136,25 @@ def setup_metrics_manager(
     metrics_cfg,
     model,
 ):
+    """
+    Sets up the metrics manager.
+
+    Parameters
+    ----------
+    cfg : dict
+        Configuration dictionary containing all the necessary parameters.
+    image_shape : tuple
+        Shape of the input images.
+    metrics_cfg : dict
+        Configuration dictionary containing all the necessary parameters for metrics.
+    model : torch.nn.Module
+        The model to be used.
+
+    Returns
+    -------
+    dict, ExplanationsManager
+        Dictionary of MetricsManager objects and an ExplanationsManager object.
+    """
     log_dir = cfg["results_path"] + "/metrics/" + cfg["experiment_name"]
 
     explanations_dict = {}
@@ -136,7 +177,7 @@ def setup_metrics_manager(
             log_dir=log_dir,
             image_shape=image_shape,
         )
-    explanation_manager = ExplanationsManager(cfg, model)
+    explanation_manager = ExplanationsManager(cfg, model, save=True)
     return metrics_manager_dict, explanation_manager
 
 
@@ -148,6 +189,29 @@ def evaluate_metrics_batch(
     segments_tensor: Union[np.ndarray, torch.Tensor],
     attributions_dict: Dict[str, Union[np.ndarray, torch.Tensor]],
 ):
+    """
+    Evaluates the metrics for a batch.
+
+    Parameters
+    ----------
+    cfg : dict
+        Configuration dictionary containing all the necessary parameters.
+    metrics_manager_dict : dict
+        Dictionary of MetricsManager objects.
+    image_tensor : Union[np.ndarray, torch.Tensor]
+        Tensor of images.
+    predicted_label_tensor : Union[List, np.ndarray, torch.Tensor]
+        Tensor of predicted labels.
+    segments_tensor : Union[np.ndarray, torch.Tensor]
+        Tensor of segments.
+    attributions_dict : Dict[str, Union[np.ndarray, torch.Tensor]]
+        Dictionary of attributions.
+
+    Returns
+    -------
+    dict, dict
+        Dictionary of results and dictionary of time spent for each explanation method.
+    """
     image_tensor = _to_numpy_array(image_tensor)
     segments_tensor = _to_numpy_array(segments_tensor)
     predicted_label_tensor = _to_numpy_array(predicted_label_tensor)
@@ -169,28 +233,20 @@ def evaluate_metrics_batch(
     return all_results, all_time_spend
 
 
-def _parse_dataloader_batch(batch: dict):
-    image_tensor = batch["features"]
-    segments_tensor = batch["segmentations"]
-    return image_tensor, None, segments_tensor, None
-
-
-def _parse_zarr_batch(batch: dict):
-    # batch_dict = dict(zip(keys, batch))
-    image_tensor = batch.pop("x_data").numpy(force=True)
-    _ = batch.pop("y_data").numpy(force=True)
-    predicted_label_tensor = batch.pop("y_pred_data").numpy(force=True)
-    if "s_data" in batch:
-        segments_tensor = batch.pop("s_data").numpy(force=True)
-    else:
-        segments_tensor = None
-
-    _ = batch.pop("index_data")
-    attributions_dict = batch  # rename for clarity
-    return image_tensor, predicted_label_tensor, segments_tensor, attributions_dict
-
-
 def _to_numpy_array(input_tensor):
+    """
+    Converts the input tensor to a numpy array.
+
+    Parameters
+    ----------
+    input_tensor : Union[np.ndarray, torch.Tensor, list]
+        Input tensor.
+
+    Returns
+    -------
+    Union[np.ndarray, list]
+        Numpy array or list of numpy arrays.
+    """
     if input_tensor is None:
         return None
     elif isinstance(input_tensor, np.ndarray):
@@ -201,3 +257,91 @@ def _to_numpy_array(input_tensor):
         return [_to_numpy_array(x) for x in input_tensor]
     else:
         return np.asarray(input_tensor)
+
+
+def _skip_batch(
+    multilabel,
+    predicted_label_tensor,
+    skip_samples_with_single_label,
+    skip_wrong_predictions,
+    true_labels,
+):
+    """
+    Determines whether to skip the current batch based on the given conditions.
+
+    Parameters
+    ----------
+    multilabel : bool
+        Indicates whether the task is multilabel or not.
+    predicted_label_tensor : tensor
+        Tensor of predicted labels.
+    skip_samples_with_single_label : bool
+        Flag to skip samples with a single label.
+    skip_wrong_predictions : bool
+        Flag to skip wrong predictions.
+    true_labels : tensor
+        Tensor of true labels.
+
+    Returns
+    -------
+    bool
+        True if the batch should be skipped, False otherwise.
+    """
+    if skip_wrong_predictions and _is_wrong_prediction(
+        multilabel, predicted_label_tensor, true_labels
+    ):
+        return True
+    if skip_samples_with_single_label and multilabel:
+        if isinstance(predicted_label_tensor, np.ndarray):
+            return np.sum(predicted_label_tensor) == 1
+        if isinstance(predicted_label_tensor, torch.Tensor):
+            return torch.sum(predicted_label_tensor) == 1
+    return False
+
+
+def _is_wrong_prediction(multilabel, predicted_label_tensor, true_labels):
+    """
+    Checks if the prediction is wrong.
+
+    Parameters
+    ----------
+    multilabel : bool
+        Indicates whether the task is multilabel or not.
+    predicted_label_tensor : tensor
+        Tensor of predicted labels.
+    true_labels : tensor
+        Tensor of true labels.
+
+    Returns
+    -------
+    bool
+        True if the prediction is wrong, False otherwise.
+    """
+    if multilabel:
+        return _is_multilabel_wrong_prediction(predicted_label_tensor, true_labels)
+    return predicted_label_tensor != true_labels
+
+
+def _is_multilabel_wrong_prediction(predicted_label_tensor, true_labels):
+    """
+    Checks if the multilabel prediction is wrong.
+
+    Parameters
+    ----------
+    predicted_label_tensor : tensor
+        Tensor of predicted labels.
+    true_labels : tensor
+        Tensor of true labels.
+
+    Returns
+    -------
+    bool
+        True if the multilabel prediction is wrong, False otherwise.
+    """
+    if isinstance(predicted_label_tensor, np.ndarray):
+        return not np.all(np.equal(predicted_label_tensor, true_labels))
+    if isinstance(predicted_label_tensor, torch.Tensor):
+        return not torch.equal(
+            predicted_label_tensor, true_labels.to(predicted_label_tensor.device)
+        )
+    return False

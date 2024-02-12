@@ -152,15 +152,19 @@ class Explanation:
         )
         self.model.to(self.device)
         for batch_index in range(batchsize):
-            image_tensor = tensor_batch[batch_index : batch_index + 1]
+            image_tensor = tensor_batch[batch_index : batch_index + 1].to(self.device)
 
             tmp_target = target_batch[batch_index]
             # if tmp_target is  0 dim tensor expand to 1 dim tensor
             if len(tmp_target.shape) == 0:
                 tmp_target = tmp_target.unsqueeze(0)
 
+            # if the labels ar
+            if len(tmp_target) != 1:
+                # The explanation expects the targets not to be one-hot-encoded.
+                tmp_target = torch.nonzero(tmp_target, as_tuple=False)[0]
+
             for target in tmp_target:
-                image_tensor = image_tensor.to(self.device)
                 target = target.to(self.device)
 
                 attrs = self.explain(

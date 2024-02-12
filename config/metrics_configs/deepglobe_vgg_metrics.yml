@@ -7,16 +7,23 @@
 #robustness:
 #  relative_input_stability:
 #  relative_output_stability:
+#
+#randomization:
+#  random_logits:
+#
+#complexity:
+#  sparseness:
+#  complexity:
+#  effective_complexity:
+#
+#axiomatic:
+#  completeness:
+#  non_sensitivity:
 
-randomization:
-  #model_parameter_randomisation:
-  random_logits:
-
-complexity:
-  sparseness:
-  complexity:
-  effective_complexity:
-
-axiomatic:
-  completeness:
-  non_sensitivity:
+localization:
+  pointing_game:
+  attribution_localisation:
+  top_k_intersection:
+  relevance_rank_accuracy:
+  relevance_mass_accuracy:
+  auc:

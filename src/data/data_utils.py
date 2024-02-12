@@ -210,10 +210,52 @@ def _parse_segments(cfg, segments_tensor):
                 segments_tensor.shape[2],
             )
         )
-        print(unsqueezed_segments.shape)
         for class_index in range(cfg["num_classes"]):
             unsqueezed_segments[:, class_index, :, :] = segments_tensor == class_index
         segments_tensor = unsqueezed_segments
     else:
         raise ValueError("Unknown dataset")
     return segments_tensor
+
+
+def parse_batch(batch: dict):
+    # batch can either come from the zarr or from the dataloader
+    if "features" in batch.keys():
+        # we have a batch form dataloaders
+        return _parse_dataloader_batch(batch)
+    elif "x_data" in batch.keys():
+        # we parse it as zarr batch
+        return _parse_zarr_batch(batch)
+
+    raise ValueError("Batch cannot be parsed...")
+
+
+def _parse_dataloader_batch(batch: dict):
+    image_tensor = batch["features"]
+    segments_tensor = batch["segmentations"]
+    labels_tensor = batch["targets"]
+    index_tensor = batch["index"]
+    return image_tensor, labels_tensor, None, segments_tensor, index_tensor, None
+
+
+def _parse_zarr_batch(batch: dict):
+    tmp_batch = batch.copy()
+    # batch_dict = dict(zip(keys, batch))
+    image_tensor = tmp_batch.pop("x_data").numpy(force=True)
+    label_tensor = tmp_batch.pop("y_data").numpy(force=True)
+    predicted_label_tensor = tmp_batch.pop("y_pred_data").numpy(force=True)
+    if "s_data" in tmp_batch:
+        segments_tensor = tmp_batch.pop("s_data").numpy(force=True)
+    else:
+        segments_tensor = None
+
+    index_tensor = tmp_batch.pop("index_data")
+    attributions_dict = tmp_batch  # rename for clarity
+    return (
+        image_tensor,
+        label_tensor,
+        predicted_label_tensor,
+        segments_tensor,
+        index_tensor,
+        attributions_dict,
+    )

@@ -1,5 +1,7 @@
+import numpy as np
 import torch
 
+from data.data_utils import parse_batch
 from data.zarr_handler import ZarrGroupHandler
 from src.xai.explanations.explanation_methods.gradcam_impl import GradCamImpl
 from src.xai.explanations.explanation_methods.ig_impl import IntegratedGradientsImpl
@@ -68,7 +70,7 @@ class ExplanationsManager:
             keys=storage_keys,
         )
 
-    def explain_batch(self, batch: torch.Tensor):
+    def explain_batch(self, batch: dict):
         """
         Explain a batch of images.
         Parameters
@@ -80,10 +82,15 @@ class ExplanationsManager:
         -------
 
         """
-        features = batch["features"].to(self.device)
-        target = batch["targets"].to(self.device)
-        idx = batch["index"].to(self.device)
-        segments = batch.get("segmentations", torch.tensor([])).to(self.device)
+        (
+            features,
+            target,
+            _,
+            segments,
+            idx,
+            _,
+        ) = parse_batch(batch)
+        features, target = self._to_tensor(features), self._to_tensor(target)
 
         predictions = self.model.prediction_step(features)
 
@@ -107,3 +114,9 @@ class ExplanationsManager:
             self.storage_handler.append(tmp_storage_dict)
 
         return tmp_storage_dict
+
+    def _to_tensor(self, input_tensor):
+        if isinstance(input_tensor, np.ndarray):
+            input_tensor = torch.tensor(input_tensor)
+        input_tensor = input_tensor.to(self.device)
+        return input_tensor

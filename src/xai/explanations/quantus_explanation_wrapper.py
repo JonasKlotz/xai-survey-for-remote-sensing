@@ -36,6 +36,10 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
         inputs = torch.from_numpy(inputs).float()
     if isinstance(targets, np.ndarray):
         targets = torch.from_numpy(targets)
+    if isinstance(targets, list):
+        # in case of MLC we have a list of tensors, as the labels are not one hot encoded
+        targets = [torch.tensor(target) for target in targets]
+
     model = model.float()
 
     # mandatory kwargs
