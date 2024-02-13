@@ -107,6 +107,7 @@ class Explanation:
 
         if isinstance(target_batch, list):
             target_batch = [t.to(self.device) for t in target_batch]
+
         elif isinstance(target_batch, torch.Tensor):
             target_batch = target_batch.to(self.device)
 
@@ -162,7 +163,7 @@ class Explanation:
             # if the labels ar
             if len(tmp_target) != 1:
                 # The explanation expects the targets not to be one-hot-encoded.
-                tmp_target = torch.nonzero(tmp_target, as_tuple=False)[0]
+                tmp_target = torch.nonzero(tmp_target, as_tuple=False)
 
             for target in tmp_target:
                 target = target.to(self.device)

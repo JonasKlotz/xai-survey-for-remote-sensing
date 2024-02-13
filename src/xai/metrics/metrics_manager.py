@@ -110,7 +110,7 @@ class MetricsManager:
             self.log = True
             self.metric_csv_logger = CSVLogger(
                 log_dir=self.log_dir,
-                filename=explanation.attribution_name,
+                filename=f"{explanation.attribution_name}_metrics",
                 column_names=column_names,
             )
             self.time_csv_logger = CSVLogger(
@@ -122,12 +122,12 @@ class MetricsManager:
     def _load_metrics(self):
         """Load all metrics"""
         self.categorized_metrics = {
-            "faithfulness": self._load_faithfulness_metrics(),
-            "robustness": self._load_robustness_metrics(),
-            "localization": self._load_localization_metrics(),
-            "complexity": self._load_complexity_metrics(),
-            "randomization": self._load_randomization_metrics(),
-            "axiomatic": self._load_axiomatic_metrics(),
+            "Faithfulness": self._load_faithfulness_metrics(),
+            "Robustness": self._load_robustness_metrics(),
+            "Localization": self._load_localization_metrics(),
+            "Complexity": self._load_complexity_metrics(),
+            "Randomization": self._load_randomization_metrics(),
+            "Axiomatic": self._load_axiomatic_metrics(),
         }
         # remove empty categories
         self.categorized_metrics = {
@@ -206,89 +206,89 @@ class MetricsManager:
 
     def _load_faithfulness_metrics(self):
         """Load all faithfulness metrics"""
-        if "faithfulness" not in self.metrics_config:
+        if "Faithfulness" not in self.metrics_config:
             return
         faithfulness_metrics = {
-            "faithfulness_corr": quantus.FaithfulnessCorrelation(
+            "Faithfulness Correlation": quantus.FaithfulnessCorrelation(
                 nr_runs=self.nr_runs, subset_size=self.height, **self.general_args
             ),
-            "faithfulness_estimate": quantus.FaithfulnessEstimate(
+            "Faithfulness Estimate": quantus.FaithfulnessEstimate(
                 features_in_step=self.features_in_step, **self.general_args
             ),
-            "monotonicity": quantus.Monotonicity(
+            "Monotonicity-Arya": quantus.Monotonicity(
                 features_in_step=self.features_in_step, **self.general_args
             ),
-            "monotonicity_correlation": quantus.MonotonicityCorrelation(
+            "Monotonicity-Nguyen": quantus.MonotonicityCorrelation(
                 nr_samples=self.num_samples,
                 features_in_step=self.features_in_step,
                 **self.general_args,
             ),
-            "pixel_flipping": quantus.PixelFlipping(
+            "Pixel-Flipping": quantus.PixelFlipping(
                 features_in_step=self.features_in_step, **self.general_args
             ),
-            "region_perturb": quantus.RegionPerturbation(
+            "Region Segmentation": quantus.RegionPerturbation(
                 patch_size=self.patch_size,
                 regions_evaluation=10,
                 normalise=True,
                 **self.general_args,
             ),
-            "selectivity": quantus.Selectivity(
+            "Selectivity": quantus.Selectivity(
                 patch_size=self.patch_size, **self.general_args
             ),
-            "sensitivity_n": quantus.SensitivityN(
+            "SensitivityN": quantus.SensitivityN(
                 features_in_step=self.features_in_step,
                 n_max_percentage=0.8,
                 **self.general_args,
             ),
-            "irof": quantus.IROF(
+            "IROF": quantus.IROF(
                 segmentation_method="slic", perturb_baseline="mean", **self.general_args
             ),
-            "infidelity": quantus.Infidelity(
+            "Infidelity": quantus.Infidelity(
                 perturb_baseline="uniform",
                 n_perturb_samples=5,
                 perturb_patch_sizes=[self.patch_size],
                 **self.general_args,
             ),
-            "road": quantus.ROAD(
+            "ROAD": quantus.ROAD(
                 noise=0.01,
                 perturb_func=quantus.noisy_linear_imputation,
                 percentages=list(range(1, 50, 2)),
                 **self.general_args,
             ),
-            "sufficiency": quantus.Sufficiency(threshold=0.6, **self.general_args),
+            "Sufficiency": quantus.Sufficiency(threshold=0.6, **self.general_args),
         }
         return {
             k: v
             for k, v in faithfulness_metrics.items()
-            if k in self.metrics_config["faithfulness"]
+            if k in self.metrics_config["Faithfulness"]
         }
 
     def _load_robustness_metrics(self):
         """Load all robustness metrics"""
-        if "robustness" not in self.metrics_config:
+        if "Robustness" not in self.metrics_config:
             return
         robustness_metrics = {
-            "local_lipschitz_estimate": quantus.LocalLipschitzEstimate(
+            "Local Lipschitz Estimate": quantus.LocalLipschitzEstimate(
                 nr_samples=self.num_samples,
                 perturb_std=0.2,
                 perturb_mean=0.0,
                 **self.general_args,
             ),
-            "max_sensitivity": quantus.MaxSensitivity(
+            "Max-Sensitivity": quantus.MaxSensitivity(
                 nr_samples=self.num_samples,
                 lower_bound=0.2,
                 perturb_func=quantus.uniform_noise,
                 similarity_func=quantus.difference,
                 **self.general_args,
             ),
-            "average_sensitivity": quantus.AvgSensitivity(
+            "Avg-Sensitivity": quantus.AvgSensitivity(
                 nr_samples=self.num_samples,
                 lower_bound=0.2,
                 perturb_func=quantus.uniform_noise,
                 similarity_func=quantus.difference,
                 **self.general_args,
             ),
-            "continuity": quantus.Continuity(
+            "Continuity Test": quantus.Continuity(
                 patch_size=self.patch_size,
                 nr_steps=10,
                 perturb_baseline="uniform",
@@ -299,54 +299,54 @@ class MetricsManager:
                 aggregate_func=aggregate_continuity_metric,
                 # todo: Not sure if this is the right way for the aggregation
             ),
-            "consistency": quantus.Consistency(**self.general_args),
-            "relative_input_stability": quantus.RelativeInputStability(
+            "Consistency": quantus.Consistency(**self.general_args),
+            "Relative Input Stability": quantus.RelativeInputStability(
                 nr_samples=self.num_samples, **self.general_args
             ),
-            "relative_output_stability": quantus.RelativeOutputStability(
+            "Relative Output Stability": quantus.RelativeOutputStability(
                 nr_samples=self.num_samples, **self.general_args
             ),
-            "relative_representation_stability": quantus.RelativeRepresentationStability(
+            "Relative Representation Stability": quantus.RelativeRepresentationStability(
                 nr_samples=self.num_samples, **self.general_args
             ),
         }
         return {
             k: v
             for k, v in robustness_metrics.items()
-            if k in self.metrics_config["robustness"]
+            if k in self.metrics_config["Robustness"]
         }
 
     def _load_localization_metrics(self):
         """Load all localization metrics"""
-        if "localization" not in self.metrics_config:
+        if "Localisation" not in self.metrics_config:
             return
         localization_metrics = {
-            "focus": quantus.Focus(**self.general_args),
-            "pointing_game": quantus.PointingGame(**self.general_args),
-            "attribution_localisation": quantus.AttributionLocalisation(
+            "Focus": quantus.Focus(**self.general_args),
+            "Pointing Game": quantus.PointingGame(**self.general_args),
+            "Attribution Localisation": quantus.AttributionLocalisation(
                 **self.general_args
             ),
-            "top_k_intersection": quantus.TopKIntersection(**self.general_args, k=100),
-            "relevance_rank_accuracy": quantus.RelevanceRankAccuracy(
+            "Top-K Intersection": quantus.TopKIntersection(**self.general_args, k=100),
+            "Relevance Rank Accuracy": quantus.RelevanceRankAccuracy(
                 **self.general_args
             ),
-            "relevance_mass_accuracy": quantus.RelevanceMassAccuracy(
+            "Relevance Mass Accuracy": quantus.RelevanceMassAccuracy(
                 **self.general_args
             ),
-            "auc": quantus.AUC(**self.general_args),
+            "AUC": quantus.AUC(**self.general_args),
         }
         return {
             k: v
             for k, v in localization_metrics.items()
-            if k in self.metrics_config["localization"]
+            if k in self.metrics_config["Localisation"]
         }
 
     def _load_randomization_metrics(self):
         """Load all randomization metrics"""
-        if "randomization" not in self.metrics_config:
+        if "Randomisation" not in self.metrics_config:
             return
         randomization_metrics = {
-            "model_parameter_randomisation": quantus.MPRT(
+            "MPRT": quantus.MPRT(
                 # layer_order="top_down",
                 skip_layers=True,
                 return_last_correlation=True,
@@ -354,7 +354,7 @@ class MetricsManager:
                 return_average_correlation=False,
                 **self.general_args,
             ),
-            "random_logits": quantus.RandomLogit(
+            "Random Logit": quantus.RandomLogit(
                 num_classes=self.num_classes,
                 similarity_func=quantus.ssim,
                 **self.general_args,
@@ -363,44 +363,44 @@ class MetricsManager:
         return {
             k: v
             for k, v in randomization_metrics.items()
-            if k in self.metrics_config["randomization"]
+            if k in self.metrics_config["Randomisation"]
         }
 
     def _load_complexity_metrics(self):
         """Load all complexity metrics"""
-        if "complexity" not in self.metrics_config:
+        if "Complexity" not in self.metrics_config:
             return
         complexity_metrics = {
-            "sparseness": quantus.Sparseness(**self.general_args),
-            "complexity": quantus.Complexity(**self.general_args),
-            "effective_complexity": quantus.EffectiveComplexity(**self.general_args),
+            "Sparseness": quantus.Sparseness(**self.general_args),
+            "Complexity": quantus.Complexity(**self.general_args),
+            "Effective Complexity": quantus.EffectiveComplexity(**self.general_args),
         }
         return {
             k: v
             for k, v in complexity_metrics.items()
-            if k in self.metrics_config["complexity"]
+            if k in self.metrics_config["Complexity"]
         }
 
     def _load_axiomatic_metrics(self):
         """Load all axiomatic metrics"""
-        if "axiomatic" not in self.metrics_config:
+        if "Axiomatic" not in self.metrics_config:
             return
         axiomatic_metrics = {
-            "completeness": quantus.Completeness(
+            "Completeness": quantus.Completeness(
                 **self.general_args,
                 output_func=np.sum,
             ),
-            "non_sensitivity": quantus.NonSensitivity(
+            "NonSensitivity": quantus.NonSensitivity(
                 n_samples=1,
                 features_in_step=self.height,  # here we need a high number as otherwise the metric is too slow
                 perturb_baseline="black",
                 perturb_func=quantus.baseline_replacement_by_indices,
                 **self.general_args,
             ),  # complexity for metric = n_samples*(h*w/features_in_step) * model predict time
-            "input_invariance": quantus.InputInvariance(**self.general_args),
+            "InputInvariance": quantus.InputInvariance(**self.general_args),
         }
         return {
             k: v
             for k, v in axiomatic_metrics.items()
-            if k in self.metrics_config["axiomatic"]
+            if k in self.metrics_config["Axiomatic"]
         }

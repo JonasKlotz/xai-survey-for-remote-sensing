@@ -47,8 +47,8 @@ def evaluate_explanation_methods(
     multilabel = cfg["task"] == "multilabel"
 
     recompute_attributions = True
-    skip_wrong_predictions = False
-    skip_samples_with_single_label = False
+    skip_wrong_predictions = True
+    skip_samples_with_single_label = True
 
     cfg, data_loader = get_dataloader_from_cfg(cfg)
 

@@ -1,31 +1,30 @@
-## Metrics
-faithfulness:
-#  region_perturb:
-#  selectivity:
-#  infidelity:
-  road:
-#
-#robustness:
-#  relative_input_stability:
-#  relative_output_stability:
-#
-#complexity:
-#  sparseness:
-#  complexity:
-#  effective_complexity:
-#
-#randomization:
-#   random_logits:
-#
-#
-#axiomatic:
-#  completeness:
-#  non_sensitivity:
-#
-#localization:
-#  pointing_game:
-#  attribution_localisation:
-#  top_k_intersection:
-#  relevance_rank_accuracy:
-#  relevance_mass_accuracy:
-#  auc:
+# Metrics
+
+Faithfulness:
+    Region Segmentation:
+    Selectivity:
+    Infidelity:
+
+Robustness:
+    Relative Input Stability:
+    Relative Output Stability:
+
+Randomisation:
+    Random Logit:
+
+Complexity:
+    Sparseness:
+    Complexity:
+    Effective Complexity:
+
+Axiomatic:
+    Completeness:
+    NonSensitivity:
+
+Localisation:
+    Pointing Game:
+    Top-K Intersection:
+    Relevance Mass Accuracy:
+    Relevance Rank Accuracy:
+    Attribution Localisation :
+    AUC:

@@ -104,7 +104,6 @@ class ExplanationsManager:
 
         # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():
-            # todo dimensions wrong????
             batch_attrs = explanation.explain_batch(features, predictions)
 
             # save it to zarr
