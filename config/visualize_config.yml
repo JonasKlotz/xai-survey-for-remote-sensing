@@ -1,3 +1,0 @@
-# whether to load the batches from a specific path
-zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/explanations_2024-01-20_16-29-46.zarr'
-model_path: 'models/resnet18_deepglobe_2024-01-19_12-03-44/epochs_20.pt'

@@ -164,6 +164,7 @@ class ExplanationVisualizer:
 
         Parameters
         ----------
+        predictions_tensor
         attrs : Union[torch.Tensor, dict[torch.Tensor]]
             Attributes tensor or dictionary of attributes tensors.
         image_tensor : torch.Tensor

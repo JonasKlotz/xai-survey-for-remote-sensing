@@ -188,7 +188,7 @@ class MetricsManager:
         time = {}
         for key in metrics.keys():
             start_time = datetime.datetime.now()
-            results[key] = metrics[key](
+            res = metrics[key](
                 model=self.model,
                 x_batch=x_batch,
                 y_batch=y_batch,
@@ -200,6 +200,11 @@ class MetricsManager:
                 explain_func=self.explain_func,
                 explain_func_kwargs=self.explain_func_kwargs,
             )
+            print("TEST")
+            if hasattr(metrics[key], "get_auc_score"):
+                res = metrics[key].get_auc_score
+
+            results[key] = res
             time[key] = datetime.datetime.now() - start_time
 
         return results, time
@@ -223,14 +228,21 @@ class MetricsManager:
                 features_in_step=self.features_in_step,
                 **self.general_args,
             ),
+            # We use AUC as aggregate function
             "Pixel-Flipping": quantus.PixelFlipping(
-                features_in_step=self.features_in_step, **self.general_args
+                features_in_step=self.features_in_step,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
             ),
+            # We use AUC as aggregate function
             "Region Segmentation": quantus.RegionPerturbation(
                 patch_size=self.patch_size,
                 regions_evaluation=10,
                 normalise=True,
-                **self.general_args,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
             ),
             "Selectivity": quantus.Selectivity(
                 patch_size=self.patch_size, **self.general_args

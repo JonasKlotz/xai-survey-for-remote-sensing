@@ -13,6 +13,8 @@ from matplotlib.transforms import Affine2D
 
 # Plotting configs.
 sns.set(font_scale=1.5)
+print(plt.style.available)
+
 plt.style.use("seaborn-white")
 plt.rcParams["ytick.labelleft"] = True
 plt.rcParams["xtick.labelbottom"] = True

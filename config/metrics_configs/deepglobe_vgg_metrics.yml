@@ -6,6 +6,7 @@ Faithfulness:
     Infidelity:
 
 Robustness:
+    Max-Sensitivity:
     Relative Input Stability:
     Relative Output Stability:
 
@@ -14,7 +15,6 @@ Randomisation:
 
 Complexity:
     Sparseness:
-    Complexity:
     Effective Complexity:
 
 Axiomatic:

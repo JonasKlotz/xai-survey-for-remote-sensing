@@ -1,6 +1,7 @@
+import torch
 from tqdm import tqdm
 
-from data.data_utils import get_index_to_name
+from data.data_utils import get_index_to_name, parse_batch
 from data.zarr_handler import get_zarr_dataloader
 from models.get_models import get_model
 from utility.cluster_logging import logger
@@ -22,7 +23,7 @@ def visualize(cfg: dict):
     data_loader = get_zarr_dataloader(
         cfg,
     )
-    keys = data_loader.zarr_keys
+    _ = data_loader.zarr_keys
     index2name = get_index_to_name(cfg)
     explanation_visualizer = ExplanationVisualizer(cfg, model, index2name)
     cfg[
@@ -30,27 +31,34 @@ def visualize(cfg: dict):
     ] = f"{cfg['results_path']}/visualizations/{cfg['experiment_name']}"
 
     for batch in tqdm(data_loader):
-        # squeeze whole batch
-        batch = [b.squeeze() for b in batch]
-        # split batch with keys
-        batch_dict = dict(zip(keys, batch))
-        image_tensor = batch_dict.pop("x_data")
-        label_tensor = batch_dict.pop("y_data")
-        predictions_tensor = batch_dict.pop("y_pred_data")
-        if "s_data" in batch_dict.keys():
-            segments_tensor = batch_dict.pop("s_data")
-        else:
-            segments_tensor = None
-        index_tensor = batch_dict.pop("index_data")
+        #
+        batch = parse_batch(batch)
+        batch_tensor_list = batch[:-1]
+        batch_tensor_list = [torch.tensor(t).squeeze() for t in batch_tensor_list]
+
+        attributions_dict = batch[-1]
+        attributions_dict = {
+            k: torch.tensor(v).squeeze() for k, v in attributions_dict.items()
+        }
+
+        # unpack the batch
+        (
+            image_tensor,
+            true_labels,
+            predicted_label_tensor,
+            segments_tensor,
+            index_tensor,
+        ) = batch_tensor_list
 
         # here we can either supply the labels or the predictions
         explanation_visualizer.visualize(
-            attrs=batch_dict,
+            attrs=attributions_dict,
             image_tensor=image_tensor,
-            label_tensor=label_tensor,
+            label_tensor=true_labels,
             segmentation_tensor=segments_tensor,
-            predictions_tensor=predictions_tensor,
-            show=False,
+            predictions_tensor=predicted_label_tensor,
+            show=True,
             task=cfg["task"],
         )
         explanation_visualizer.save_last_fig(name=f"sample_{index_tensor}")
+        break
