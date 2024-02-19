@@ -57,8 +57,7 @@ def visualize(cfg: dict):
             label_tensor=true_labels,
             segmentation_tensor=segments_tensor,
             predictions_tensor=predicted_label_tensor,
-            show=True,
+            show=False,
             task=cfg["task"],
         )
         explanation_visualizer.save_last_fig(name=f"sample_{index_tensor}")
-        break

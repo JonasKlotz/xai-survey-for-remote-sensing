@@ -200,7 +200,6 @@ class MetricsManager:
                 explain_func=self.explain_func,
                 explain_func_kwargs=self.explain_func_kwargs,
             )
-            print("TEST")
             if hasattr(metrics[key], "get_auc_score"):
                 res = metrics[key].get_auc_score
 

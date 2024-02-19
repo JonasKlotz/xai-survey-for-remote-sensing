@@ -235,15 +235,19 @@ class ExplanationVisualizer:
 
             attrs = [attr.squeeze() for attr in attrs]
             attrs = [attr for attr in attrs if not np.isnan(attr).all()]
-            # if attrs are all zero replace with 5x5 zeros
-            attrs = [np.zeros((5, 5)) if np.all(attr == 0) else attr for attr in attrs]
+
+            # remove np.all(attr == 0)
+            attrs = [attr for attr in attrs if not np.all(attr == 0)]
 
             data[key] = [go.Heatmap(z=attr, colorscale="RdBu_r") for attr in attrs]
 
         return data
 
     def _create_fig_from_dict_data(
-        self, data: dict, labels, predictions_tensor: torch.Tensor = None, plot_title=""
+        self,
+        data: dict,
+        labels,
+        predictions_tensor: torch.Tensor = None,
     ):
         """
         Create figure from dictionary data.
@@ -273,13 +277,13 @@ class ExplanationVisualizer:
         }
         num_attrs = len(attrs)
 
-        labels = labels.numpy()
-        plots_per_attr = int(len(labels))
+        predictions_tensor = np.nonzero(predictions_tensor.numpy())[0]
+        plots_per_attr = int(len(predictions_tensor))
         cols = num_attrs + 1
         rows = max(plots_per_attr, 3)  # at least 2 rows for segmentation
 
         subplot_titles = self._create_subplot_titles(
-            list(attrs.keys()), cols, labels, rows
+            list(attrs.keys()), cols, predictions_tensor, rows
         )
 
         fig = make_subplots(
@@ -309,11 +313,21 @@ class ExplanationVisualizer:
                 legend=dict(orientation="h", yanchor="top", y=0, xanchor="left", x=0)
             )
 
+        labels_tensor = np.nonzero(predictions_tensor)[0]
+        label_names = [self.index_to_name[label] for label in labels_tensor]
+        predictions_names = [self.index_to_name[pred] for pred in predictions_tensor]
+
+        # join labels and predictions to title
+        label_names = ", ".join(label_names)
+        predictions_names = ", ".join(predictions_names)
+
+        title = f"Explanation for true label {label_names} and predicted label {predictions_names}"
+
         fig.update_layout(
             height=self.size * rows,
             width=self.size * cols,
             margin=dict(t=40, b=40),
-            title_text=plot_title,
+            title_text=title,
         )
         return fig
 
@@ -335,7 +349,7 @@ class ExplanationVisualizer:
         plotly.graph_objects.Figure
             Figure object.
         """
-        label_names = [self.index_to_name[index] for index in range(len(labels))]
+        label_names = [self.index_to_name[label] for label in labels]
         subplot_titles = [
             [""] * cols for _ in range(rows)
         ]  # Use list comprehension here

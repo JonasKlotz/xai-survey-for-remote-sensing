@@ -9,7 +9,6 @@ from torch.utils import model_zoo
 from torchmetrics.functional import accuracy
 from src.visualization.utils import (
     generate_heatmap_pytorch,
-    get_fool_sample,
     preprocess_sample,
     visualize_heatmap,
 )
@@ -317,7 +316,7 @@ class LightningBagNet(LightningModule):
 
     def visualize_heatmap(self, sample=None, label=None, save_path=None):
         if sample is None:
-            sample, label = get_fool_sample()
+            raise ValueError("sample must be provided")
         sample = preprocess_sample(sample)
         heatmap = generate_heatmap_pytorch(self, sample, label, self.model.bagnet_size)
         visualize_heatmap(sample, heatmap, save_path=save_path)
