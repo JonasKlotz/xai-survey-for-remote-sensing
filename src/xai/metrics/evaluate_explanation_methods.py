@@ -176,7 +176,7 @@ def setup_metrics_manager(
             log_dir=log_dir,
             image_shape=image_shape,
         )
-    explanation_manager = ExplanationsManager(cfg, model, save=True)
+    explanation_manager = ExplanationsManager(cfg, model, save=False)
     return metrics_manager_dict, explanation_manager
 
 
