@@ -17,10 +17,6 @@ def custom_aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
     aggregated: float
         The aggregated value.
     """
-    """
-    Aggregations:
-    - Region Perturbation: (batchsize x regions_evaluation) 
-    """
     if isinstance(input_, list):
         return np.mean(
             [
@@ -37,6 +33,56 @@ def custom_aggregation_function(input_: Union[list, np.ndarray, dict]) -> float:
         aggregated = 0
         for key, value in input_.items():
             aggregated = custom_aggregation_function(value)
+        return aggregated
+
+    return input_
+
+
+def custom_aggregation_function_mlc(
+    input_: Union[list, np.ndarray, dict], first_recursion=True
+) -> Union[float, list]:
+    """Aggregates the input to a single value.
+
+    Parameters
+    ----------
+    input_: Union[list, np.ndarray, dict]
+        The input to aggregate.
+
+    Returns
+    -------
+    aggregated: float
+        The aggregated value.
+    """
+    """
+    Aggregations:
+    - Region Perturbation: (batchsize x regions_evaluation) 
+    """
+    if first_recursion and isinstance(input_, list):
+        return [
+            [
+                custom_aggregation_function_mlc(label, False)
+                for label in sample
+                if label is not None
+            ]
+            for sample in input_
+            if sample is not None
+        ]
+    elif isinstance(input_, list):
+        return np.mean(
+            [
+                custom_aggregation_function_mlc(value, False)
+                for value in input_
+                if value is not None
+            ]
+        )
+
+    elif isinstance(input_, np.ndarray):
+        return np.mean(input_)
+
+    elif isinstance(input_, dict):
+        aggregated = 0
+        for key, value in input_.items():
+            aggregated = custom_aggregation_function_mlc(value, False)
         return aggregated
 
     return input_

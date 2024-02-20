@@ -9,6 +9,7 @@ from xai.explanations.quantus_explanation_wrapper import explanation_wrapper
 from xai.metrics.metrics_utiliies import (
     custom_aggregation_function,
     aggregate_continuity_metric,
+    custom_aggregation_function_mlc,
 )
 
 
@@ -64,10 +65,10 @@ class MetricsManager:
         self.width = image_shape[2]
 
         self.patch_size = int(
-            self.height / 4
+            self.height / 8
         )  # todo: make this configurable? Also this can lead to errors?
-        self.features_in_step = int(self.height / 4)
-        self.num_samples = 1
+        self.features_in_step = int(self.height / 8)
+        self.num_samples = 5
 
         self.sentinel_value = sentinel_value
         self.softmax = softmax
@@ -93,7 +94,9 @@ class MetricsManager:
             "return_aggregate": self.aggregate,
             "disable_warnings": self.disable_warnings,
             "display_progressbar": False,
-            "aggregate_func": custom_aggregation_function,
+            "aggregate_func": custom_aggregation_function_mlc
+            if self.multi_label
+            else custom_aggregation_function,
             "multi_label": self.multi_label,
         }
 
@@ -118,6 +121,11 @@ class MetricsManager:
                 filename=f"{explanation.attribution_name}_time",
                 column_names=column_names,
             )
+            self.label_csv_logger = CSVLogger(
+                log_dir=self.log_dir,
+                filename=f"{explanation.attribution_name}_labels",
+                column_names=["True Label", "Predicted Label"],
+            )
 
     def _load_metrics(self):
         """Load all metrics"""
@@ -140,6 +148,7 @@ class MetricsManager:
         y_batch: np.ndarray,
         a_batch: np.ndarray,
         s_batch: np.ndarray = None,
+        y_true_batch: np.ndarray = None,
     ):
         all_results = {}
         time_spend = {}
@@ -154,6 +163,10 @@ class MetricsManager:
         if self.log:
             self.metric_csv_logger.update(all_results)
             self.time_csv_logger.update(time_spend)
+            self.label_csv_logger.update(
+                {"True Label": y_true_batch, "Predicted Label": y_batch}
+            )
+
         return all_results, time_spend
 
     def _evaluate_category(
@@ -186,6 +199,12 @@ class MetricsManager:
         """
         results = {}
         time = {}
+        already_unpacked_metrics = [
+            "Relative Input Stability",
+            "Relative Output Stability",
+            "Relative Representation Stability",
+            "Effective Complexity",
+        ]
         for key in metrics.keys():
             start_time = datetime.datetime.now()
             res = metrics[key](
@@ -202,9 +221,14 @@ class MetricsManager:
             )
             if hasattr(metrics[key], "get_auc_score"):
                 res = metrics[key].get_auc_score
-
-            results[key] = res
+            # the metrics that are not aggregated are already unpacked
+            elif self.multi_label and key not in already_unpacked_metrics:
+                res = res[0]  # batch unpacking
             time[key] = datetime.datetime.now() - start_time
+            print("Metric", key, "Result", res, "Time", time[key])
+            results[key] = res
+            if self.multi_label:
+                assert_results_shape(res, y_batch)
 
         return results, time
 
@@ -237,14 +261,19 @@ class MetricsManager:
             # We use AUC as aggregate function
             "Region Segmentation": quantus.RegionPerturbation(
                 patch_size=self.patch_size,
-                regions_evaluation=10,
-                normalise=True,
+                regions_evaluation=15,
+                normalise=False,
                 disable_warnings=self.disable_warnings,
                 display_progressbar=False,
                 multi_label=self.multi_label,
             ),
+            # We use AUC as aggregate function
             "Selectivity": quantus.Selectivity(
-                patch_size=self.patch_size, **self.general_args
+                patch_size=self.patch_size,
+                normalise=False,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
             ),
             "SensitivityN": quantus.SensitivityN(
                 features_in_step=self.features_in_step,
@@ -312,13 +341,25 @@ class MetricsManager:
             ),
             "Consistency": quantus.Consistency(**self.general_args),
             "Relative Input Stability": quantus.RelativeInputStability(
-                nr_samples=self.num_samples, **self.general_args
+                nr_samples=self.num_samples,
+                return_aggregate=False,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
             ),
             "Relative Output Stability": quantus.RelativeOutputStability(
-                nr_samples=self.num_samples, **self.general_args
+                nr_samples=self.num_samples,
+                return_aggregate=False,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
             ),
             "Relative Representation Stability": quantus.RelativeRepresentationStability(
-                nr_samples=self.num_samples, **self.general_args
+                nr_samples=self.num_samples,
+                return_aggregate=False,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
             ),
         }
         return {
@@ -384,7 +425,12 @@ class MetricsManager:
         complexity_metrics = {
             "Sparseness": quantus.Sparseness(**self.general_args),
             "Complexity": quantus.Complexity(**self.general_args),
-            "Effective Complexity": quantus.EffectiveComplexity(**self.general_args),
+            "Effective Complexity": quantus.EffectiveComplexity(
+                eps=0.3,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
+            ),
         }
         return {
             k: v
@@ -398,7 +444,10 @@ class MetricsManager:
             return
         axiomatic_metrics = {
             "Completeness": quantus.Completeness(
-                **self.general_args,
+                return_aggregate=False,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
                 output_func=np.sum,
             ),
             "NonSensitivity": quantus.NonSensitivity(
@@ -415,3 +464,12 @@ class MetricsManager:
             for k, v in axiomatic_metrics.items()
             if k in self.metrics_config["Axiomatic"]
         }
+
+
+def assert_results_shape(results, labels):
+    # batchsize 1 only
+    results = np.array(results)
+    labels = np.array(labels)
+    assert (
+        results.shape == labels.shape
+    ), f"Results shape {results.shape} != labels shape {labels.shape}"
