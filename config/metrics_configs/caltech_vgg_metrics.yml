@@ -2,29 +2,29 @@
 
 Faithfulness:
     Region Segmentation:
-    Selectivity:
-    Infidelity:
-
-Robustness:
-    Relative Input Stability:
-    Relative Output Stability:
-
-Randomisation:
-    Random Logit:
-
-Complexity:
-    Sparseness:
-    Complexity:
-    Effective Complexity:
-
-Axiomatic:
-    Completeness:
-    NonSensitivity:
-
-Localisation:
-    Pointing Game:
-    Top-K Intersection:
-    Relevance Mass Accuracy:
-    Relevance Rank Accuracy:
-    Attribution Localisation :
-    AUC:
+#    Selectivity:
+#    Infidelity:
+#
+#Robustness:
+#    Relative Input Stability:
+#    Relative Output Stability:
+#
+#Randomisation:
+#    Random Logit:
+#
+#Complexity:
+#    Sparseness:
+#    Complexity:
+#    Effective Complexity:
+#
+#Axiomatic:
+#    Completeness:
+#    NonSensitivity:
+#
+#Localisation:
+#    Pointing Game:
+#    Top-K Intersection:
+#    Relevance Mass Accuracy:
+#    Relevance Rank Accuracy:
+#    Attribution Localisation :
+#    AUC:
