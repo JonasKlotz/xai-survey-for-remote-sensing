@@ -108,23 +108,22 @@ def evaluate_explanation_methods(
             # parse the segments to quantus format
             segments_tensor = _parse_segments(cfg, segments_tensor)
 
-        # try:
-        evaluate_metrics_batch(
-            cfg,
-            metrics_manager_dict,
-            image_tensor,
-            predicted_label_tensor,
-            segments_tensor,
-            attributions_dict,
-            true_labels,
-        )
+        try:
+            evaluate_metrics_batch(
+                cfg,
+                metrics_manager_dict,
+                image_tensor,
+                predicted_label_tensor,
+                segments_tensor,
+                attributions_dict,
+                true_labels,
+            )
 
-        # except Exception as e:
-        #     logger.error(f"Error in batch {i}: {e}")
-        #     continue
+        except Exception as e:
+            logger.error(f"Error in batch {i}: {e}")
+            continue
 
         i += cfg["data"]["batch_size"]
-        # if i >= max_iterations:
 
     end_time = datetime.now()
     logger.debug(f"Time for evaluation: {end_time - start_time}")

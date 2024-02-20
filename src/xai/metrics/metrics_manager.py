@@ -225,7 +225,7 @@ class MetricsManager:
             elif self.multi_label and key not in already_unpacked_metrics:
                 res = res[0]  # batch unpacking
             time[key] = datetime.datetime.now() - start_time
-            print("Metric", key, "Result", res, "Time", time[key])
+            # print("Metric", key, "Result", res, "Time", time[key])
             results[key] = res
             if self.multi_label:
                 assert_results_shape(res, y_batch)
