@@ -28,13 +28,17 @@ data:
 
 
 # Training parameters
-max_epochs: 20
+max_epochs: 50
 learning_rate: 0.05
 momentum: 0.9
 weight_decay: 0.0005
 optimizer: 'sgd'
 scheduler: 'step'
 threshold: 0.5
+
+loss: "rrr"
+rrr_explanation: "deeplift"
+rrr_lambda: 1
 
 # whether to load the batches from a specific path
 zarr_path: 'results/caltech101_vgg_final.zarr'

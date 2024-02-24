@@ -195,22 +195,25 @@ def get_dataloader_from_cfg(cfg, filter_keys=None):
     return cfg, data_loader
 
 
-def _parse_segments(cfg, segments_tensor):
+def _parse_segments(segments_tensor, dataset_name, num_classes):
     # The quantus framework expects the segments to be boolean tensors.
-    if cfg["dataset_name"] == "caltech101":
+    if dataset_name == "caltech101":
         # threshold the segments
         segments_tensor = segments_tensor > 0.5
-    elif cfg["dataset_name"] == "deepglobe":
+        # convert to 0 1 binary tensor
+        segments_tensor = segments_tensor.int()
+
+    elif dataset_name == "deepglobe":
         # create tensor empty with shape (batchsize, num_classes, 1, 120, 120) from (batchsize, 1, 120, 120)
         unsqueezed_segments = np.zeros(
             shape=(
                 segments_tensor.shape[0],
-                cfg["num_classes"],
+                num_classes,
                 segments_tensor.shape[1],
                 segments_tensor.shape[2],
             )
         )
-        for class_index in range(cfg["num_classes"]):
+        for class_index in range(num_classes):
             unsqueezed_segments[:, class_index, :, :] = segments_tensor == class_index
         segments_tensor = unsqueezed_segments
     else:

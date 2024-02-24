@@ -1,5 +1,8 @@
 import torch
 
+from data.data_utils import _parse_segments
+from src.xai.explanations.explanation_manager import _explanation_methods
+
 
 # todo a problem here is how to get th explanation while training?
 # the problem is that generating the explanation might mess up the regula loss calulation,e.g. forwards pass in the explanation
@@ -7,7 +10,15 @@ import torch
 
 
 class RightForRightReasonsLoss(torch.nn.Module):
-    def __init__(self, lambda_=1, explanation_method=None):
+    def __init__(
+        self,
+        task: str = "multiclass",
+        num_classes: int = None,
+        lambda_=1,
+        dataset_name: str = "unknown",
+        explanation_method_name: str = "deeplift",
+        explanation_kwargs: dict = None,
+    ):
         """
 
         The right for the right reasons loss is defined as:
@@ -25,47 +36,66 @@ class RightForRightReasonsLoss(torch.nn.Module):
             The weight of the explanation loss
         """
         super().__init__()
-        self.explanation_method = explanation_method
+        self.explanation_method_name = explanation_method_name
+        self.explanation_method_constructor = _explanation_methods[
+            explanation_method_name
+        ]
+        if explanation_kwargs is None:
+            explanation_kwargs = {}
+        self.explanation_kwargs = (
+            explanation_kwargs if explanation_kwargs is not None else {}
+        )
+
+        #
         self.lambda_ = lambda_
+
+        self.task = task
+        self.num_classes = num_classes
+        self.dataset_name = dataset_name
 
     def forward(
         self,
+        model: torch.nn.Module,
         x_batch: torch.Tensor,
-        y_batch: torch.Tensor,
+        y_pred_batch: torch.Tensor,
         s_batch: torch.Tensor,
-        regular_loss_value: float = 0,
     ):
         """
 
         Parameters
         ----------
-        regular_loss_value
         x_batch : torch.Tensor
             The input batch
         y_batch: torch.Tensor
             The target batch
+        y_pred_batch: torch.Tensor
+            The prediction batch, values of the labels, e.g. (2, 5, 13) for MLC
         s_batch: torch.Tensor
             The relevancy map, this map is 1 where the explanation should be 0
-
         Returns
         -------
 
         """
-        # todo should i xexplain the predictions or the labels
-        attrs = self.explanation_method.explain_batch(
-            tensor_batch=x_batch, predictions_batch=None, labels_batch=y_batch
+        # initialize the explanation method
+        explanation_method = self.explanation_method_constructor(
+            model=model, device=x_batch.device, **self.explanation_kwargs
         )
-        print(f"attrs: {attrs.shape}")
-        print(f"s_batch: {s_batch.shape}")
 
-        # convert sbatch into relevancy maps (0 where the explanation should be 0)
+        attrs = explanation_method.explain_batch(
+            tensor_batch=x_batch, target_batch=y_pred_batch
+        )
+
+        s_batch = segmentations_to_relevancy_map(
+            s_batch, num_classes=self.num_classes, dataset_name=self.dataset_name
+        )
 
         rrr_loss = torch.linalg.norm(attrs * s_batch)
-        rrr_loss /= len(x_batch)
-        return regular_loss_value + self.lambda_ * rrr_loss
+        return self.lambda_ * rrr_loss
 
 
-def segmentations_to_relevancy_map(y_batch, s_batch):
+def segmentations_to_relevancy_map(
+    s_batch, num_classes: int = None, dataset_name="unknown"
+):
     """
     Convert a batch of segmentations to a relevancy map
 
@@ -79,4 +109,16 @@ def segmentations_to_relevancy_map(y_batch, s_batch):
     relevancy_map: torch.Tensor
         The relevancy map
     """
-    pass
+
+    s_batch = _parse_segments(s_batch, dataset_name, num_classes)
+
+    """
+        flip the segmentation batch, every element that is 1 should be 0 and vice versa
+        
+        Segmentation  Relevancy Map   Attribution   
+        0 0 0 1 1      1 1 1 0 0      1 1 1 0 0  
+        0 0 0 1 1  ->  1 1 1 0 0  +   1 1 1 0 0  -> Is the worst possible explanation and should result in a high loss
+        0 0 0 0 0      1 1 1 1 1      1 1 1 1 1
+    """
+    s_batch = 1 - s_batch
+    return s_batch

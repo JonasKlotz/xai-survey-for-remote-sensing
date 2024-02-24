@@ -106,7 +106,9 @@ def evaluate_explanation_methods(
 
         if segments_tensor is not None:
             # parse the segments to quantus format
-            segments_tensor = _parse_segments(cfg, segments_tensor)
+            segments_tensor = _parse_segments(
+                segments_tensor, cfg["dataset_name"], cfg["num_classes"]
+            )
 
         try:
             evaluate_metrics_batch(

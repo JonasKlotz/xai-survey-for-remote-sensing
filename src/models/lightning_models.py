@@ -8,6 +8,7 @@ from torchvision.models import VGG16_Weights
 
 from src.models.interpretable_resnet import get_resnet
 from training.metrics import TrainingMetricsManager
+from training.rrr_loss import RightForRightReasonsLoss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -24,6 +25,12 @@ class LightningBaseModel(LightningModule):
         self.threshold = config["threshold"]
         self.max_epochs = config["max_epochs"]
 
+        # Parameters for RRR loss
+        self.loss_name = config.get("loss", "regular")
+        self.rrr_explanation = config.get("rrr_explanation", None)
+        self.rrr_lambda = config.get("rrr_lambda", 1)
+        self.dataset_name = config.get("dataset_name", "unknown")
+
         # Hyperparameters
         self.learning_rate = config["learning_rate"]
         self.momentum = config["momentum"]
@@ -31,6 +38,8 @@ class LightningBaseModel(LightningModule):
         self.num_classes = config["num_classes"]
 
         self.backbone = self.get_backbone(config)
+
+        self.config = config
 
         # unfreeze the model
         if not freeze:
@@ -62,14 +71,15 @@ class LightningBaseModel(LightningModule):
 
         return predictions
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx, stage="train"):
         images = batch["features"]
         target = batch["targets"]
+        segmentations = batch["segmentations"]
 
         y_hat = self.backbone(images)
-
-        loss, normalized_probabilities = self._calc_loss(y_hat, target)
-        stage = "train"
+        loss, normalized_probabilities = self.calc_loss(
+            images, segmentations, stage, target, y_hat
+        )
 
         self.log(f"{stage}_loss", loss, prog_bar=True, sync_dist=True)
         self.metrics_manager.update(normalized_probabilities, target, stage=stage)
@@ -79,9 +89,13 @@ class LightningBaseModel(LightningModule):
     def evaluate(self, batch, stage=None):
         images = batch["features"]
         target = batch["targets"]
+        segmentations = batch["segmentations"]
 
         y_hat = self.backbone(images)
-        loss, normalized_probabilities = self._calc_loss(y_hat, target)
+        loss, normalized_probabilities = self.calc_loss(
+            images, segmentations, stage, target, y_hat
+        )
+
         target = target.long()
         self.log(f"{stage}_loss", loss, prog_bar=True, sync_dist=True)
         self.metrics_manager.update(normalized_probabilities, target, stage=stage)
@@ -125,7 +139,25 @@ class LightningBaseModel(LightningModule):
             self.metrics_manager.compute(stage="test"), prog_bar=True, sync_dist=True
         )
 
-    def _calc_loss(self, unnormalized_logits, target):
+    def calc_loss(self, images, segmentations, stage, target, y_hat):
+        if self.loss_name == "rrr":
+            loss, normalized_probabilities, explanation_loss = self._calc_rrr_loss(
+                images, segmentations, target, y_hat
+            )
+            # log the explanation loss
+            self.log(
+                f"{stage}_explanation_loss",
+                explanation_loss,
+                prog_bar=True,
+                sync_dist=True,
+            )
+            # We have to predict again as some of the explanation methods change the gradients
+            _ = self.backbone(images)
+        else:
+            loss, normalized_probabilities = self._calc_regular_loss(y_hat, target)
+        return loss, normalized_probabilities
+
+    def _calc_regular_loss(self, unnormalized_logits, target):
         if self.task == "multilabel":
             loss = nn.BCEWithLogitsLoss()(unnormalized_logits, target)
             normalized_probabilities = torch.sigmoid(unnormalized_logits)
@@ -135,6 +167,27 @@ class LightningBaseModel(LightningModule):
         else:
             raise ValueError(f"Task {self.task} not supported.")
         return loss, normalized_probabilities
+
+    def _calc_rrr_loss(self, images, segmentations, target, y_hat):
+        regular_loss, normalized_probabilities = self._calc_regular_loss(y_hat, target)
+        if self.task == "multiclass":
+            predictions = torch.argmax(normalized_probabilities, dim=1)
+        elif self.task == "multilabel":
+            predictions = (normalized_probabilities > self.threshold).long()
+        else:
+            raise ValueError(f"Task {self.task} not supported.")
+        # get prediction values
+        rrr = RightForRightReasonsLoss(
+            task=self.task,
+            num_classes=self.num_classes,
+            lambda_=self.rrr_lambda,
+            dataset_name=self.dataset_name,
+            explanation_method_name=self.rrr_explanation,
+            explanation_kwargs=self.config.get("explanation_kwargs", None),
+        )
+        explanation_loss = rrr(self, images, predictions, segmentations)
+        loss = regular_loss + explanation_loss
+        return loss, normalized_probabilities, explanation_loss
 
     @property
     def out_channels(self):

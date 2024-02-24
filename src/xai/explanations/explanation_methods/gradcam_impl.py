@@ -3,7 +3,6 @@ from typing import Union
 import torch
 from captum.attr import GuidedGradCam
 
-from models.lightning_models import LightningResnet, LightningVGG
 from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
@@ -12,6 +11,8 @@ class GradCamImpl(Explanation):
 
     def __init__(self, model, device, layer=None, **kwargs):
         super().__init__(model, device, **kwargs)
+        from models.lightning_models import LightningResnet, LightningVGG
+
         if isinstance(model, LightningResnet):
             if model.hparams.resnet_layers == 18:
                 layer = model.backbone.layer4[1].conv2
