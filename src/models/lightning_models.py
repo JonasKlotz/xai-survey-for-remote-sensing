@@ -76,9 +76,8 @@ class LightningBaseModel(LightningModule):
         target = batch["targets"]
         segmentations = batch["segmentations"]
 
-        y_hat = self.backbone(images)
         loss, normalized_probabilities = self.calc_loss(
-            images, segmentations, stage, target, y_hat
+            images, segmentations, stage, target
         )
 
         self.log(f"{stage}_loss", loss, prog_bar=True, sync_dist=True)
@@ -91,9 +90,8 @@ class LightningBaseModel(LightningModule):
         target = batch["targets"]
         segmentations = batch["segmentations"]
 
-        y_hat = self.backbone(images)
         loss, normalized_probabilities = self.calc_loss(
-            images, segmentations, stage, target, y_hat
+            images, segmentations, stage, target
         )
 
         target = target.long()
@@ -139,8 +137,11 @@ class LightningBaseModel(LightningModule):
             self.metrics_manager.compute(stage="test"), prog_bar=True, sync_dist=True
         )
 
-    def calc_loss(self, images, segmentations, stage, target, y_hat):
+    def calc_loss(self, images, segmentations, stage, target):
         if self.loss_name == "rrr":
+            # enable gradients for the explanation loss (if we are in test mode)
+            self.backbone.requires_grad_(True)
+            y_hat = self.backbone(images)
             loss, normalized_probabilities, explanation_loss = self._calc_rrr_loss(
                 images, segmentations, target, y_hat
             )
@@ -154,6 +155,7 @@ class LightningBaseModel(LightningModule):
             # We have to predict again as some of the explanation methods change the gradients
             _ = self.backbone(images)
         else:
+            y_hat = self.backbone(images)
             loss, normalized_probabilities = self._calc_regular_loss(y_hat, target)
         return loss, normalized_probabilities
 
