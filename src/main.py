@@ -43,6 +43,7 @@ def main(
     visualizations=False,
     debug=False,
     debug_explanations_bool=False,
+    explanation_methods=None,
 ):
     logger.debug("In main")
     config_path = os.path.join(project_root, config_path)
@@ -70,6 +71,10 @@ def main(
 
     # plot_dataset_distribution_zarr(general_config)
     # plot_pixel_distribution_zarr(general_config)
+    if explanation_methods:
+        logger.debug(f"Explanation methods: {explanation_methods}")
+        general_config["explanation_methods"] = explanation_methods
+        general_config["rrr_explanation"] = explanation_methods[0]
 
     logger.debug(f"General config: {general_config}")
     if training:
@@ -130,6 +135,13 @@ if __name__ == "__main__":
         ),
         help="Path to the metrics config file",
     )
+    parser.add_argument(
+        "--explanation_methods",
+        type=str,
+        help="Explanation method to evaluate. Multiple methods can be evaluated by separating them with a comma.",
+        nargs="*",  # 0 or more
+        default=None,
+    )
 
     args = parser.parse_args()
 
@@ -142,4 +154,5 @@ if __name__ == "__main__":
         debug=args.debug,
         debug_explanations_bool=args.debug_explanations,
         metrics_config_path=args.metrics_config_path,
+        explanation_methods=args.explanation_methods,
     )
