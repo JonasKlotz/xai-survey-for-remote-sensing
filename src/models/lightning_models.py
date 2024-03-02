@@ -69,7 +69,7 @@ class LightningBaseModel(LightningModule):
         else:
             raise ValueError(f"Task {self.task} not supported.")
 
-        return predictions
+        return predictions, logits
 
     def training_step(self, batch, batch_idx, stage="train"):
         images = batch["features"]

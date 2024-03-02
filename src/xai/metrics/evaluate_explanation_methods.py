@@ -78,7 +78,7 @@ def evaluate_explanation_methods(
         ) = parse_batch(batch)
 
         if predicted_label_tensor is None:
-            predicted_label_tensor = model.prediction_step(
+            predicted_label_tensor, _ = model.prediction_step(
                 image_tensor.to(cfg["device"])
             )
 

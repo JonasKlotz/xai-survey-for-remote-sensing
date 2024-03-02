@@ -65,7 +65,7 @@ def debug_explanations(cfg: dict):
 
         # here we can either supply the labels or the predictions
         explanation_visualizer.visualize(
-            attrs=batch_dict,
+            attribution_dict=batch_dict,
             image_tensor=image_tensor,
             label_tensor=label_tensor,
             segmentation_tensor=None,
