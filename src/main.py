@@ -75,6 +75,9 @@ def main(
         logger.debug(f"Explanation methods: {explanation_methods}")
         general_config["explanation_methods"] = explanation_methods
         general_config["rrr_explanation"] = explanation_methods[0]
+        general_config[
+            "experiment_name"
+        ] = f'{general_config["experiment_name"]}_{explanation_methods[0]}'
 
     logger.debug(f"General config: {general_config}")
     if training:
