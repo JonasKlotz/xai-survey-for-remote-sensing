@@ -140,7 +140,7 @@ class LightningBaseModel(LightningModule):
     def calc_loss(self, images, segmentations, stage, target):
         if self.loss_name == "rrr":
             # enable gradients for the explanation loss (if we are in test mode)
-            self.backbone.requires_grad_(True)
+            self.requires_grad_(True)
             y_hat = self.backbone(images)
             loss, normalized_probabilities, explanation_loss = self._calc_rrr_loss(
                 images, segmentations, target, y_hat
