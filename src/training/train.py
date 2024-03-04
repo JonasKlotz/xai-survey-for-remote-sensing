@@ -27,6 +27,9 @@ def train(
     model = get_model(cfg, pretrained=True)
     logger.debug("Start Training")
     prefix_name = f"{cfg['model_name']}_{cfg['dataset_name']}_{cfg['timestamp']}"
+    if cfg["rrr_explanation"]:
+        prefix_name = f"{prefix_name}_{cfg['rrr_explanation']}"
+
     cfg["models_path"] = os.path.join(cfg["models_path"], prefix_name)
 
     callbacks = [

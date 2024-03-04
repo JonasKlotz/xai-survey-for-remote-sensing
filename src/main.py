@@ -78,6 +78,9 @@ def main(
         general_config[
             "experiment_name"
         ] = f'{general_config["experiment_name"]}_{explanation_methods[0]}'
+        general_config["training_root_path"] = os.path.join(
+            general_config["models_path"], general_config["experiment_name"]
+        )
 
     logger.debug(f"General config: {general_config}")
     if training:
