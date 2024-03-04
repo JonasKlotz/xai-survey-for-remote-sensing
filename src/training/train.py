@@ -81,7 +81,13 @@ def train(
 
 
 def tune_trainer(
-    cfg, data_module, model, trainer, tune_batch_size=False, tune_learning_rate=False
+    cfg,
+    data_module,
+    model,
+    trainer,
+    tune_batch_size=False,
+    tune_learning_rate=False,
+    max_lr=0.1,
 ):
     tuner = Tuner(trainer)
 
@@ -98,6 +104,8 @@ def tune_trainer(
 
         # Pick point based on plot, or get suggestion
         new_lr = lr_finder.suggestion()
+        new_lr = max_lr if new_lr > max_lr else new_lr
+
         logger.debug(f"New learning rate: {new_lr}")
         model.learning_rate = new_lr
 

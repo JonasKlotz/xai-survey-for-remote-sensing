@@ -39,6 +39,8 @@ class LightningBaseModel(LightningModule):
 
         self.backbone = self.get_backbone(config)
 
+        self.trained_epochs = 0
+
         self.config = config
 
         # unfreeze the model
@@ -137,10 +139,18 @@ class LightningBaseModel(LightningModule):
             self.metrics_manager.compute(stage="test"), prog_bar=True, sync_dist=True
         )
 
+    def on_train_epoch_end(self) -> None:
+        self.trained_epochs = +1
+
     def calc_loss(self, images, segmentations, stage, target):
-        if self.loss_name == "rrr":
+        # After 5 epochs we enable the RRR loss, as it is not stable in the beginning
+        if self.loss_name == "rrr" and self.trained_epochs > 5:
             # enable gradients for the explanation loss (if we are in test mode)
             self.requires_grad_(True)
+            images.requires_grad = True
+            target.requires_grad = True
+            segmentations.requires_grad = True
+
             y_hat = self.backbone(images)
             loss, normalized_probabilities, explanation_loss = self._calc_rrr_loss(
                 images, segmentations, target, y_hat
