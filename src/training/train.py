@@ -25,6 +25,8 @@ def train(
 
     # load model
     model = get_model(cfg, pretrained=True)
+    model.learning_rate = cfg["learning_rate"]
+
     logger.debug("Start Training")
     prefix_name = f"{cfg['model_name']}_{cfg['dataset_name']}_{cfg['timestamp']}"
     if cfg["rrr_explanation"]:
@@ -41,20 +43,13 @@ def train(
             filename="{epoch}-{val_loss:.2f}",
         ),
     ]
-    multiGPU = False
     strategy = "auto"
     if torch.cuda.is_available():
         if torch.cuda.device_count() > 1:
-            multiGPU = True
-            logger.debug(f"Using {torch.cuda.device_count()} GPUs")
-        else:
-            logger.debug(f"Using {torch.cuda.device_count()} GPU")
-        if multiGPU:
             # currently i do not want to use ddp
             model = torch.nn.parallel.DistributedDataParallel(model)
             strategy = "ddp"
-    else:
-        strategy = "auto"
+        logger.debug(f"Using {torch.cuda.device_count()} GPU")
 
     # init trainer
     trainer = Trainer(
@@ -64,9 +59,9 @@ def train(
         accelerator="auto",
         strategy=strategy,
         gradient_clip_val=1,
-        log_every_n_steps=20,
+        # log_every_n_steps=20,
     )
-    tune_trainer(cfg, data_module, model, trainer, tune_learning_rate=True)
+    # tune_trainer(cfg, data_module, model, trainer, tune_learning_rate=True)
 
     trainer.fit(model, data_module)
     model.metrics_manager.plot(stage="val")
@@ -87,7 +82,7 @@ def tune_trainer(
     trainer,
     tune_batch_size=False,
     tune_learning_rate=False,
-    max_lr=0.1,
+    max_lr=0.025,
 ):
     tuner = Tuner(trainer)
 
