@@ -92,7 +92,7 @@ class ExplanationsManager:
         ) = parse_batch(batch)
         features, target = self._to_tensor(features), self._to_tensor(target)
 
-        predictions = self.model.prediction_step(features)
+        predictions, logits = self.model.prediction_step(features)
 
         tmp_storage_dict = {
             "x_data": features,

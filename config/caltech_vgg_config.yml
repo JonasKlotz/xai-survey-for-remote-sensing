@@ -4,7 +4,6 @@ visualize: False
 
 # General parameters
 model_name: 'vgg'
-layer_number: 34 # 18 34 50
 dataset_name: 'caltech101'
 num_classes: 101
 input_channels: 3
@@ -24,12 +23,12 @@ data:
   batch_size: 8 # optimal training: 128
   num_workers: 0
   pin_memory: False
-  force_shuffle: True # shuffle also test loader
+  force_shuffle: False # shuffle also test loader
 
 
 # Training parameters
 max_epochs: 20
-learning_rate: 0.05
+learning_rate: 0.025
 momentum: 0.9
 weight_decay: 0.0005
 optimizer: 'sgd'

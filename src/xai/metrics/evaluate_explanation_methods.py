@@ -44,11 +44,11 @@ def evaluate_explanation_methods(
     image_shape = (3, 120, 120) if cfg["dataset_name"] == "deepglobe" else (3, 224, 224)
 
     one_hot_encoding = cfg["dataset_name"] == "deepglobe"
-    multilabel = cfg["task"] == "multilabel"
+    # multilabel = cfg["task"] == "multilabel"
 
     recompute_attributions = True
-    skip_wrong_predictions = True
-    skip_samples_with_single_label = True
+    # skip_wrong_predictions = True
+    # skip_samples_with_single_label = True
 
     cfg, data_loader = get_dataloader_from_cfg(cfg)
 
@@ -81,6 +81,11 @@ def evaluate_explanation_methods(
             predicted_label_tensor, _ = model.prediction_step(
                 image_tensor.to(cfg["device"])
             )
+        if segments_tensor is not None:
+            # parse the segments to quantus format
+            segments_tensor = _parse_segments(
+                segments_tensor, cfg["dataset_name"], cfg["num_classes"]
+            )
 
         # Cast all to NP
         image_tensor = _to_numpy_array(image_tensor)
@@ -88,27 +93,12 @@ def evaluate_explanation_methods(
         predicted_label_tensor = _to_numpy_array(predicted_label_tensor)
         true_labels = _to_numpy_array(true_labels)
 
-        if _skip_batch(
-            multilabel,
-            predicted_label_tensor,
-            skip_samples_with_single_label,
-            skip_wrong_predictions,
-            true_labels,
-        ):
-            continue
-
         if attributions_dict is None or recompute_attributions:
             attributions_dict = explanation_manager.explain_batch(batch)
 
         if one_hot_encoding:
             # The quantus framework expects the targets not to be one-hot-encoded.
             predicted_label_tensor = reverse_one_hot_encoding(predicted_label_tensor)
-
-        if segments_tensor is not None:
-            # parse the segments to quantus format
-            segments_tensor = _parse_segments(
-                segments_tensor, cfg["dataset_name"], cfg["num_classes"]
-            )
 
         try:
             evaluate_metrics_batch(

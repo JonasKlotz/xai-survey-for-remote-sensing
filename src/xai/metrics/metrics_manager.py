@@ -221,6 +221,8 @@ class MetricsManager:
             )
             if hasattr(metrics[key], "get_auc_score"):
                 res = metrics[key].get_auc_score
+            elif hasattr(metrics[key], "get_aoc_score"):
+                res = metrics[key].get_aoc_score
             # the metrics that are not aggregated are already unpacked
             elif self.multi_label and key not in already_unpacked_metrics:
                 res = res[0]  # batch unpacking

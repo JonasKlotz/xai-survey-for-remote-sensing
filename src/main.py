@@ -3,8 +3,6 @@ import os
 import sys
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
-
 import pytorch_lightning as pl  # noqa: E402
 import torch.multiprocessing  # noqa: E402
 
@@ -44,7 +42,10 @@ def main(
     debug=False,
     debug_explanations_bool=False,
     explanation_methods=None,
+    gpu=3,
 ):
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+
     logger.debug("In main")
     config_path = os.path.join(project_root, config_path)
     metrics_config_path = os.path.join(project_root, metrics_config_path)
@@ -149,6 +150,13 @@ if __name__ == "__main__":
         default=None,
     )
 
+    parser.add_argument(
+        "--gpu",
+        type=int,
+        help="GPU to use",
+        default=3,
+    )
+
     args = parser.parse_args()
 
     main(
@@ -161,4 +169,5 @@ if __name__ == "__main__":
         debug_explanations_bool=args.debug_explanations,
         metrics_config_path=args.metrics_config_path,
         explanation_methods=args.explanation_methods,
+        gpu=args.gpu,
     )

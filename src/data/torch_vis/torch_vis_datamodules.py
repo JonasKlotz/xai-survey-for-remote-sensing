@@ -28,8 +28,6 @@ class TorchVisDataModule(pl.LightningDataModule):
         self.num_workers = cfg["data"]["num_workers"]
         self.pin_memory = cfg["data"]["pin_memory"]
 
-        self.force_shuffle = cfg["data"]["force_shuffle"]
-
     @abstractmethod
     def get_dataset(
         self,
@@ -57,10 +55,7 @@ class TorchVisDataModule(pl.LightningDataModule):
         )
 
     def get_loader(self, dataset, drop_last):
-        if self.force_shuffle:
-            shuffle = True
-        else:
-            shuffle = True if dataset == self.trainset_tr else False
+        shuffle = True if dataset == self.trainset_tr else False
 
         dataloader = DataLoader(
             dataset,
