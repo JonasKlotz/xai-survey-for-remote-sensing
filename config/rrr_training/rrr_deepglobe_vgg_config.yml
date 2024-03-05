@@ -26,7 +26,7 @@ data:
   test_csv: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_test.csv"
   segmentations_lmdb_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
 
-  batch_size: 128 #128
+  batch_size: 64 #128
   num_workers: 8 # 8
   pin_memory: True
   force_shuffle: True # shuffle also test loader only for metrics evaluation
@@ -34,7 +34,7 @@ data:
 
 # Training parameters
 max_epochs: 10
-learning_rate: 0.05
+learning_rate: 0.025
 momentum: 0.9
 weight_decay: 0.0005
 optimizer: 'sgd'

@@ -20,14 +20,14 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  batch_size: 8 # optimal training: 128
-  num_workers: 0
+  batch_size: 128 #128
+  num_workers: 8 # 8
   pin_memory: False
   force_shuffle: False # shuffle also test loader
 
 
 # Training parameters
-max_epochs: 20
+max_epochs: 10
 learning_rate: 0.025
 momentum: 0.9
 weight_decay: 0.0005

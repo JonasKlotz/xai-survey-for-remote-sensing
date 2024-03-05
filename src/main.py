@@ -2,12 +2,6 @@ import argparse
 import os
 import sys
 
-
-import pytorch_lightning as pl  # noqa: E402
-import torch.multiprocessing  # noqa: E402
-
-from config_utils import parse_config, load_yaml  # noqa: E402
-
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(project_root)
@@ -16,20 +10,7 @@ quantus_path = os.path.join(project_root, "src/xai/metrics/Quantus")
 sys.path.append(quantus_path)
 print(f"Added {quantus_path} to path.")
 
-from src.training.train import train  # noqa: E402
-from src.xai.explanations.generate_explanations import generate_explanations  # noqa: E402
-from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods  # noqa: E402
-from utility.cluster_logging import logger  # noqa: E402
-from visualization.visualize import visualize  # noqa: E402
-from xai.explanations.debug_explanations import debug_explanations  # noqa: E402
-
-# Fix all seeds with lightning
-pl.seed_everything(42)
-
-
-torch.multiprocessing.set_sharing_strategy(
-    "file_system"
-)  # handle too many open files error
+from config_utils import parse_config, load_yaml  # noqa: E402
 
 
 def main(
@@ -45,6 +26,23 @@ def main(
     gpu=3,
 ):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
+
+    import pytorch_lightning as pl  # noqa: E402
+    import torch.multiprocessing  # noqa: E402
+
+    from src.training.train import train  # noqa: E402
+    from src.xai.explanations.generate_explanations import generate_explanations  # noqa: E402
+    from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods  # noqa: E402
+    from utility.cluster_logging import logger  # noqa: E402
+    from visualization.visualize import visualize  # noqa: E402
+    from xai.explanations.debug_explanations import debug_explanations  # noqa: E402
+
+    # Fix all seeds with lightning
+    pl.seed_everything(42)
+
+    torch.multiprocessing.set_sharing_strategy(
+        "file_system"
+    )  # handle too many open files error
 
     logger.debug("In main")
     config_path = os.path.join(project_root, config_path)
@@ -63,7 +61,7 @@ def main(
         )
 
     general_config["device"] = torch.device(
-        "cuda:0" if torch.cuda.is_available() else "cpu"
+        "cuda" if torch.cuda.is_available() else "cpu"
     )
 
     general_config["load_from_zarr"] = (
@@ -85,7 +83,7 @@ def main(
 
     logger.debug(f"General config: {general_config}")
     if training:
-        train(general_config)
+        train(general_config, gpu)
 
     if visualizations:
         visualize(general_config)

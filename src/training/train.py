@@ -14,9 +14,7 @@ from models.get_models import get_model
 from utility.cluster_logging import logger
 
 
-def train(
-    cfg: dict,
-):
+def train(cfg: dict, gpu: int):
     cfg["method"] = "train"
 
     # load datamodule
@@ -29,7 +27,8 @@ def train(
 
     logger.debug("Start Training")
     prefix_name = f"{cfg['model_name']}_{cfg['dataset_name']}_{cfg['timestamp']}"
-    if cfg["rrr_explanation"]:
+
+    if cfg.get("rrr_explanation", None) is not None:
         prefix_name = f"{prefix_name}_{cfg['rrr_explanation']}"
 
     cfg["models_path"] = os.path.join(cfg["models_path"], prefix_name)
@@ -44,12 +43,6 @@ def train(
         ),
     ]
     strategy = "auto"
-    if torch.cuda.is_available():
-        if torch.cuda.device_count() > 1:
-            # currently i do not want to use ddp
-            model = torch.nn.parallel.DistributedDataParallel(model)
-            strategy = "ddp"
-        logger.debug(f"Using {torch.cuda.device_count()} GPU")
 
     # init trainer
     trainer = Trainer(
@@ -59,6 +52,8 @@ def train(
         accelerator="auto",
         strategy=strategy,
         gradient_clip_val=1,
+        # devices=[gpu],
+        inference_mode=False,  # we dont want nograd during evaluation
         # log_every_n_steps=20,
     )
     # tune_trainer(cfg, data_module, model, trainer, tune_learning_rate=True)
