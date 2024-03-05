@@ -56,7 +56,9 @@ def train(cfg: dict, gpu: int):
         inference_mode=False,  # we dont want nograd during evaluation
         # log_every_n_steps=20,
     )
-    # tune_trainer(cfg, data_module, model, trainer, tune_learning_rate=True)
+    # tune_trainer(
+    #     cfg, data_module, model, trainer, tune_learning_rate=True, tune_batch_size=True
+    # )
 
     trainer.fit(model, data_module)
     model.metrics_manager.plot(stage="val")
