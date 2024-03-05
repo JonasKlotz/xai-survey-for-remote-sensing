@@ -110,6 +110,7 @@ class ExplanationVisualizer:
         show=True,
         task: str = "multilabel",
         normalize=True,
+        title="",
     ):
         if task == "multilabel":
             # here we can either supply the labels or the predictions
@@ -121,6 +122,7 @@ class ExplanationVisualizer:
                 predictions_tensor=predictions_tensor,
                 show=show,
                 normalize=normalize,
+                title=title,
             )
         else:
             self.visualize_single_label_classification(
@@ -131,6 +133,7 @@ class ExplanationVisualizer:
                 predictions_tensor=predictions_tensor,
                 show=show,
                 normalize=normalize,
+                title=title,
             )
 
     def visualize_batch(
@@ -163,6 +166,7 @@ class ExplanationVisualizer:
         predictions_tensor: torch.Tensor = None,
         show=True,
         normalize=True,
+        title="",
     ):
         """
         Visualize multi-label classification.
@@ -186,7 +190,10 @@ class ExplanationVisualizer:
         )
 
         fig = self._create_fig_from_dict_data(
-            data, labels=label_tensor, predictions_tensor=predictions_tensor
+            data,
+            labels=label_tensor,
+            predictions_tensor=predictions_tensor,
+            title=title,
         )
 
         # Show the figure
@@ -281,8 +288,9 @@ class ExplanationVisualizer:
             if key not in ["Image", "Segmentation"]
         }
         num_attrs = len(attrs)
-
-        predictions_tensor = np.nonzero(predictions_tensor.numpy())[0]
+        if isinstance(predictions_tensor, torch.Tensor):
+            predictions_tensor = predictions_tensor.numpy()
+        predictions_tensor = np.nonzero(predictions_tensor)[0]
         plots_per_attr = int(len(predictions_tensor))
         cols = num_attrs + 1
         rows = max(plots_per_attr, 2)  # at least 2 rows for segmentation
@@ -520,7 +528,7 @@ class ExplanationVisualizer:
                 z=segmentation,
                 colorscale=colorscale,  # Use the custom colorscale
                 zmin=0,
-                zmax=5,  # Set the fixed scale range from 0 to 6
+                zmax=self.num_classes - 1,  # Set the fixed scale range from 0 to 6
                 showscale=False,  # Hide the default color scale
             )
         )
@@ -556,6 +564,7 @@ class ExplanationVisualizer:
         label_tensor: torch.Tensor = None,
         predictions_tensor: torch.Tensor = None,
         show=True,
+        title="",
     ):
         data = {}
 
@@ -595,12 +604,14 @@ class ExplanationVisualizer:
             fig.add_trace(plot, row=1, col=i)
             remove_axis(fig, row=1, col=i)
 
+        if not title:
+            title = f"Explanation for true label {label_tensor.item()} and predicted label {predictions_tensor.item()}"
+
         fig.update_layout(
             height=self.size * rows,
             width=self.size * cols,
             margin=dict(t=60, b=60),
-            title_text=f"Explanation for true label {label_tensor.item()} "
-            f"and predicted label {predictions_tensor.item()}",
+            title_text=title,
         )
         self.last_fig = fig
 
@@ -700,7 +711,7 @@ class ExplanationVisualizer:
                 data,
                 labels=label_tensor,
                 predictions_tensor=predictions_tensor,
-                title=save_name + "_" + title,
+                title=save_name + " " + title,
             )
 
             # flatten masked_predictions_list
@@ -741,7 +752,7 @@ class ExplanationVisualizer:
             if show:
                 fig.show()
             if save_name:
-                self.save_last_fig(name=save_name + attr_name, format="svg")
+                self.save_last_fig(name=save_name + title, format="svg")
 
             return fig
 
