@@ -20,8 +20,8 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  batch_size: 8 #128
-  num_workers: 8 # 8
+  batch_size: 8
+  num_workers: 8
   pin_memory: False
   force_shuffle: False # shuffle also test loader
 
@@ -37,7 +37,7 @@ threshold: 0.5
 
 # whether to load the batches from a specific path
 zarr_path: 'results/caltech101_vgg_final.zarr'
-model_path: 'models/caltech101_vgg_final/final_model.pt'
+model_path: 'models/caltech_10EP/caltech101_vgg/final_model.ckpt'
 
 
 

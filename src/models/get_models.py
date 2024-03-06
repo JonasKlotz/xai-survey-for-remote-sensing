@@ -31,7 +31,7 @@ def get_lightning_resnet(
         config=cfg,
     )
     if self_trained:
-        state_dict = load_model(cfg)
+        state_dict = load_state_dict(cfg)
         model.load_state_dict(
             state_dict,
             strict=False,
@@ -52,7 +52,7 @@ def get_lightning_vgg(
         config=cfg,
     )
     if self_trained:
-        state_dict = load_model(cfg)
+        state_dict = load_state_dict(cfg)
         model.load_state_dict(
             state_dict,
             strict=False,
@@ -64,7 +64,7 @@ def get_lightning_vgg(
     return model
 
 
-def load_model(cfg: dict):
+def load_state_dict(cfg: dict):
     """
     Load the most recent model of a specific type from the models directory.
 
@@ -92,6 +92,14 @@ def load_model(cfg: dict):
     if not models_path:
         raise FileNotFoundError("Models path is not provided in the configuration.")
 
-    model = torch.load(models_path, map_location=torch.device(cfg["device"]))
+    # check if path ends with .pt
+    if models_path.endswith(".pt"):
+        model = torch.load(models_path, map_location=torch.device(cfg["device"]))
+    elif models_path.endswith(".ckpt"):
+        model = torch.load(models_path, map_location=torch.device(cfg["device"]))[
+            "state_dict"
+        ]
+    else:
+        raise ValueError("Model path must end with .pt or .ckpt")
 
     return model

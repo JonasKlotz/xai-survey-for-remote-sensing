@@ -126,6 +126,7 @@ def setup_metrics_manager(
     image_shape,
     metrics_cfg,
     model,
+    save_all_explanations=True,
 ):
     """
     Sets up the metrics manager.
@@ -140,6 +141,7 @@ def setup_metrics_manager(
         Configuration dictionary containing all the necessary parameters for metrics.
     model : torch.nn.Module
         The model to be used.
+
 
     Returns
     -------
@@ -168,7 +170,7 @@ def setup_metrics_manager(
             log_dir=log_dir,
             image_shape=image_shape,
         )
-    explanation_manager = ExplanationsManager(cfg, model, save=False)
+    explanation_manager = ExplanationsManager(cfg, model, save=save_all_explanations)
     return metrics_manager_dict, explanation_manager
 
 
