@@ -1,7 +1,6 @@
 import os
 from typing import List
 
-import numpy as np
 import torch
 import tqdm
 from pytorch_lightning import LightningDataModule
@@ -150,14 +149,19 @@ def get_index_to_name(cfg):
     """
     This function returns the index to name mapping of the dataset
     """
-    if cfg["dataset_name"] == "deepglobe":
-        return DEEPGLOBE_IDX2NAME
-    elif cfg["dataset_name"] == "caltech101":
-        return CALTECH101_IDX2NAME
-    elif cfg["dataset_name"] == "mnist":
-        return MNIST_IDX2NAME
-    else:
+    """
+        This function returns the index to name mapping of the dataset
+        """
+    dataset_name_to_idx_name = {
+        "deepglobe": DEEPGLOBE_IDX2NAME,
+        "caltech101": CALTECH101_IDX2NAME,
+        "mnist": MNIST_IDX2NAME,
+    }
+
+    if cfg["dataset_name"] not in dataset_name_to_idx_name:
         raise ValueError(f"Dataset {cfg['dataset_name']} not supported.")
+
+    return dataset_name_to_idx_name[cfg["dataset_name"]]
 
 
 def reverse_one_hot_encoding(batches: List[torch.Tensor]):
@@ -195,7 +199,9 @@ def get_dataloader_from_cfg(cfg, filter_keys=None):
     return cfg, data_loader
 
 
-def _parse_segments(segments_tensor, dataset_name, num_classes):
+def _parse_segments(
+    segments_tensor: torch.Tensor, dataset_name: str, num_classes: int
+) -> torch.tensor:
     # The quantus framework expects the segments to be boolean tensors.
     if dataset_name == "caltech101":
         # threshold the segments
@@ -205,16 +211,21 @@ def _parse_segments(segments_tensor, dataset_name, num_classes):
 
     elif dataset_name == "deepglobe":
         # create tensor empty with shape (batchsize, num_classes, 1, 120, 120) from (batchsize, 1, 120, 120)
-        unsqueezed_segments = np.zeros(
-            shape=(
+        # todo: maybe broken now for metrics
+        unsqueezed_segments = torch.zeros(
+            size=(
                 segments_tensor.shape[0],
                 num_classes,
+                1,
                 segments_tensor.shape[1],
                 segments_tensor.shape[2],
             )
         )
         for class_index in range(num_classes):
-            unsqueezed_segments[:, class_index, :, :] = segments_tensor == class_index
+            unsqueezed_segments[:, class_index, 0, :, :] = (
+                segments_tensor == class_index
+            )
+
         segments_tensor = unsqueezed_segments
     else:
         raise ValueError("Unknown dataset")

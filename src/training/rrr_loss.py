@@ -78,7 +78,10 @@ class RightForRightReasonsLoss(torch.nn.Module):
         """
         # initialize the explanation method
         explanation_method = self.explanation_method_constructor(
-            model=model, device=x_batch.device, **self.explanation_kwargs
+            model=model,
+            device=x_batch.device,
+            multi_label=self.task == "multilabel",
+            **self.explanation_kwargs,
         )
 
         attrs = explanation_method.explain_batch(
@@ -88,7 +91,8 @@ class RightForRightReasonsLoss(torch.nn.Module):
         s_batch = segmentations_to_relevancy_map(
             s_batch, num_classes=self.num_classes, dataset_name=self.dataset_name
         )
-
+        # push to device
+        s_batch = s_batch.to(x_batch.device)
         rrr_loss = torch.linalg.norm(attrs * s_batch)
         return self.lambda_ * rrr_loss
 
