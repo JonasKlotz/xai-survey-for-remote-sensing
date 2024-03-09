@@ -23,6 +23,7 @@ from xai.metrics.metrics_manager import MetricsManager
 def evaluate_explanation_methods(
     cfg: dict,
     metrics_cfg: dict,
+    save_data=False,
 ):
     """
     Evaluate Explanation Methods.
@@ -61,6 +62,7 @@ def evaluate_explanation_methods(
         image_shape=image_shape,
         metrics_cfg=metrics_cfg,
         model=model,
+        save_all_explanations=save_data,
     )
 
     # max_iterations = 200 // cfg["data"]["batch_size"]
@@ -84,7 +86,7 @@ def evaluate_explanation_methods(
         if segments_tensor is not None:
             # parse the segments to quantus format
             segments_tensor = _parse_segments(
-                segments_tensor, cfg["dataset_name"], cfg["num_classes"]
+                torch.tensor(segments_tensor), cfg["dataset_name"], cfg["num_classes"]
             )
 
         # Cast all to NP

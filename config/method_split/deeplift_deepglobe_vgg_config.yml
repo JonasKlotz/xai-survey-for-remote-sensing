@@ -15,12 +15,12 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  images_lmdb_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/patches.lmdb"
-  labels_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/labels.parquet"
-  train_csv: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_train.csv"
-  val_csv: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_val.csv"
-  test_csv: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_test.csv"
-  segmentations_lmdb_path: "/media/storagecube/data/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
+  images_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/patches.lmdb"
+  labels_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/labels.parquet"
+  train_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_train.csv"
+  val_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_val.csv"
+  test_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_test.csv"
+  segmentations_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
 
   batch_size: 128 #128
   num_workers: 8 # 8
@@ -40,7 +40,4 @@ threshold: 0.5
 
 # whether to load the batches from a specific path
 zarr_path: 'results/metrics/deepglobe_vgg_good/deepglobe_vgg_2024-02-13_12-45-28.zarr'
-model_path: 'models/deepglobe_vgg_final/final_model.pt'
-
-
-
+model_path: 'models/deepglobe_vgg_20EP/final_model.ckpt'

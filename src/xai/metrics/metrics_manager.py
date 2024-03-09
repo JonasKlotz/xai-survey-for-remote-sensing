@@ -64,10 +64,9 @@ class MetricsManager:
         self.height = image_shape[1]
         self.width = image_shape[2]
 
-        self.patch_size = int(
-            self.height / 8
-        )  # todo: make this configurable? Also this can lead to errors?
-        self.features_in_step = int(self.height / 8)
+        # todo: make this configurable? Also this can lead to errors?
+        self.patch_size = int(self.height / 4)
+        self.features_in_step = int(self.height / 4)
         self.num_samples = 5
 
         self.sentinel_value = sentinel_value
@@ -221,8 +220,6 @@ class MetricsManager:
             )
             if hasattr(metrics[key], "get_auc_score"):
                 res = metrics[key].get_auc_score
-            elif hasattr(metrics[key], "get_aoc_score"):
-                res = metrics[key].get_aoc_score
             # the metrics that are not aggregated are already unpacked
             elif self.multi_label and key not in already_unpacked_metrics:
                 res = res[0]  # batch unpacking
@@ -230,7 +227,7 @@ class MetricsManager:
             # print("Metric", key, "Result", res, "Time", time[key])
             results[key] = res
             if self.multi_label:
-                assert_results_shape(res, y_batch)
+                assert_results_shape(res, y_batch, key)
 
         return results, time
 
@@ -468,10 +465,10 @@ class MetricsManager:
         }
 
 
-def assert_results_shape(results, labels):
+def assert_results_shape(results, labels, explanation_name: str = ""):
     # batchsize 1 only
     results = np.array(results)
     labels = np.array(labels)
     assert (
         results.shape == labels.shape
-    ), f"Results shape {results.shape} != labels shape {labels.shape}"
+    ), f"Results shape {results.shape} != labels shape {labels.shape} for {explanation_name}"

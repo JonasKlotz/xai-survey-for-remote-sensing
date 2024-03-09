@@ -24,6 +24,7 @@ def main(
     debug_explanations_bool=False,
     explanation_methods=None,
     gpu=3,
+    save_data=False,
 ):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -93,7 +94,9 @@ def main(
 
     if evaluations:
         metrics_config = load_yaml(metrics_config_path)
-        evaluate_explanation_methods(general_config, metrics_config)
+        evaluate_explanation_methods(
+            general_config, metrics_config, save_data=save_data
+        )
 
     if debug_explanations_bool:
         debug_explanations(general_config)
@@ -155,6 +158,13 @@ if __name__ == "__main__":
         default=3,
     )
 
+    parser.add_argument(
+        "--save_data",
+        type=bool,
+        help="Whether to save x_data, y_data etc in the zarr file",
+        default=False,
+    )
+
     args = parser.parse_args()
 
     main(
@@ -168,4 +178,5 @@ if __name__ == "__main__":
         metrics_config_path=args.metrics_config_path,
         explanation_methods=args.explanation_methods,
         gpu=args.gpu,
+        save_data=args.save_data,
     )
