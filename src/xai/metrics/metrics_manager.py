@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 import src.xai.metrics.Quantus.quantus as quantus
+from utility.cluster_logging import logger
 from utility.csv_logger import CSVLogger
 from xai.explanations.quantus_explanation_wrapper import explanation_wrapper
 from xai.metrics.metrics_utiliies import (
@@ -23,7 +24,7 @@ class MetricsManager:
         aggregate=True,
         log_dir=None,
         image_shape=(3, 224, 224),
-        sentinel_value=np.nan,
+        sentinel_value=None,
         softmax=True,
     ):
         """
@@ -69,9 +70,14 @@ class MetricsManager:
         self.features_in_step = int(self.height / 4)
         self.num_samples = 5
 
-        self.sentinel_value = sentinel_value
         self.softmax = softmax
         self.multi_label = self.task == "multilabel"
+        if sentinel_value is None:
+            if self.multi_label:
+                sentinel_value = [np.nan] * self.num_classes
+            else:
+                sentinel_value = np.nan
+        self.sentinel_value = sentinel_value
 
         self.categories = [
             "faithfulness",
@@ -102,10 +108,10 @@ class MetricsManager:
         # load metrics
         self._load_metrics()
 
-        column_names = []
+        self.column_names = []
         for category_name, metrics_category in self.metrics_config.items():
             for key in metrics_category.keys():
-                column_names.append(key)
+                self.column_names.append(key)
 
         self.log_dir = log_dir
         if self.log_dir:
@@ -113,12 +119,12 @@ class MetricsManager:
             self.metric_csv_logger = CSVLogger(
                 log_dir=self.log_dir,
                 filename=f"{explanation.attribution_name}_metrics",
-                column_names=column_names,
+                column_names=self.column_names,
             )
             self.time_csv_logger = CSVLogger(
                 log_dir=self.log_dir,
                 filename=f"{explanation.attribution_name}_time",
-                column_names=column_names,
+                column_names=self.column_names,
             )
             self.label_csv_logger = CSVLogger(
                 log_dir=self.log_dir,
@@ -151,22 +157,29 @@ class MetricsManager:
     ):
         all_results = {}
         time_spend = {}
+        try:
+            for category_name, metrics_category in self.categorized_metrics.items():
+                results, time = self._evaluate_category(
+                    metrics_category, x_batch, y_batch, a_batch, s_batch
+                )
+                all_results.update(results)
+                time_spend.update(time)
+        except Exception as e:
+            # We want to catch all exceptions and log them, but still return the sentinel value
+            logger.error("Exception", e)
+            all_results = {k: self.sentinel_value for k in self.column_names}
+            time_spend = {k: self.sentinel_value for k in self.column_names}
 
-        for category_name, metrics_category in self.categorized_metrics.items():
-            results, time = self._evaluate_category(
-                metrics_category, x_batch, y_batch, a_batch, s_batch
-            )
-            all_results.update(results)
-            time_spend.update(time)
+        self._log_all(all_results, time_spend, y_batch, y_true_batch)
+        return all_results, time_spend
 
+    def _log_all(self, all_results, time_spend, y_batch, y_true_batch):
         if self.log:
             self.metric_csv_logger.update(all_results)
             self.time_csv_logger.update(time_spend)
             self.label_csv_logger.update(
                 {"True Label": y_true_batch, "Predicted Label": y_batch}
             )
-
-        return all_results, time_spend
 
     def _evaluate_category(
         self,
@@ -198,12 +211,7 @@ class MetricsManager:
         """
         results = {}
         time = {}
-        already_unpacked_metrics = [
-            "Relative Input Stability",
-            "Relative Output Stability",
-            "Relative Representation Stability",
-            "Effective Complexity",
-        ]
+
         for key in metrics.keys():
             start_time = datetime.datetime.now()
             res = metrics[key](
@@ -218,18 +226,31 @@ class MetricsManager:
                 explain_func=self.explain_func,
                 explain_func_kwargs=self.explain_func_kwargs,
             )
+            time[key] = datetime.datetime.now() - start_time
+
             if hasattr(metrics[key], "get_auc_score"):
                 res = metrics[key].get_auc_score
-            # the metrics that are not aggregated are already unpacked
-            elif self.multi_label and key not in already_unpacked_metrics:
-                res = res[0]  # batch unpacking
-            time[key] = datetime.datetime.now() - start_time
-            # print("Metric", key, "Result", res, "Time", time[key])
-            results[key] = res
+
             if self.multi_label:
-                assert_results_shape(res, y_batch, key)
+                res = self._parse_multilabel(key, res, y_batch)
+            results[key] = res
 
         return results, time
+
+    def _parse_multilabel(self, key: str, res, y_batch):
+        res = self.squeeze_list(res)
+        assert_results_shape(res, self.squeeze_list(y_batch), key)
+
+        if not isinstance(res, list):
+            res = [res]
+        tmp_res = [np.nan] * self.num_classes
+        for i, label_index in enumerate(y_batch[-1]):
+            tmp_res[label_index] = res[i]
+        res = tmp_res
+        return res
+
+    def squeeze_list(self, res):
+        return torch.tensor(np.array(res)).squeeze().tolist()
 
     def _load_faithfulness_metrics(self):
         """Load all faithfulness metrics"""
@@ -258,9 +279,20 @@ class MetricsManager:
                 multi_label=self.multi_label,
             ),
             # We use AUC as aggregate function
-            "Region Segmentation": quantus.RegionPerturbation(
+            "Region Segmentation MORF": quantus.RegionPerturbation(
+                order="morf",
                 patch_size=self.patch_size,
-                regions_evaluation=15,
+                regions_evaluation=10,
+                normalise=False,
+                disable_warnings=self.disable_warnings,
+                display_progressbar=False,
+                multi_label=self.multi_label,
+            ),
+            # We use AUC as aggregate function
+            "Region Segmentation LERF": quantus.RegionPerturbation(
+                order="lerf",
+                patch_size=self.patch_size,
+                regions_evaluation=10,
                 normalise=False,
                 disable_warnings=self.disable_warnings,
                 display_progressbar=False,

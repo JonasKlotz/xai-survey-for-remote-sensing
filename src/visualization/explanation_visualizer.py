@@ -565,6 +565,7 @@ class ExplanationVisualizer:
         predictions_tensor: torch.Tensor = None,
         show=True,
         title="",
+        normalize=True,
     ):
         data = {}
 
@@ -573,12 +574,12 @@ class ExplanationVisualizer:
         data["Image"] = go.Image(z=image)
 
         if segmentation_tensor is not None:
-            # Add Segmentation
-            segmentation_fig = self.plot_segmentation(segmentation_tensor)
-            segmentation_list = []
-            for trace in segmentation_fig.data:
-                segmentation_list.append(trace)
-            data["Segmentation"] = segmentation_list
+            segmentation_map = go.Heatmap(
+                z=np.flipud(segmentation_tensor),
+                zmin=0,
+                zmax=1,
+            )
+            data["Segmentation"] = segmentation_map
 
         for key, attrs in attrs_dict.items():
             attr = self._preprocess_attrs(attrs)

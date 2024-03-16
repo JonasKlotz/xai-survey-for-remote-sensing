@@ -59,16 +59,17 @@ def visualize(cfg: dict):
             index_tensor,
         ) = batch_tensor_list
 
-        # explanation_visualizer.visualize(
-        #     attribution_dict=attributions_dict,
-        #     image_tensor=image_tensor,
-        #     label_tensor=true_labels,
-        #     segmentation_tensor=segments_tensor,
-        #     predictions_tensor=predicted_label_tensor,
-        #     show=True,
-        #     task=cfg["task"],
-        # )
-        #
+        explanation_visualizer.visualize(
+            attribution_dict=attributions_dict,
+            image_tensor=image_tensor,
+            label_tensor=true_labels,
+            segmentation_tensor=segments_tensor,
+            predictions_tensor=predicted_label_tensor,
+            show=False,
+            task=cfg["task"],
+        )
+        explanation_visualizer.save_last_fig(name=f"sample_{index_tensor}")
+
         # explanation_visualizer.visualize_top_k_attributions(
         #     attribution_dict=attributions_dict,
         #     image_tensor=image_tensor,
@@ -91,36 +92,31 @@ def visualize(cfg: dict):
         #     k=0.9,
         #     largest=False,
         # )
-        k_list = [0.05, 0.1, 0.15, 0.2]
-        explanation_visualizer.visualize_top_k_attributions_with_predictions(
-            attribution_dict=attributions_dict,
-            image_tensor=image_tensor,
-            label_tensor=true_labels,
-            segmentation_tensor=segments_tensor,
-            predictions_tensor=predicted_label_tensor,
-            show=True,
-            k_list=k_list,
-            remove_top_k_features=False,
-            model=model,
-            title="Top k attributions present in the Image",
-            save_name=f"sample_{index_tensor}",
-        )
+        # k_list = [0.05, 0.1, 0.15, 0.2]
+        # explanation_visualizer.visualize_top_k_attributions_with_predictions(
+        #     attribution_dict=attributions_dict,
+        #     image_tensor=image_tensor,
+        #     label_tensor=true_labels,
+        #     segmentation_tensor=segments_tensor,
+        #     predictions_tensor=predicted_label_tensor,
+        #     show=True,
+        #     k_list=k_list,
+        #     remove_top_k_features=False,
+        #     model=model,
+        #     title="Top k attributions present in the Image",
+        #     save_name=f"sample_{index_tensor}",
+        # )
 
-        explanation_visualizer.visualize_top_k_attributions_with_predictions(
-            attribution_dict=attributions_dict,
-            image_tensor=image_tensor,
-            label_tensor=true_labels,
-            segmentation_tensor=segments_tensor,
-            predictions_tensor=predicted_label_tensor,
-            show=True,
-            k_list=k_list,
-            remove_top_k_features=True,
-            model=model,
-            title="Top k attributions removed from the Image",
-            save_name=f"sample_{index_tensor}",
-        )
-        print(f"Visualizing sample {index_tensor}")
-        if i == 5:
-            break
-
-        # explanation_visualizer.save_last_fig(name=f"sample_{index_tensor}")
+        # explanation_visualizer.visualize_top_k_attributions_with_predictions(
+        #     attribution_dict=attributions_dict,
+        #     image_tensor=image_tensor,
+        #     label_tensor=true_labels,
+        #     segmentation_tensor=segments_tensor,
+        #     predictions_tensor=predicted_label_tensor,
+        #     show=True,
+        #     k_list=k_list,
+        #     remove_top_k_features=True,
+        #     model=model,
+        #     title="Top k attributions removed from the Image",
+        #     save_name=f"sample_{index_tensor}",
+        # )

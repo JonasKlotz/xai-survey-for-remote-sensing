@@ -4,6 +4,8 @@ Faithfulness:
     IROF:
     Monotonicity-Arya:
     Selectivity:
+    Region Segmentation MORF:
+    Region Segmentation LERF:
 
 Robustness:
     Max-Sensitivity:
