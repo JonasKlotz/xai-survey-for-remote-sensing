@@ -6,7 +6,12 @@ from typing import Any
 class LMDBDataHandler:
     def __init__(self, path: str, read_only: bool = False, write_only: bool = False):
         self.env = lmdb.open(
-            path, max_dbs=1, readonly=read_only, create=not read_only, map_size=1e10
+            path,
+            max_dbs=1,
+            readonly=read_only,
+            create=not read_only,
+            map_size=int(1e12),
+            lock=False,
         )
         self.db = self.env.open_db(b"main")
         self.read_only = read_only
