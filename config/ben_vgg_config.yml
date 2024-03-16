@@ -19,12 +19,12 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  images_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/patches.lmdb"
-  labels_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/labels.parquet"
-  train_csv: "/home/jonas/splits/deepglobe_version2_train.csv"
-  val_csv: "/home/jonas/splits/deepglobe_version2_val.csv"
-  test_csv: "/home/jonas/splits/deepglobe_version2_test.csv"
-  segmentations_lmdb_path: "/media/storagecube/jonasklotz/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
+  images_lmdb_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/BENv2.lmdb"
+  labels_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/lbls.parquet"
+  train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/"
+  val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/"
+  test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/"
+  segmentations_lmdb_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/"
 
   images_lmdb_path: "/storagecube/tomburgert/datasets/BEN19/Fresh_S2_lmdb.db"
   labels_path: "/storagecube/tomburgert/datasets/BEN19/ben-s2-metadata_labelvectors.parquet"

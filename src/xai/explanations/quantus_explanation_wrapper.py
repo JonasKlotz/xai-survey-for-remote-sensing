@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+from utility.cluster_logging import logger
 from xai.explanations.explanation_manager import _explanation_methods
 
 
@@ -45,7 +46,6 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
     # mandatory kwargs
     explanation_method_name = explain_func_kwargs.pop("explanation_method_name")
     device = explain_func_kwargs.pop("device")
-    # multi_label = explain_func_kwargs.pop("multi_label")
 
     explanation_method = _explanation_methods[explanation_method_name]
     explanation = explanation_method(model, device=device, **explain_func_kwargs)
@@ -54,6 +54,6 @@ def explanation_wrapper(model, inputs, targets, **explain_func_kwargs):
         tensor_batch=inputs, target_batch=targets
     ).numpy(force=True)
     if np.all((attributions == 0)):
-        print(f"All zero for method {explanation_method_name}")
+        logger.warning(f"All zero for method {explanation_method_name}")
 
     return attributions

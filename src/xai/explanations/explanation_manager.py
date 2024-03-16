@@ -70,7 +70,7 @@ class ExplanationsManager:
             keys=storage_keys,
         )
 
-    def explain_batch(self, batch: dict):
+    def explain_batch(self, batch: dict, explain_all: bool = False):
         """
         Explain a batch of images.
         Parameters
@@ -101,6 +101,9 @@ class ExplanationsManager:
             "s_data": segments,
             "index_data": idx,
         }
+        # if we want to generate an explanation for every label
+        if explain_all:
+            predictions = torch.ones(predictions.shape, device=predictions.device)
 
         # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():

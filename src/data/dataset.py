@@ -68,7 +68,7 @@ class BaseDataset(Dataset):
 
     def __getitem__(self, idx):
         """Get item at position idx of Dataset."""
-        patch, self.images_env = self._extract_path_from_lmdb(
+        patch, self.images_env = self._extract_patch_from_lmdb(
             idx, self.images_env, self.lmdb_path
         )
 
@@ -77,7 +77,7 @@ class BaseDataset(Dataset):
             (
                 segmentation_patch,
                 self.segmentations_env,
-            ) = self._extract_path_from_lmdb(
+            ) = self._extract_patch_from_lmdb(
                 idx, self.segmentations_env, self.segmentations_lmdb_path
             )
 
@@ -92,7 +92,7 @@ class BaseDataset(Dataset):
             "segmentations": segmentation_patch,
         }
 
-    def _extract_path_from_lmdb(self, idx, env, lmdb_path):
+    def _extract_patch_from_lmdb(self, idx, env, lmdb_path):
         """Extract patch from LMDB."""
         if env is None:
             env = lmdb.open(
@@ -199,7 +199,7 @@ class Ben19Dataset(BaseDataset):
 
     def __getitem__(self, idx):
         """Get item at position idx of Dataset."""
-        s2_patch, self.images_env = self._extract_path_from_lmdb(
+        s2_patch, self.images_env = self._extract_patch_from_lmdb(
             idx, self.images_env, self.lmdb_path
         )
         label = self.labels[idx]
@@ -285,7 +285,7 @@ class EuroSATDataset(BaseDataset):
 
     def __getitem__(self, idx):
         """Get item at position idx of Dataset."""
-        patch, self.images_env = self._extract_path_from_lmdb(
+        patch, self.images_env = self._extract_patch_from_lmdb(
             idx, self.images_env, self.lmdb_path
         )
 
