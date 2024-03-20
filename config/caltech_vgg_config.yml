@@ -36,7 +36,7 @@ scheduler: 'step'
 threshold: 0.5
 
 # whether to load the batches from a specific path
-zarr_path: 'results/caltech101_vgg_final_results_with_metrics/caltech101_vgg_final.zarr'
+zarr_path: 'results/caltech101/caltech101_vgg_final.zarr'
 model_path: 'models/caltech_10EP/caltech101_vgg/final_model.ckpt'
 
 

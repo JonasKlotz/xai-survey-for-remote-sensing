@@ -110,7 +110,7 @@ class ExplanationVisualizer:
         show=True,
         task: str = "multilabel",
         normalize=True,
-        title="",
+        title=None,
     ):
         if task == "multilabel":
             # here we can either supply the labels or the predictions
@@ -166,7 +166,7 @@ class ExplanationVisualizer:
         predictions_tensor: torch.Tensor = None,
         show=True,
         normalize=True,
-        title="",
+        title=None,
     ):
         """
         Visualize multi-label classification.
@@ -278,7 +278,22 @@ class ExplanationVisualizer:
         plotly.graph_objects.Figure
             Figure object.
         """
+
+        label_names = [
+            self.index_to_name[label.item()]
+            for label in torch.nonzero(labels, as_tuple=True)[0]
+        ]
+        predictions_names = [
+            self.index_to_name[pred.item()]
+            for pred in torch.nonzero(predictions_tensor, as_tuple=True)[0]
+        ]
+
         # Create a subplot layout with 1 row and the number of non-empty plots
+        if title is None:
+            # join labels and predictions to title
+            label_names = ", ".join(label_names)
+            predictions_names = ", ".join(predictions_names)
+            title = f"Explanation for true label {label_names} and predicted label {predictions_names}"
 
         image, segmentations = data["Image"], data["Segmentation"]
         # get all other attrs
@@ -294,9 +309,11 @@ class ExplanationVisualizer:
         plots_per_attr = int(len(predictions_tensor))
         cols = num_attrs + 1
         rows = max(plots_per_attr, 2)  # at least 2 rows for segmentation
+        titles = list(attrs.keys())
+        # titles = [title[2:-5] if title.startswith("a_") and title.endswith("_data") else title for title in titles]
 
         subplot_titles = self._create_subplot_titles(
-            list(attrs.keys()), cols, predictions_tensor, rows
+            titles, cols, predictions_tensor, rows
         )
 
         fig = make_subplots(
@@ -326,21 +343,10 @@ class ExplanationVisualizer:
                 legend=dict(orientation="h", yanchor="top", y=0, xanchor="left", x=0)
             )
 
-        label_names = [self.index_to_name[label.item()] for label in labels]
-        predictions_names = [
-            self.index_to_name[pred.item()] for pred in predictions_tensor
-        ]
-
-        if title is None:
-            # join labels and predictions to title
-            label_names = ", ".join(label_names)
-            predictions_names = ", ".join(predictions_names)
-            title = f"Explanation for true label {label_names} and predicted label {predictions_names}"
-
         fig.update_layout(
             height=self.size * rows,
             width=self.size * cols,
-            margin=dict(t=40, b=40),
+            margin=dict(t=70, b=70),
             title_text=title,
             font=dict(
                 size=20,  # Set the font size here
@@ -400,7 +406,7 @@ class ExplanationVisualizer:
         """
         # create save path if it does not exist
         os.makedirs(self.save_path, exist_ok=True)
-        print(f"Saving figure to {self.save_path}/{name}.{format}")
+        # print(f"Saving figure to {self.save_path}/{name}.{format}")
         self.last_fig.write_image(f"{self.save_path}/{name}.{format}", format=format)
 
     def _preprocess_image(self, image: Union[torch.Tensor, np.ndarray]) -> np.ndarray:
@@ -593,7 +599,11 @@ class ExplanationVisualizer:
         cols = num_plots
         rows = 1
         titles = list(data.keys())
-
+        # remove a_ prefix and _data suffix
+        titles = [
+            title[2:-5] if title.startswith("a_") and title.endswith("_data") else title
+            for title in titles
+        ]
         fig = make_subplots(
             rows=rows,
             cols=cols,
