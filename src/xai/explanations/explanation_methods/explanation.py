@@ -174,7 +174,14 @@ class Explanation:
                 )
 
                 attrs = self._post_process_attribution(attrs)
-
+                if attrs.shape != all_attrs[batch_index, target]:
+                    # Shape mismatch e.g. from GradCAM without interpolation
+                    attrs = torch.nn.functional.interpolate(
+                        attrs,
+                        size=(height, width),
+                        mode="bilinear",
+                        align_corners=False,
+                    )
                 all_attrs[batch_index, target] = attrs.float()
         return all_attrs
 

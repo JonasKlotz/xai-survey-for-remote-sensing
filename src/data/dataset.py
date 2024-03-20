@@ -1,3 +1,4 @@
+import os
 import pickle
 
 import lmdb
@@ -44,9 +45,9 @@ class BaseDataset(Dataset):
 
     def read_csv(self, csv_path):
         # if file exists, read it
-        # if os.path.isfile(csv_path):
-        return pd.read_csv(csv_path, header=None).to_numpy()[:, 0]
-        # raise FileNotFoundError(f"CSV file not found at {csv_path}")
+        if os.path.isfile(csv_path):
+            return pd.read_csv(csv_path, header=None).to_numpy()[:, 0]
+        raise FileNotFoundError(f"CSV file not found at {csv_path}")
 
     def read_labels(self, meta_data_path, patch_names):
         df = pd.read_parquet(meta_data_path)
@@ -92,6 +93,9 @@ class BaseDataset(Dataset):
             "segmentations": segmentation_patch,
         }
 
+    def get_patch_name(self, idx):
+        return self.patch_names[idx]
+
     def _extract_patch_from_lmdb(self, idx, env, lmdb_path):
         """Extract patch from LMDB."""
         if env is None:
@@ -102,7 +106,7 @@ class BaseDataset(Dataset):
                 meminit=False,
                 readahead=True,
             )
-        patch_name = self.patch_names[idx]
+        patch_name = self.get_patch_name(idx)
         with env.begin(write=False) as txn:
             byte_flow = txn.get(patch_name.encode("utf-8"))
         patch = pickle.loads(byte_flow)

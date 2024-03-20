@@ -9,6 +9,8 @@ import torchvision
 from plotly.subplots import make_subplots
 from scipy.spatial import cKDTree
 
+from data.data_utils import parse_batch
+
 
 def _assert_single_image_and_attrs_shape(
     attrs: torch.Tensor, image_tensor: torch.Tensor
@@ -283,10 +285,14 @@ class ExplanationVisualizer:
             self.index_to_name[label.item()]
             for label in torch.nonzero(labels, as_tuple=True)[0]
         ]
-        predictions_names = [
-            self.index_to_name[pred.item()]
-            for pred in torch.nonzero(predictions_tensor, as_tuple=True)[0]
-        ]
+        if predictions_tensor is not None:
+            predictions_names = [
+                self.index_to_name[pred.item()]
+                for pred in torch.nonzero(predictions_tensor, as_tuple=True)[0]
+            ]
+            predictions_names = ", ".join(predictions_names)
+        else:
+            predictions_names = ""
 
         # Create a subplot layout with 1 row and the number of non-empty plots
         if title is None:
@@ -854,6 +860,47 @@ class ExplanationVisualizer:
         mask[top_k_indices] = 1
         mask = mask.reshape(attr_shape)
         return mask
+
+    def visualize_from_batch_dict(self, batch_dict, show=True):
+        """
+
+        Parameters
+        ----------
+        batch_dict
+            From the ExplanationManager
+
+        Returns
+        -------
+
+        """
+        batch = parse_batch(batch_dict)
+        batch_tensor_list = batch[:-1]
+        batch_tensor_list = [torch.tensor(t).squeeze() for t in batch_tensor_list]
+
+        attributions_dict = batch[-1]
+        attributions_dict = {
+            k: torch.tensor(v).squeeze() for k, v in attributions_dict.items()
+        }
+
+        # unpack the batch
+        (
+            image_tensor,
+            true_labels,
+            predicted_label_tensor,
+            segments_tensor,
+            index_tensor,
+        ) = batch_tensor_list
+
+        self.visualize(
+            attribution_dict=attributions_dict,
+            image_tensor=image_tensor,
+            label_tensor=true_labels,
+            segmentation_tensor=segments_tensor,
+            predictions_tensor=predicted_label_tensor,
+            show=show,
+            task=self.cfg["task"],
+        )
+        self.save_last_fig(name=f"sample_{index_tensor}")
 
 
 class NormalizeInverse(torchvision.transforms.Normalize):

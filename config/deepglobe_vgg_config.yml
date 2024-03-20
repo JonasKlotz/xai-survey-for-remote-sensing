@@ -19,12 +19,12 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  images_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/patches.lmdb"
+  images_lmdb_path: "/home/jonasklotz/Studys/MASTERS/XAI/results/deepglobe_vgg_lmdb_notcompleted/deeplift.lmdb"
   labels_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/labels.parquet"
   train_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_train.csv"
   val_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_val.csv"
   test_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_test.csv"
-  segmentations_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
+  segmentations_lmdb_path: "/home/jonasklotz/Studys/MASTERS/XAI/results/deepglobe_vgg_lmdb_notcompleted/deeplift.lmdb"
 
 
   batch_size: 8 #128

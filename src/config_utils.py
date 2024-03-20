@@ -2,9 +2,12 @@ import os
 from datetime import datetime
 
 import yaml
+import torch
+
+from utility.cluster_logging import logger
 
 
-def parse_config(config_path, project_root):
+def parse_config(config_path, project_root, debug=False):
     """
     Parse the config file and add important paths to the config dictionary.
     Parameters
@@ -18,7 +21,30 @@ def parse_config(config_path, project_root):
     """
     configs = load_yaml(config_path)
     configs = add_important_paths_to_cfg(configs, project_root)
+    configs = more_parsing(configs, project_root)
     return configs
+
+
+def more_parsing(general_config, debug):
+    general_config["debug"] = debug
+
+    # print all cuda devices
+    logger.debug(f"Available cuda devices: {torch.cuda.device_count()}")
+    for i in range(torch.cuda.device_count()):
+        logger.debug(f"Device {i}: {torch.cuda.get_device_name(i)}")
+        logger.debug(
+            f"Device {i} memory: {torch.cuda.get_device_properties(i)}"
+            f"total_memory: {torch.cuda.get_device_properties(i).total_memory}"
+        )
+
+    general_config["device"] = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
+
+    general_config["load_from_zarr"] = (
+        debug and general_config["dataset_name"] == "deepglobe"
+    )
+    return general_config
 
 
 def load_yaml(config_path):

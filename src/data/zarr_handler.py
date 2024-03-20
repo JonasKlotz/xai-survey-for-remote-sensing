@@ -136,6 +136,9 @@ class ZarrGroupDataset(Dataset):
             return self.filter_keys
         return self.zarr_group.keys()
 
+    def get_patch_name(self, idx):
+        return idx
+
 
 def get_zarr_dataloader(
     cfg: dict,

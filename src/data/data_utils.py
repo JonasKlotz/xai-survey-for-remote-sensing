@@ -254,7 +254,7 @@ def _parse_dataloader_batch(batch: dict):
 
 def _parse_zarr_batch(batch: dict):
     tmp_batch = batch.copy()
-    # batch_dict = dict(zip(keys, batch))
+    tmp_batch = {k: torch.tensor(v) for k, v in tmp_batch.items()}
     image_tensor = tmp_batch.pop("x_data").numpy(force=True)
     label_tensor = tmp_batch.pop("y_data").numpy(force=True)
     predicted_label_tensor = tmp_batch.pop("y_pred_data").numpy(force=True)
