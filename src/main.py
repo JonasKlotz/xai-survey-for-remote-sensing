@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(project_root)
@@ -32,11 +33,11 @@ def main(
     import torch.multiprocessing  # noqa: E402
 
     from src.training.train import train  # noqa: E402
-    from src.xai.explanations.generate_explanations import generate_explanations  # noqa: E402
     from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods  # noqa: E402
     from utility.cluster_logging import logger  # noqa: E402
     from visualization.visualize import visualize  # noqa: E402
     from xai.explanations.debug_explanations import debug_explanations  # noqa: E402
+    from cutmix.create_xai_masks import generate_xai_masks
 
     # Fix all seeds with lightning
     pl.seed_everything(42)
@@ -90,8 +91,8 @@ def main(
         visualize(general_config)
 
     if explanations:
-        generate_explanations(general_config)
-
+        # generate_explanations(general_config)
+        generate_xai_masks(general_config)
     if evaluations:
         metrics_config = load_yaml(metrics_config_path)
         evaluate_explanation_methods(

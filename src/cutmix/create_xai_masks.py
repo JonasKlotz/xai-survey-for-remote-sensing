@@ -4,12 +4,9 @@ import lmdb
 import numpy as np
 import pytorch_lightning as pl  # noqa: E402
 import torch
-import torch.nn as nn
 import tqdm
 import sys
 import os
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from config_utils import parse_config
 from data.lmdb_handler import LMDBDataHandler
@@ -53,7 +50,6 @@ def generate_xai_masks(cfg):
     logger.debug(f"Using device: {cfg['device']}")
     cfg["method"] = "explain"
     cfg["data"]["num_workers"] = 0
-    cfg["data"]["batch_size"] = 8  # for debugging
 
     cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="train")
 
@@ -63,7 +59,7 @@ def generate_xai_masks(cfg):
 
     explanation_manager = ExplanationsManager(cfg, model, save=False)
     segmentation_handler_dict = _create_lmdb_handlers(cfg, explanation_manager)
-
+    i = 0
     for batch in tqdm.tqdm(data_loader):
         (
             features,
@@ -81,6 +77,9 @@ def generate_xai_masks(cfg):
             segmentation_handler_dict,
             explanation_manager.explanations.keys(),
         )
+        if i > 1500:
+            break
+        i += 1
 
 
 def save_outputs(seg_lmdb_path: str, outputs, threshold: float) -> None:
@@ -93,35 +92,11 @@ def save_outputs(seg_lmdb_path: str, outputs, threshold: float) -> None:
                 txn.put(key.encode(), pickle.dumps(xai_mask))
 
 
-def infer_explanations(
-    model: nn.Module,
-    batch_x: torch.Tensor,
-    num_classes: int,
-) -> torch.tensor:
-    target_layers = [model.backbone.features[28]]
-    cam = GradCAM(model=model, target_layers=target_layers)
-    output = []  # (batch, class_maps, h, w)
-
-    for i in tqdm.tqdm(range(len(batch_x))):
-        x_cams = []
-        for cl in range(num_classes):
-            x_cams.append(
-                cam(
-                    input_tensor=batch_x[i : i + 1],  # .cuda(),
-                    targets=[ClassifierOutputTarget(cl)],
-                )[0]
-            )
-        output.append(x_cams)
-
-    output = torch.tensor(output)
-    return output
-
-
 def post_process_output(output: torch.Tensor, batch_y, threshold=0.5):
     output = output.squeeze()
     batch_y = batch_y.squeeze()
     output = output.numpy(force=True)
-    cl_sel = np.invert(batch_y.numpy().astype(bool))
+    cl_sel = np.invert(batch_y.numpy(force=True).astype(bool))
     output[cl_sel, :, :] = 0
     output = (output > threshold).astype(int)
     # rxpand dimension to (batch, class_maps, h, w)
@@ -155,7 +130,7 @@ def _save_segmentations_to_lmdb(
         for idx, write_index in enumerate(range(len(index))):
             attr = attribution_maps[idx]
             label = batch_y[idx]
-            write_index = str(index[write_index].item())
+            write_index = index[write_index].item()
             patch_name = data_loader.dataset.get_patch_name(write_index)
 
             write_attribution_map = post_process_output(
