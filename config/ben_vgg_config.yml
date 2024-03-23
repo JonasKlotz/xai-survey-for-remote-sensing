@@ -21,16 +21,10 @@ explanation_methods:
 data:
   images_lmdb_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/BENv2.lmdb"
   labels_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/lbls.parquet"
-  train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/"
-  val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/"
-  test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/"
-  segmentations_lmdb_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/"
-
-  images_lmdb_path: "/storagecube/tomburgert/datasets/BEN19/Fresh_S2_lmdb.db"
-  labels_path: "/storagecube/tomburgert/datasets/BEN19/ben-s2-metadata_labelvectors.parquet"
-  train_csv: "/storagecube/tomburgert/datasets/BEN19/splits/all_train.csv"
-  test_csv: "/storagecube/tomburgert/datasets/BEN19/splits/all_test.csv"
-
+  train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_train.csv"
+  val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_val.csv"
+  test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_test.csv"
+  segmentations_lmdb_path: None # "/media/storagecube/jonasklotz/BigEarthNet-V2/"
 
   batch_size: 16 #128
   num_workers: 0 # 8

@@ -70,7 +70,9 @@ class ExplanationsManager:
             keys=storage_keys,
         )
 
-    def explain_batch(self, batch: dict, explain_all: bool = False):
+    def explain_batch(
+        self, batch: dict, explain_all: bool = False, explain_true_labels: bool = False
+    ):
         """
         Explain a batch of images.
         Parameters
@@ -91,8 +93,19 @@ class ExplanationsManager:
             _,
         ) = parse_batch(batch)
         features, target = self._to_tensor(features), self._to_tensor(target)
+        # ensure that the model and the input are on the same device
+        features = features.to(self.device)
+        self.model = self.model.to(self.device)
 
         predictions, logits = self.model.prediction_step(features)
+
+        # if we want to generate an explanation for every label
+        if explain_true_labels:
+            explanation_targets = target
+        elif explain_all:
+            explanation_targets = torch.ones(target.shape, device=target.device)
+        else:
+            explanation_targets = predictions
 
         tmp_storage_dict = {
             "x_data": features,
@@ -101,13 +114,9 @@ class ExplanationsManager:
             "s_data": segments,
             "index_data": idx,
         }
-        # if we want to generate an explanation for every label
-        if explain_all:
-            predictions = torch.ones(predictions.shape, device=predictions.device)
-
         # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():
-            batch_attrs = explanation.explain_batch(features, predictions)
+            batch_attrs = explanation.explain_batch(features, explanation_targets)
 
             # save it to zarr
             tmp_storage_dict["a_" + explanation_name + "_data"] = batch_attrs

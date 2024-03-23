@@ -40,7 +40,6 @@ def visualize(cfg: dict):
     ] = f"{cfg['results_path']}/visualizations/{cfg['experiment_name']}"
 
     for i, batch in enumerate(tqdm(data_loader)):
-        #
         batch = parse_batch(batch)
         batch_tensor_list = batch[:-1]
         batch_tensor_list = [torch.tensor(t).squeeze() for t in batch_tensor_list]
@@ -59,15 +58,31 @@ def visualize(cfg: dict):
             index_tensor,
         ) = batch_tensor_list
 
-        explanation_visualizer.visualize(
-            attribution_dict=attributions_dict,
-            image_tensor=image_tensor,
-            label_tensor=true_labels,
-            segmentation_tensor=segments_tensor,
-            predictions_tensor=predicted_label_tensor,
-            show=False,
-            task=cfg["task"],
-        )
+        read_path = "/home/jonasklotz/Studys/MASTERS/XAI/results/first_batch.pth"
+        read_dict = torch.load(read_path, map_location="cpu")
+
+        image_tensors = read_dict["features"]
+        true_labelss = read_dict["targets"]
+        predicted_label_tensors = true_labels
+
+        for k in range(len(image_tensors)):
+            image_tensor = image_tensors[k]
+            true_labels = true_labelss[k]
+            predicted_label_tensor = predicted_label_tensors[k]
+
+            attributions_dict = {}
+            attributions_dict["a_deeplift_data"] = read_dict["segmentations"][k]
+
+            explanation_visualizer.visualize(
+                attribution_dict=attributions_dict,
+                image_tensor=image_tensor,
+                label_tensor=true_labels,
+                segmentation_tensor=segments_tensor,
+                predictions_tensor=predicted_label_tensor,
+                show=True,
+                task=cfg["task"],
+            )
+        break
         explanation_visualizer.save_last_fig(name=f"sample_{index_tensor}")
 
         # explanation_visualizer.visualize_top_k_attributions(

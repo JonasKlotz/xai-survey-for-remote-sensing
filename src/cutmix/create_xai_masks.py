@@ -2,28 +2,12 @@ import pickle
 
 import lmdb
 import numpy as np
-import pytorch_lightning as pl  # noqa: E402
 import torch
 import tqdm
-import sys
 import os
 
 from config_utils import parse_config
 from data.lmdb_handler import LMDBDataHandler
-
-# Fix all seeds with lightning
-pl.seed_everything(42)
-
-
-project_root = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-
-sys.path.append(project_root)
-print(f"Added {project_root} to path.")
-quantus_path = os.path.join(project_root, "src/xai/metrics/Quantus")
-sys.path.append(quantus_path)
-print(f"Added {quantus_path} to path.")
 
 
 from data.data_utils import get_dataloader_from_cfg, parse_batch  # noqa: E402
@@ -35,6 +19,7 @@ from xai.explanations.explanation_manager import ExplanationsManager  # noqa: E4
 def main(
     config_path: str,
 ):
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(project_root, config_path)
 
     general_config = parse_config(config_path, project_root, True)
@@ -99,7 +84,7 @@ def post_process_output(output: torch.Tensor, batch_y, threshold=0.5):
     cl_sel = np.invert(batch_y.numpy(force=True).astype(bool))
     output[cl_sel, :, :] = 0
     output = (output > threshold).astype(int)
-    # rxpand dimension to (batch, class_maps, h, w)
+    # expand dimension to (batch, class_maps, h, w)
     output = np.expand_dims(output, axis=0)
 
     # move cam dimension to last dimension -> (batch, h, w, class_maps)

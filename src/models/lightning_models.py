@@ -1,8 +1,9 @@
-import os
+import os.path
 from abc import abstractmethod
 
 import torch
 import torch.nn as nn
+from einops import einops
 from pytorch_lightning import LightningModule
 from torchvision import models
 from torchvision.models import VGG16_Weights
@@ -47,6 +48,12 @@ class LightningBaseModel(LightningModule):
 
         self.optimizer = None
 
+        self.first_batch_save_path = os.path.join(
+            config["results_path"], config["experiment_name"], "first_batch.pth"
+        )
+        os.makedirs(os.path.dirname(self.first_batch_save_path), exist_ok=True)
+        self.first_batch_saved = False
+
         # unfreeze the model
         if not freeze:
             for param in self.backbone.parameters():
@@ -56,6 +63,14 @@ class LightningBaseModel(LightningModule):
             self.metrics_manager = TrainingMetricsManager(config)
         else:
             self.metrics_manager = None
+        if self.config["setup_explanations"]:
+            self.config["setup_explanations"] = False
+            # hacky cracky shit
+            from models.get_models import get_lightning_vgg
+            from xai.explanations.explanation_manager import ExplanationsManager
+
+            model = get_lightning_vgg(config, self_trained=True, pretrained=False)
+            self.explanation_manager = ExplanationsManager(config, model, save=False)
 
     @abstractmethod
     def get_backbone(self, cfg):
@@ -222,11 +237,7 @@ class LightningBaseModel(LightningModule):
     ##########################################################################################################################################
     def _augment(self, batch):
         # image only augmentation
-        if self.min_aug_area > self.max_aug_area:
-            raise ValueError(
-                f"""The value of max_aug_area: {self.max_aug_area} is less or equal than min_aug_area: {self.min_aug_area},
-                but max_aug_area should be strictly greater than min_aug_area!"""
-            )
+
         self.get_box_version = 1
         self.max_aug_area = 0.5
         self.min_aug_area = 0.1
@@ -234,6 +245,11 @@ class LightningBaseModel(LightningModule):
         self.overhead: int = 10
         self.threshold = -1
 
+        if self.min_aug_area > self.max_aug_area:
+            raise ValueError(
+                f"""The value of max_aug_area: {self.max_aug_area} is less or equal than min_aug_area: {self.min_aug_area},
+                but max_aug_area should be strictly greater than min_aug_area!"""
+            )
         batch = CutMix_Xai(
             batch=batch,
             get_box_version=self.get_box_version,
@@ -247,31 +263,52 @@ class LightningBaseModel(LightningModule):
         return batch
 
     def on_before_batch_transfer(self, batch, dataloader_idx=0):
-        # augment
-        if self.training and self.augment and self.max_aug_epoch > self.current_epoch:
+        if self.training:
+            # generate explanations
+            self.explanation_manager.model.to(self.device)
+            batch["features"].to(self.device)
+            self.explanation_manager.model.eval()
+
+            explanations = self.explanation_manager.explain_batch(
+                batch, explain_all=True
+            )
+            explanation_method_name = list(
+                self.explanation_manager.explanations.keys()
+            )[0]
+            attr = explanations[f"a_{explanation_method_name}_data"]
+            # invert label batcn
+            targets = batch["targets"]
+            broadcasted_targets = targets.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+
+            # null the attributes of the non-target class
+            attr = attr * broadcasted_targets.to(attr.device)
+            # threshold the attributes
+            threshold = 0.5
+            attr = (attr > threshold).int()
+
+            # squeeze everything but the batch dimension
+            attr = attr.squeeze()
+
+            # move cam dimension to last dimension -> (batch, h, w, class_maps) using torch einsum
+            attr = einops.rearrange(attr, "b c h w -> b h w c")
+            # replace segmentations in batch with the explanations
+
+            batch["segmentations"] = attr
+
             batch = self._augment(batch)
 
-            # checking if first batch should be saved
+        # checking if first batch should be saved
+        if self.training and not self.first_batch_saved:
+            print("Save first batch....")
 
-            if (
-                self.first_batch_save_path is not None
-                and self.training
-                and not self.first_batch_saved
-            ):
-                print("Save first batch....")
+            # we dont want to override existing files
+            if os.path.exists(self.first_batch_save_path):
+                raise FileExistsError(
+                    f"The path {self.first_batch_save_path} already exists. Please specify a different location by specifying first_batch_save_path!"
+                )
 
-                # we dont want to override existing files
-                if os.path.exists(self.first_batch_save_path):
-                    raise FileExistsError(
-                        f"The path {self.first_batch_save_path} already exists. Please specify a different location by specifying first_batch_save_path!"
-                    )
-
-                torch.save(batch, self.first_batch_save_path)
-                self.first_batch_saved = True
-
-        if self.track_first_epoch:
-            self.tracked_stats.append(batch[1].sum(axis=0))
-            self.tracked_stats_num_labels.append(batch[1].sum(axis=1))
+            torch.save(batch, self.first_batch_save_path)
+            self.first_batch_saved = True
 
         return batch
 

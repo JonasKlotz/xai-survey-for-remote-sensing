@@ -53,7 +53,7 @@ def train(cfg: dict, gpu: int):
         strategy=strategy,
         gradient_clip_val=1,
         # devices=[gpu],
-        inference_mode=False,  # we dont want nograd during evaluation
+        inference_mode=False,  # we always want gradients for RRR
         # log_every_n_steps=20,
     )
     # tune_trainer(cfg, data_module, model, trainer, tune_learning_rate=True)

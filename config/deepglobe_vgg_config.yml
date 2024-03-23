@@ -11,30 +11,30 @@ pretrained: False
 
 # Explanation parameters
 explanation_methods:
-  - 'lime'
-  - 'lrp'
-  - 'integrated_gradients'
-  - 'gradcam'
+#  - 'lime'
+#  - 'lrp'
+#  - 'integrated_gradients'
+#  - 'gradcam'
   - 'deeplift'
 
 # Dataset parameters
 data:
-  images_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/patches.lmdb"
-  labels_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/labels.parquet"
-  train_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_train.csv"
-  val_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_val.csv"
-  test_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_test.csv"
-  segmentations_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
+    images_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/patches.lmdb"
+    labels_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/labels.parquet"
+    train_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_train.csv"
+    val_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_val.csv"
+    test_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_test.csv"
+    segmentations_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
 
 
-  batch_size: 8 #128
-  num_workers: 8 # 8
-  pin_memory: False
-  force_shuffle: False # shuffle also test loader
+    batch_size: 32 #128
+    num_workers: 8 # 8
+    pin_memory: False
+    force_shuffle: False # shuffle also test loader
 
 
 # Training parameters
-max_epochs: 200
+max_epochs: 20
 learning_rate: 0.025
 momentum: 0.9
 weight_decay: 0.0005

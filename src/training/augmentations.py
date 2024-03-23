@@ -1,10 +1,10 @@
 import random
 from enum import IntEnum
+from typing import Tuple
 
 import numpy as np
 import torch
 from einops import rearrange
-from typing import Tuple
 
 
 def CutMix_Xai(
@@ -20,71 +20,69 @@ def CutMix_Xai(
     The function take a batch = [img_tensors, segmentation_masks, labels] and returns
     a batch with the same shape but the content differs corresponding to the mask.
 
-    It expects the XAI masks tobe parsed as segmentation masks.
-
-
-    Parameters
-    ----------
-    batch
-    threshold
-    get_box_version
-    max_aug_area
-    min_aug_area
-    aug_p
-    overhead
-
-    Returns
-    -------
+    It expects the XAI masks to be parsed as segmentation masks.
 
     """
 
-    if not torch.is_tensor(batch[0]):
-        raise ValueError(
-            f"Expecting batch to be a torch.tensor but its {type(batch[0])}!"
-        )
-    batch[0] = rearrange(batch[0], "b c h w -> b h w c")
+    features = batch["features"]
 
-    # todo: Parse batch into dict format
-    imgs = batch[0].detach().numpy()
-    seg_masks = batch[1].detach().numpy()
-    labels = batch[2]
+    # einsum permutes the dimensions of the tensor
+    features = rearrange(features, "b c h w -> b h w c")
+
+    targets = batch["targets"]
+    segmentations = batch["segmentations"]
 
     x1, x2, y1, y2 = generate_mask(
-        batch=imgs,
+        batch=features,
         get_box_version=get_box_version,
         max_aug_area=max_aug_area,
         min_aug_area=min_aug_area,
         overhead=overhead,
     )
 
-    new_order = np.random.permutation(imgs.shape[0])
+    new_order = np.random.permutation(features.shape[0])
     # its save because of advanced indexing https://numpy.org/doc/stable/user/basics.indexing.html
 
-    new_imgs = imgs[new_order]
+    new_imgs = features[new_order]
 
-    new_seg_masks = seg_masks[new_order]
+    new_seg_masks = segmentations[new_order]
+
     # if labels are not changed we exlcude the multi-labels from derivation function
     not_changed = []
+
     for i, (xx1, xx2, yy1, yy2) in enumerate(zip(x1, x2, y1, y2)):
         if random.random() < aug_p:
             new_xx1, new_xx2, new_yy1, new_yy2 = get_random_box_location(
-                xx2 - xx1, yy2 - yy1, seg_masks[i].shape[:2]
+                xx2 - xx1, yy2 - yy1, segmentations[i].shape[:2]
             )
-            imgs[i][new_xx1:new_xx2, new_yy1:new_yy2] = new_imgs[i][xx1:xx2, yy1:yy2]
-            seg_masks[i][new_xx1:new_xx2, new_yy1:new_yy2] = new_seg_masks[i][
+
+            tmp = new_imgs[i][xx1:xx2, yy1:yy2]
+            features[i][new_xx1:new_xx2, new_yy1:new_yy2] = tmp
+
+            segmentations[i][new_xx1:new_xx2, new_yy1:new_yy2] = new_seg_masks[i][
                 xx1:xx2, yy1:yy2
             ]
         else:
             not_changed.append(i)
-    labels = derive_labels(
-        old_labels=labels,
-        seg_masks=seg_masks,
+
+    targets = derive_labels(
+        old_labels=targets,
+        seg_masks=segmentations,
         not_changed=not_changed,
         threshold=threshold,
     )
-    imgs = torch.from_numpy(imgs)
-    imgs = rearrange(imgs, "b h w c -> b c h w")
-    return [imgs, labels]
+    if isinstance(targets, np.ndarray):
+        targets = torch.from_numpy(targets)
+
+    if isinstance(features, np.ndarray):
+        features = torch.from_numpy(features)
+    features = rearrange(features, "b h w c -> b c h w")
+
+    # overwrite the old values
+    batch["features"] = features
+    batch["targets"] = targets
+
+    return batch
 
 
 def generate_mask(
@@ -186,6 +184,10 @@ def get_box_version1(batch, max_aug_area, min_aug_area, overhead):
 
 def derive_labels(old_labels, seg_masks, not_changed, threshold):
     new_labels = torch.zeros_like(old_labels)
+
+    if isinstance(seg_masks, torch.Tensor):
+        seg_masks = seg_masks.numpy(force=True)
+
     new_labels[np.sum(seg_masks, axis=(1, 2)) > threshold] = 1.0
     new_labels[not_changed] = old_labels[not_changed]
     return new_labels

@@ -114,6 +114,7 @@ class ExplanationVisualizer:
         normalize=True,
         title=None,
     ):
+        # assert that the label and prediction tensors are not
         if task == "multilabel":
             # here we can either supply the labels or the predictions
             self.visualize_multi_label_classification(
@@ -523,6 +524,7 @@ class ExplanationVisualizer:
         plotly.graph_objects.Figure
             Figure object.
         """
+
         # convert to np if tensor
         if isinstance(segmentation, torch.Tensor):
             segmentation = segmentation.cpu().detach().numpy()
