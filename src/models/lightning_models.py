@@ -1,3 +1,4 @@
+import os
 from abc import abstractmethod
 
 import torch
@@ -7,6 +8,7 @@ from torchvision import models
 from torchvision.models import VGG16_Weights
 
 from src.models.interpretable_resnet import get_resnet
+from training.augmentations import CutMix_Xai
 from training.metrics import TrainingMetricsManager
 from training.rrr_loss import RightForRightReasonsLoss
 
@@ -214,6 +216,68 @@ class LightningBaseModel(LightningModule):
     def out_channels(self):
         # dirty hack for quantus input invariance metric, as we have a model wrapper this is necessary
         return self.backbone.features[0].out_channels
+
+    ##########################################################################################################################################
+    ###                                     Functions for the augmentation
+    ##########################################################################################################################################
+    def _augment(self, batch):
+        # image only augmentation
+        if self.min_aug_area > self.max_aug_area:
+            raise ValueError(
+                f"""The value of max_aug_area: {self.max_aug_area} is less or equal than min_aug_area: {self.min_aug_area},
+                but max_aug_area should be strictly greater than min_aug_area!"""
+            )
+        self.get_box_version = 1
+        self.max_aug_area = 0.5
+        self.min_aug_area = 0.1
+        self.aug_p: float = 0.5
+        self.overhead: int = 10
+        self.threshold = -1
+
+        batch = CutMix_Xai(
+            batch=batch,
+            get_box_version=self.get_box_version,
+            max_aug_area=self.max_aug_area,
+            min_aug_area=self.min_aug_area,
+            aug_p=self.aug_p,
+            overhead=self.overhead,
+            threshold=self.threshold,
+        )
+
+        return batch
+
+    def on_before_batch_transfer(self, batch, dataloader_idx=0):
+        # augment
+        if self.training and self.augment and self.max_aug_epoch > self.current_epoch:
+            batch = self._augment(batch)
+
+            # checking if first batch should be saved
+
+            if (
+                self.first_batch_save_path is not None
+                and self.training
+                and not self.first_batch_saved
+            ):
+                print("Save first batch....")
+
+                # we dont want to override existing files
+                if os.path.exists(self.first_batch_save_path):
+                    raise FileExistsError(
+                        f"The path {self.first_batch_save_path} already exists. Please specify a different location by specifying first_batch_save_path!"
+                    )
+
+                torch.save(batch, self.first_batch_save_path)
+                self.first_batch_saved = True
+
+        if self.track_first_epoch:
+            self.tracked_stats.append(batch[1].sum(axis=0))
+            self.tracked_stats_num_labels.append(batch[1].sum(axis=1))
+
+        return batch
+
+    ##########################################################################################################################################
+    ###                                     END Functions for the augmentation
+    ##########################################################################################################################################
 
 
 class LightningResnet(LightningBaseModel):
