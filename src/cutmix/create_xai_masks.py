@@ -35,6 +35,7 @@ def generate_xai_masks(cfg):
     logger.debug(f"Using device: {cfg['device']}")
     cfg["method"] = "explain"
     cfg["data"]["num_workers"] = 0
+    cfg["data"]["batch_size"] = 8
 
     cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="train")
 
@@ -62,7 +63,7 @@ def generate_xai_masks(cfg):
             segmentation_handler_dict,
             explanation_manager.explanations.keys(),
         )
-        if i > 1500:
+        if i > 1200:
             break
         i += 1
 
@@ -83,7 +84,7 @@ def post_process_output(output: torch.Tensor, batch_y, threshold=0.5):
     output = output.numpy(force=True)
     cl_sel = np.invert(batch_y.numpy(force=True).astype(bool))
     output[cl_sel, :, :] = 0
-    output = (output > threshold).astype(int)
+    output = (output > threshold).astype(bool)
     # expand dimension to (batch, class_maps, h, w)
     output = np.expand_dims(output, axis=0)
 
@@ -128,4 +129,6 @@ def _save_segmentations_to_lmdb(
 
 
 if __name__ == "__main__":
-    main(config_path="config/deepglobe_vgg_config.yml")
+    main(
+        config_path="/home/jonasklotz/Studys/MASTERS/XAI/config/deepglobe_vgg_config.yml"
+    )

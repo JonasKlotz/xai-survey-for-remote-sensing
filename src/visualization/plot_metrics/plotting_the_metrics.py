@@ -27,7 +27,9 @@ def main_multilabel():
     metric_2 = "Region Segmentation MORF"
     save_path = "/home/jonasklotz/Studys/MASTERS/Thesis/Final_Results/deepglobe/metrics/df_test.csv"
 
-    visualization_save_dir = "save_path"
+    visualization_save_dir = (
+        "/home/jonasklotz/Studys/MASTERS/Final_Results/deepglobe/temporary"
+    )
 
     # df_full = parse_data(csv_dir)
     # # # save the df to a csv
@@ -48,10 +50,10 @@ def main_multilabel():
 
     df = df_full.drop(columns=["CorrectPrediction", "SampleIndex"])
 
-    df_only_correct = df_full[df_full["CorrectPrediction"] is True]
+    df_only_correct = df_full[df_full["CorrectPrediction"] == True]  # noqa: E712 necessary for filtering
     df_only_correct = df_only_correct.drop(columns=["CorrectPrediction", "SampleIndex"])
 
-    df_only_false = df_full[df_full["CorrectPrediction"] is False]
+    df_only_false = df_full[df_full["CorrectPrediction"] == False]  # noqa: E712 necessary for filtering
     df_only_false = df_only_false.drop(columns=["CorrectPrediction", "SampleIndex"])
 
     df_only_false_grouped = (

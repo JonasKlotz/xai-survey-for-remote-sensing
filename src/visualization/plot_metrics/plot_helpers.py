@@ -381,7 +381,7 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
             x=df_scaled.columns,  # Metrics as x
             y=df_scaled.index,  # Methods as y
             hoverongaps=False,  # Don't allow hovering over gaps
-            colorscale="RdBu_r",
+            colorscale=COLORSCALE,
         )
     )  # You can change the colorscale as needed
     if title_text is None:
