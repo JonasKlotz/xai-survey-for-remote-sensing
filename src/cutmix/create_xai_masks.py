@@ -45,7 +45,7 @@ def generate_xai_masks(cfg):
 
     explanation_manager = ExplanationsManager(cfg, model, save=False)
     segmentation_handler_dict = _create_lmdb_handlers(cfg, explanation_manager)
-    i = 0
+
     for batch in tqdm.tqdm(data_loader):
         (
             features,
@@ -63,9 +63,6 @@ def generate_xai_masks(cfg):
             segmentation_handler_dict,
             explanation_manager.explanations.keys(),
         )
-        if i > 1200:
-            break
-        i += 1
 
 
 def save_outputs(seg_lmdb_path: str, outputs, threshold: float) -> None:
@@ -96,7 +93,7 @@ def post_process_output(output: torch.Tensor, batch_y, threshold=0.5):
 
 def _create_lmdb_handlers(cfg, explanation_manager):
     segmentation_handler_dict = {}
-    base_path = f"{cfg['results_path']}/{cfg['experiment_name']}"
+    base_path = f"/media/storagecube/jonasklotz/{cfg['experiment_name']}"
     os.makedirs(base_path, exist_ok=True)
     for explanation_method_name in explanation_manager.explanations.keys():
         lmdb_path = f"{base_path}/{explanation_method_name}.lmdb"
