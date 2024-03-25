@@ -3,8 +3,11 @@ import os
 import pandas as pd
 from plotly import express as px, graph_objects as go
 from plotly.subplots import make_subplots
+from sklearn.preprocessing import StandardScaler
 
 from quantus import AVAILABLE_METRICS
+
+COLORSCALE = "RdBu_r"
 
 
 def get_method_colors(methods):
@@ -222,6 +225,9 @@ def plot_metrics_comparison_scatter(
 def plot_best_overall_method(
     df_test, all_methods, visualization_save_dir=None, title_text=None, show=True
 ):
+    if title_text is None:
+        title_text = "Number of top scored Metrics per Method"
+
     # calculate mean over all metrics
     df_mean = df_test.groupby(["Method", "Metric"])["Value"].mean().reset_index()
     # count which methods have the highest mean value for each metric
@@ -267,8 +273,6 @@ def plot_best_overall_method(
         width=800,
     )  # Apply colors here
 
-    if title_text is None:
-        title_text = "Number of top scored Metrics per Method"
     # Customize y axis text
     fig.update_yaxes(title_text="Number of top scored Metrics")
     # Customize hover text to display metrics names
@@ -345,3 +349,157 @@ def plot_bar_double_metric(
     plot_generalized(
         df_grouped, "Metric", title_text, visualization_save_dir=visualization_save_dir
     )
+
+
+def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
+    df_grouped = df_full.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    # reorder the df that the columns are the metrics and the rows are the methods
+    df_grouped = df_grouped.pivot(index="Method", columns="Metric", values="Value")
+    # get categories
+    categories = get_metrics_categories(df_full["Metric"].unique())
+    # reorder the columns using the categories dict
+    category_names = sorted(set(categories.values()))
+    categories_lists = {k: [] for k in category_names}
+    for metric, category in categories.items():
+        categories_lists[category].append(metric)
+    # reorder the columns
+    new_columns = [li for sublist in categories_lists.values() for li in sublist]
+    df_grouped = df_grouped[new_columns]
+
+    row_order = ["lime", "gradcam", "deeplift", "integrated", "lrp"]
+    # reorder the rows
+    df_grouped = df_grouped.loc[row_order]
+
+    df_scaled = standart_scale_df(df_grouped)
+    # Convert the DataFrame to a 2D array
+    matrix = df_scaled.values
+
+    # Create the heatmap
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=matrix,
+            x=df_scaled.columns,  # Metrics as x
+            y=df_scaled.index,  # Methods as y
+            hoverongaps=False,  # Don't allow hovering over gaps
+            colorscale="RdBu_r",
+        )
+    )  # You can change the colorscale as needed
+    if title_text is None:
+        title_text = "Standard Scaled Metrics"
+
+    # Update the layout if needed
+    fig.update_layout(
+        title=title_text,
+        xaxis_title="Metrics",
+        yaxis_title="Methods",
+        xaxis={"side": "bottom"},
+    )  # Ensure the x-axis (metrics) is at the top
+
+    categories = get_metrics_categories(df_full["Metric"].unique())
+
+    # Add annotations for each category
+    for i, metric in enumerate(df_scaled.columns):
+        # Assuming you have a function or a way to get the category of a metric
+        category = categories[
+            metric
+        ]  # Assuming 'categories' dictionary maps metrics to their categories
+        fig.add_annotation(
+            x=i,
+            y=1.05,
+            xref="x",
+            yref="paper",
+            text=category,
+            showarrow=False,
+            font=dict(family="Arial", size=12, color="black"),
+            align="center",
+        )
+
+    # Adjust layout to ensure annotations are visible
+    fig.update_layout(margin=dict(t=100))
+
+    save_fig(fig, title_text, visualization_save_dir)
+
+    # Show the figure
+    fig.show()
+
+
+def plot_correlation(results, visualization_save_dir=None, title=None):
+    fig = go.Figure()
+    # Add bars for correlation coefficients
+    fig.add_trace(
+        go.Bar(
+            x=results.index,
+            y=results["Correlation"],
+            marker_color=results["Correlation"],  # Use correlation value for color
+            marker=dict(colorscale=COLORSCALE),  # Specify your desired colorscale here
+            text=results["P-value Text"],  # Use p-value text for hoverinfo
+            hoverinfo="text+y",
+        )
+    )
+    # Highlight the 0 line
+    fig.add_hline(y=0, line_dash="dash", line_color="black")
+    # Annotations for statistical significance
+    for i, row in results.iterrows():
+        if row["Significant"]:  # If significant, add an annotation
+            fig.add_annotation(
+                x=i,
+                y=row["Correlation"],
+                text="*",
+                showarrow=False,
+                yshift=10,
+                font=dict(color="red", size=20),
+            )
+    # Add general annotation for statistical relevance
+    fig.add_annotation(
+        text="* p < 0.05 is statistically significant",
+        xref="paper",
+        yref="paper",
+        x=1,
+        y=1.02,
+        align="right",
+        showarrow=False,
+        font=dict(size=12),
+        xanchor="right",
+        yanchor="bottom",
+    )
+
+    if title is None:
+        title = "Correlation Coefficients with Statistical Significance"
+
+    categories = get_metrics_categories(results.index.unique())
+
+    # Add annotations for each category
+    for i, metric in enumerate(results.index):
+        # Assuming you have a function or a way to get the category of a metric
+        category = categories[
+            metric
+        ]  # Assuming 'categories' dictionary maps metrics to their categories
+        fig.add_annotation(
+            x=i,
+            y=1,
+            xref="x",
+            yref="paper",
+            text=category,
+            showarrow=False,
+            font=dict(family="Arial", size=12, color="black"),
+            align="center",
+        )
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Metric",
+        yaxis_title="Correlation Coefficient",
+        xaxis_tickangle=-45,
+    )
+
+    save_fig(fig, title, visualization_save_dir)
+    fig.show()
+
+
+def standart_scale_df(df):
+    scaler = StandardScaler()
+    df_scaled = df.copy()
+    scaled_data = scaler.fit_transform(df_scaled)
+    df_scaled = pd.DataFrame(scaled_data, columns=df.columns, index=df.index)
+
+    return df_scaled
