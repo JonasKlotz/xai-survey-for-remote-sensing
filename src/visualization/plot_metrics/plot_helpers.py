@@ -382,7 +382,7 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
             y=df_scaled.index,  # Methods as y
             hoverongaps=False,  # Don't allow hovering over gaps
             colorscale=COLORSCALE,
-        )
+        ),
     )  # You can change the colorscale as needed
     if title_text is None:
         title_text = "Standard Scaled Metrics"
@@ -410,12 +410,22 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
             yref="paper",
             text=category,
             showarrow=False,
-            font=dict(family="Arial", size=12, color="black"),
+            font=dict(family="Arial", size=20, color="black"),
             align="center",
         )
 
     # Adjust layout to ensure annotations are visible
     fig.update_layout(margin=dict(t=100))
+
+    # set figure size
+    fig.update_layout(
+        autosize=False,
+        width=2500,
+        height=1000,
+    )
+
+    # increase fontsize
+    fig.update_layout(font=dict(size=20))
 
     save_fig(fig, title_text, visualization_save_dir)
 

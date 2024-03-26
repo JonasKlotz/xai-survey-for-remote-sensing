@@ -13,7 +13,6 @@ def get_model(config: dict, self_trained: bool = False, pretrained: bool = False
             pretrained=pretrained,
         )
     elif config["model_name"] == "vgg":
-        config["setup_explanations"] = True
         return get_lightning_vgg(
             config,
             self_trained=self_trained,

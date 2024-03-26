@@ -63,7 +63,10 @@ class LightningBaseModel(LightningModule):
             self.metrics_manager = TrainingMetricsManager(config)
         else:
             self.metrics_manager = None
-        if self.config["setup_explanations"]:
+
+        # setup explanations if we want to generate them in the training loop
+        self.generate_explanations = config.get("setup_explanations", False)
+        if self.generate_explanations:
             self.config["setup_explanations"] = False
             # hacky cracky shit
             from models.get_models import get_lightning_vgg
@@ -264,37 +267,10 @@ class LightningBaseModel(LightningModule):
 
     def on_before_batch_transfer(self, batch, dataloader_idx=0):
         if self.training:
-            # generate explanations
-            self.explanation_manager.model.to(self.device)
-            batch["features"].to(self.device)
-            self.explanation_manager.model.eval()
-
-            explanations = self.explanation_manager.explain_batch(
-                batch, explain_all=True
-            )
-            explanation_method_name = list(
-                self.explanation_manager.explanations.keys()
-            )[0]
-            attr = explanations[f"a_{explanation_method_name}_data"]
-            # invert label batcn
-            targets = batch["targets"]
-            broadcasted_targets = targets.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-
-            # null the attributes of the non-target class
-            attr = attr * broadcasted_targets.to(attr.device)
-            # threshold the attributes
-            threshold = 0.5
-            attr = (attr > threshold).int()
-
-            # squeeze everything but the batch dimension
-            attr = attr.squeeze()
-
-            # move cam dimension to last dimension -> (batch, h, w, class_maps) using torch einsum
-            attr = einops.rearrange(attr, "b c h w -> b h w c")
-            # replace segmentations in batch with the explanations
-
-            batch["segmentations"] = attr
-
+            if self.generate_explanations:
+                attr = self._generate_explanations_as_masks(batch)
+                batch["segmentations"] = attr
+            # else we use what is provided in the batch
             batch = self._augment(batch)
 
         # checking if first batch should be saved
@@ -311,6 +287,29 @@ class LightningBaseModel(LightningModule):
             self.first_batch_saved = True
 
         return batch
+
+    def _generate_explanations_as_masks(self, batch):
+        # generate explanations
+        self.explanation_manager.model.to(self.device)
+        batch["features"].to(self.device)
+        self.explanation_manager.model.eval()
+        explanations = self.explanation_manager.explain_batch(batch, explain_all=True)
+        explanation_method_name = list(self.explanation_manager.explanations.keys())[0]
+        attr = explanations[f"a_{explanation_method_name}_data"]
+        # invert label batcn
+        targets = batch["targets"]
+        broadcasted_targets = targets.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+        # null the attributes of the non-target class
+        attr = attr * broadcasted_targets.to(attr.device)
+        # threshold the attributes
+        threshold = 0.5
+        attr = (attr > threshold).int()
+        # squeeze everything but the batch dimension
+        attr = attr.squeeze()
+        # move cam dimension to last dimension -> (batch, h, w, class_maps) using torch einsum
+        attr = einops.rearrange(attr, "b c h w -> b h w c")
+        # replace segmentations in batch with the explanations
+        return attr
 
     ##########################################################################################################################################
     ###                                     END Functions for the augmentation
