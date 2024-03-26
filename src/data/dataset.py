@@ -99,6 +99,7 @@ class BaseDataset(Dataset):
     def _extract_patch_from_lmdb(self, idx, env, lmdb_path):
         """Extract patch from LMDB."""
         if env is None:
+            # write_lmdb_keys_to_file(lmdb_path, "lmdb_keys.txt")
             env = lmdb.open(
                 str(lmdb_path),
                 max_dbs=1,
@@ -107,6 +108,9 @@ class BaseDataset(Dataset):
                 meminit=False,
                 readahead=True,
             )
+            with env.begin(write=False) as txn:
+                entries = txn.stat()["entries"]
+                print(f"Found {entries} entries in LMDB.")
 
         patch_name = self.get_patch_name(idx)
         with env.begin(write=False) as txn:
@@ -157,6 +161,7 @@ def write_lmdb_keys_to_file(lmdb_path, output_file_path):
         for key, _ in cursor:
             f.write(f"{key.decode('utf-8')}\n")
     env.close()
+    print(f"Keys written to {output_file_path}")
 
 
 class Ben19Dataset(BaseDataset):

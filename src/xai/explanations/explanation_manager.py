@@ -3,11 +3,14 @@ import torch
 
 from data.data_utils import parse_batch
 from data.zarr_handler import ZarrGroupHandler
+
 from src.xai.explanations.explanation_methods.gradcam_impl import GradCamImpl
 from src.xai.explanations.explanation_methods.ig_impl import IntegratedGradientsImpl
 from src.xai.explanations.explanation_methods.lime_impl import LimeImpl
 from src.xai.explanations.explanation_methods.lrp_impl import LRPImpl
 from xai.explanations.explanation_methods.deeplift_impl import DeepLiftImpl
+from xai.explanations.explanation_methods.guided_gradcam_impl import GuidedGradCamImpl
+from xai.explanations.explanation_methods.occlusion_impl import OcclusionImpl
 
 _explanation_methods = {
     "gradcam": GradCamImpl,
@@ -15,6 +18,8 @@ _explanation_methods = {
     "lime": LimeImpl,
     "lrp": LRPImpl,
     "deeplift": DeepLiftImpl,
+    "guided_gradcam": GuidedGradCamImpl,
+    "occlusion": OcclusionImpl,
 }
 
 
@@ -52,6 +57,7 @@ class ExplanationsManager:
                 num_classes=self.explanations_config["num_classes"],
                 multi_label=self.task == "multilabel",
             )
+
         if not self.save:
             self.storage_handler = None
             return
@@ -94,8 +100,8 @@ class ExplanationsManager:
         ) = parse_batch(batch)
         features, target = self._to_tensor(features), self._to_tensor(target)
         # ensure that the model and the input are on the same device
-        features = features.to(self.device)
-        self.model = self.model.to(self.device)
+        features = features.to(self.device, dtype=torch.float)
+        self.model = self.model.to(self.device, dtype=torch.float)
 
         predictions, logits = self.model.prediction_step(features)
 

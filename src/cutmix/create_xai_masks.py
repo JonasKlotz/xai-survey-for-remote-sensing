@@ -34,8 +34,8 @@ def generate_xai_masks(cfg):
     cfg["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.debug(f"Using device: {cfg['device']}")
     cfg["method"] = "explain"
-    cfg["data"]["num_workers"] = 0
-    cfg["data"]["batch_size"] = 8
+    cfg["data"]["num_workers"] = 1
+    cfg["data"]["batch_size"] = 1
 
     cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="train")
 
@@ -114,10 +114,11 @@ def _save_segmentations_to_lmdb(
         attribution_maps = batch_dict[f"a_{explanation_method_name}_data"]
         index = batch_dict["index_data"]
         batch_y = batch_dict["y_data"]
-        for idx, write_index in enumerate(range(len(index))):
+        print(f"Index is {index}")
+        for idx, write_index in enumerate(index):
             attr = attribution_maps[idx]
             label = batch_y[idx]
-            write_index = index[write_index].item()
+            write_index = write_index.item()
             patch_name = data_loader.dataset.get_patch_name(write_index)
 
             write_attribution_map = post_process_output(
@@ -125,8 +126,11 @@ def _save_segmentations_to_lmdb(
             )
 
             lmdb_handler = segmentation_handler_dict[explanation_method_name]
-            print(f"Writing {patch_name} to {lmdb_handler.path}")
-            lmdb_handler[patch_name] = write_attribution_map
+            print(
+                f"Writing {patch_name} to {lmdb_handler.path}, with index {write_index}"
+            )
+            with lmdb_handler.env.begin(write=True) as txn:
+                txn.put(patch_name.encode("utf-8"), pickle.dumps(write_attribution_map))
 
 
 # 935318_210 not found

@@ -12,7 +12,7 @@ class DeepLiftImpl(Explanation):
     def __init__(self, model, device, **kwargs):
         super().__init__(model, device, **kwargs)
 
-        self.attributor = DeepLift(model)
+        self.attributor = DeepLift(model, multiply_by_inputs=False)
 
     def explain(
         self, image_tensor: torch.Tensor, target: Union[int, torch.Tensor] = None

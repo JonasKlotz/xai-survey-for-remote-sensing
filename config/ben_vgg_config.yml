@@ -20,11 +20,11 @@ explanation_methods:
 # Dataset parameters
 data:
     images_lmdb_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/BENv2.lmdb"
-  labels_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/lbls.parquet"
-  train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_train.csv"
-  val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_val.csv"
-  test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_test.csv"
-  segmentations_lmdb_path: None # "/media/storagecube/jonasklotz/BigEarthNet-V2/"
+    labels_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/lbls.parquet"
+    train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_train.csv"
+    val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_val.csv"
+    test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_test.csv"
+    segmentations_lmdb_path: None # "/media/storagecube/jonasklotz/BigEarthNet-V2/"
 
   batch_size: 16 #128
   num_workers: 0 # 8

@@ -1,13 +1,13 @@
 from typing import Union
 
 import torch
-from captum.attr import LayerGradCam
+from captum.attr import GuidedGradCam
 
 from src.xai.explanations.explanation_methods.explanation import Explanation
 
 
-class GradCamImpl(Explanation):
-    attribution_name = "gradcam"
+class GuidedGradCamImpl(Explanation):
+    attribution_name = "guided_gradcam"
 
     def __init__(
         self,
@@ -20,8 +20,7 @@ class GradCamImpl(Explanation):
         super().__init__(model, device, **kwargs)
         if layer is None:
             layer = self.get_layer(layer, model)
-
-        self.attributor = LayerGradCam(model, layer)
+        self.attributor = GuidedGradCam(model, layer)
 
     def get_layer(self, layer, model):
         from models.lightning_models import LightningResnet, LightningVGG

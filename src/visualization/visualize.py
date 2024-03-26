@@ -1,7 +1,6 @@
-import torch
 from tqdm import tqdm
 
-from data.data_utils import get_index_to_name, parse_batch
+from data.data_utils import get_index_to_name
 from data.zarr_handler import get_zarr_dataloader
 from models.get_models import get_model
 from utility.cluster_logging import logger
@@ -9,6 +8,7 @@ from visualization.explanation_visualizer import ExplanationVisualizer
 
 import plotly.io as pio
 import plotly.graph_objects as go
+
 
 pio.templates["my_modification"] = go.layout.Template(layout=dict(font={"size": 20}))
 
@@ -35,103 +35,18 @@ def visualize(cfg: dict):
     _ = data_loader.zarr_keys
     index2name = get_index_to_name(cfg)
     explanation_visualizer = ExplanationVisualizer(cfg, model, index2name)
+
+    # explanation_manager = ExplanationsManager(cfg, model)
+
     cfg[
         "cgf_save_path"
     ] = f"{cfg['results_path']}/visualizations/{cfg['experiment_name']}"
 
-    for i, batch in enumerate(tqdm(data_loader)):
-        batch = parse_batch(batch)
-        batch_tensor_list = batch[:-1]
-        batch_tensor_list = [torch.tensor(t).squeeze() for t in batch_tensor_list]
+    for i, batch_dict in enumerate(tqdm(data_loader)):
+        # batch_dict = explanation_manager.explain_batch(batch_dict, explain_all=False)
+        explanation_visualizer.visualize_from_batch_dict(batch_dict, show=True)
 
-        attributions_dict = batch[-1]
-        attributions_dict = {
-            k: torch.tensor(v).squeeze() for k, v in attributions_dict.items()
-        }
+        explanation_visualizer.save_last_fig(name=f"sample_{i}")
 
-        # unpack the batch
-        (
-            image_tensor,
-            true_labels,
-            predicted_label_tensor,
-            segments_tensor,
-            index_tensor,
-        ) = batch_tensor_list
-
-        read_path = "/home/jonasklotz/Studys/MASTERS/XAI/results/first_batch.pth"
-        read_dict = torch.load(read_path, map_location="cpu")
-
-        image_tensors = read_dict["features"]
-        true_labelss = read_dict["targets"]
-        predicted_label_tensors = true_labels
-
-        for k in range(len(image_tensors)):
-            image_tensor = image_tensors[k]
-            true_labels = true_labelss[k]
-            predicted_label_tensor = predicted_label_tensors[k]
-
-            attributions_dict = {}
-            attributions_dict["a_deeplift_data"] = read_dict["segmentations"][k]
-
-            explanation_visualizer.visualize(
-                attribution_dict=attributions_dict,
-                image_tensor=image_tensor,
-                label_tensor=true_labels,
-                segmentation_tensor=segments_tensor,
-                predictions_tensor=predicted_label_tensor,
-                show=True,
-                task=cfg["task"],
-            )
-        break
-        explanation_visualizer.save_last_fig(name=f"sample_{index_tensor}")
-
-        # explanation_visualizer.visualize_top_k_attributions(
-        #     attribution_dict=attributions_dict,
-        #     image_tensor=image_tensor,
-        #     label_tensor=true_labels,
-        #     segmentation_tensor=segments_tensor,
-        #     predictions_tensor=predicted_label_tensor,
-        #     show=True,
-        #     task=cfg["task"],
-        #     k=0.1,
-        #     largest=True,
-        # )
-        # explanation_visualizer.visualize_top_k_attributions(
-        #     attribution_dict=attributions_dict,
-        #     image_tensor=image_tensor,
-        #     label_tensor=true_labels,
-        #     segmentation_tensor=segments_tensor,
-        #     predictions_tensor=predicted_label_tensor,
-        #     show=True,
-        #     task=cfg["task"],
-        #     k=0.9,
-        #     largest=False,
-        # )
-        # k_list = [0.05, 0.1, 0.15, 0.2]
-        # explanation_visualizer.visualize_top_k_attributions_with_predictions(
-        #     attribution_dict=attributions_dict,
-        #     image_tensor=image_tensor,
-        #     label_tensor=true_labels,
-        #     segmentation_tensor=segments_tensor,
-        #     predictions_tensor=predicted_label_tensor,
-        #     show=True,
-        #     k_list=k_list,
-        #     remove_top_k_features=False,
-        #     model=model,
-        #     title="Top k attributions present in the Image",
-        #     save_name=f"sample_{index_tensor}",
-        # )
-
-        # explanation_visualizer.visualize_top_k_attributions_with_predictions(
-        #     attribution_dict=attributions_dict,
-        #     image_tensor=image_tensor,
-        #     label_tensor=true_labels,
-        #     segmentation_tensor=segments_tensor,
-        #     predictions_tensor=predicted_label_tensor,
-        #     show=True,
-        #     k_list=k_list,
-        #     remove_top_k_features=True,
-        #     model=model,
-        #     title="Top k attributions removed from the Image",
-        #     save_name=f"sample_{index_tensor}",
-        # )
+        if i > 10:
+            break

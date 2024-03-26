@@ -32,6 +32,34 @@ def _min_max_normalize(image: np.ndarray):
     return (image - image.min()) / (image.max() - image.min())
 
 
+def scale_tensor(x):
+    """
+    Scale a tensor so that:
+    - Positive values are scaled between 0 and 1.
+    - Negative values are scaled between -1 and 0.
+    """
+    # Separate positive and negative parts
+    positive_part = torch.where(x > 0, x, torch.tensor(0.0))
+    negative_part = torch.where(x < 0, x, torch.tensor(0.0))
+
+    # Scale positive values between 0 and 1
+    max_positive = positive_part.max()
+    if max_positive > 0:
+        positive_scaled = positive_part / max_positive
+    else:
+        positive_scaled = positive_part
+
+    # Scale negative values between 0 and -1
+    min_negative = negative_part.min()
+    if min_negative < 0:
+        negative_scaled = negative_part / abs(min_negative)
+    else:
+        negative_scaled = negative_part
+
+    # Combine scaled positive and negative parts
+    return positive_scaled + negative_scaled
+
+
 def _tensor_to_numpy(image: torch.Tensor):
     if len(image.shape) == 2:  # grayscale (segmentations)
         return image.cpu().detach().numpy()
@@ -251,7 +279,7 @@ class ExplanationVisualizer:
             attrs = [attr for attr in attrs if not np.all(attr == 0)]
 
             data[key] = [
-                go.Heatmap(z=attr, colorscale="RdBu_r", zmin=0, zmax=1)
+                go.Heatmap(z=attr, colorscale="RdBu_r", zmin=-1, zmax=1)
                 for attr in attrs
             ]
 
@@ -291,7 +319,6 @@ class ExplanationVisualizer:
                 self.index_to_name[pred.item()]
                 for pred in torch.nonzero(predictions_tensor, as_tuple=True)[0]
             ]
-            predictions_names = ", ".join(predictions_names)
         else:
             predictions_names = ""
 
@@ -341,7 +368,7 @@ class ExplanationVisualizer:
                 fig.add_trace(plot, row=row_key, col=col_key)
                 remove_axis(fig, row=row_key, col=col_key)
 
-                # Add empty plots to add legends
+        # Add empty plots to add legends
         for i, plot in enumerate(segmentations[1:], start=1):
             fig.add_trace(plot, row=1, col=1)
 
@@ -359,6 +386,10 @@ class ExplanationVisualizer:
                 size=20,  # Set the font size here
             ),
         )
+
+        # enforce the colorscale to be from -1 to 1
+        fig.update_coloraxes(colorscale="RdBu_r", cmin=-1, cmax=1)
+
         fig.update_annotations(font_size=15)
         return fig
 
@@ -463,8 +494,12 @@ class ExplanationVisualizer:
         # if 3 channels sum over channels
         if len(attrs.shape) == 3:
             attrs = attrs.sum(axis=0)
+        relu = False
+        if relu:
+            attrs = torch.nn.functional.relu(attrs)
         if normalize:
-            attrs = _min_max_normalize(attrs)
+            attrs = scale_tensor(attrs)
+
         attrs = _tensor_to_numpy(attrs)
         return attrs
 
@@ -901,6 +936,7 @@ class ExplanationVisualizer:
             predictions_tensor=predicted_label_tensor,
             show=show,
             task=self.cfg["task"],
+            normalize=True,
         )
         self.save_last_fig(name=f"sample_{index_tensor}")
 

@@ -14,8 +14,10 @@ explanation_methods:
 #  - 'lime'
 #  - 'lrp'
 #  - 'integrated_gradients'
-#  - 'gradcam'
   - 'deeplift'
+#  - 'guided_gradcam'
+#  - 'occlusion'
+#  - 'gradcam'
 
 # Dataset parameters
 data:
@@ -24,7 +26,7 @@ data:
     train_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_train.csv"
     val_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_val.csv"
     test_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_test.csv"
-    segmentations_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"#'/media/storagecube/jonasklotz/deeplift.lmdb'#
+    segmentations_lmdb_path: '/media/storagecube/jonasklotz/deeplift.lmdb'# "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"##
 
 
     batch_size: 32 #128
@@ -44,7 +46,7 @@ threshold: 0.5
 
 
 # whether to load the batches from a specific path
-zarr_path: '/home/jonasklotz/Studys/MASTERS/Thesis/Final_Results/deepglobe/deepglobe_vgg_deeplift.zarr'
+zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/metrics/deepglobe_vgg_good/deepglobe_vgg_2024-02-13_12-45-28.zarr'
 #"results/deepglobe_vgg_2024-02-20_16-38-35.zarr"#'results/metrics/deepglobe_vgg_good/deepglobe_vgg_2024-02-13_12-45-28.zarr'
 model_path: 'models/deepglobe_vgg_20EP/final_model.ckpt'
 

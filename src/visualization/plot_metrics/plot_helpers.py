@@ -301,7 +301,9 @@ def get_metrics_categories(metrics):
     return metrics_dict
 
 
-def plot_bar_metric_categories(df_full, categories, visualization_save_dir):
+def plot_bar_metric_categories(
+    df_full, categories, visualization_save_dir, title_prefix=""
+):
     categorie_names = list(set(categories.values()))
     # iterate over the categories and plot the metrics that belong to the category
     for category in categorie_names:
@@ -312,7 +314,7 @@ def plot_bar_metric_categories(df_full, categories, visualization_save_dir):
         # plot the metrics
         plot_bar_metric_comparison(
             df_filtered,
-            title_text=f"Comparison of Methods for {category}",
+            title_text=f"{title_prefix}Comparison of Methods for {category}",
             visualization_save_dir=visualization_save_dir,
         )
 
@@ -366,7 +368,16 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
     new_columns = [li for sublist in categories_lists.values() for li in sublist]
     df_grouped = df_grouped[new_columns]
 
-    row_order = ["lime", "gradcam", "deeplift", "integrated", "lrp"]
+    row_order = ["gradcam", "lime", "deeplift", "integrated", "lrp"]
+    rename_dict = {
+        "gradcam": "Guided GradCAM",
+        "lime": "LIME",
+        "deeplift": "DeepLift",
+        "integrated": "Integrated Gradients",
+        "lrp": "LRP",
+    }
+
+    row_order = [rename_dict[row] for row in row_order]
     # reorder the rows
     df_grouped = df_grouped.loc[row_order]
 
@@ -500,6 +511,13 @@ def plot_correlation(results, visualization_save_dir=None, title=None):
         xaxis_title="Metric",
         yaxis_title="Correlation Coefficient",
         xaxis_tickangle=-45,
+    )
+
+    # set size
+    fig.update_layout(
+        autosize=False,
+        width=2500,
+        height=1000,
     )
 
     save_fig(fig, title, visualization_save_dir)

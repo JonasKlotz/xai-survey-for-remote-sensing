@@ -160,7 +160,7 @@ class Explanation:
             if len(tmp_target.shape) == 0:
                 tmp_target = tmp_target.unsqueeze(0)
 
-            # if the labels ar
+            # if the labels are one-hot-encoded, convert them to indices
             if len(tmp_target) != 1:
                 # The explanation expects the targets not to be one-hot-encoded.
                 tmp_target = torch.nonzero(tmp_target, as_tuple=False)

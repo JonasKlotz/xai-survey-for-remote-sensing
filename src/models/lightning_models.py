@@ -174,13 +174,8 @@ class LightningBaseModel(LightningModule):
         self.trained_epochs = +1
 
     def calc_loss(self, images, segmentations, stage, target):
-        # After 5 epochs we enable the RRR loss, as it is not stable in the beginning
+        y_hat = self.backbone(images)
         if self.loss_name == "rrr" and stage == "train":
-            # enable gradients for the explanation loss (if we are in test mode)
-            # self.requires_grad_(True)
-            # images.requires_grad = True
-
-            y_hat = self.backbone(images)
             loss, normalized_probabilities, explanation_loss = self._calc_rrr_loss(
                 images, segmentations, target, y_hat
             )
@@ -194,7 +189,6 @@ class LightningBaseModel(LightningModule):
             # We have to predict again as some of the explanation methods change the gradients
             _ = self.backbone(images)
         else:
-            y_hat = self.backbone(images)
             loss, normalized_probabilities = self._calc_regular_loss(y_hat, target)
         return loss, normalized_probabilities
 

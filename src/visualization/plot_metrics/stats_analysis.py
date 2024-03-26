@@ -69,7 +69,11 @@ def calculate_correlations_with_significance(
 
 
 def calc_and_plot_correlation(
-    df_full, rrr_df, metric_to_correlate="test_accuracy", visualization_save_dir=None
+    df_full,
+    rrr_df,
+    metric_to_correlate="test_accuracy",
+    visualization_save_dir=None,
+    title_prefix="",
 ):
     corr = calculate_correlations_with_significance(
         df_full, rrr_df, metric_to_correlate=metric_to_correlate
@@ -77,5 +81,5 @@ def calc_and_plot_correlation(
     plot_correlation(
         corr,
         visualization_save_dir=visualization_save_dir,
-        title=f"Correlation of metrics with {metric_to_correlate}",
+        title=f"{title_prefix}Correlation of metrics with {metric_to_correlate}",
     )
