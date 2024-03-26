@@ -7,6 +7,7 @@ import pandas as pd
 from skimage.transform import resize
 from torch.utils.data import Dataset
 
+from data.lmdb_handler import LMDBDataHandler
 from src.data.constants import (
     BEN19_NAME2IDX,
     DEEPGLOBE_NAME2IDX,
@@ -36,6 +37,12 @@ class BaseDataset(Dataset):
         self.images_env = None
 
         self.segmentations_lmdb_path = segmentations_lmdb_path
+        self.segmentations_lmdb_handler = None
+        if segmentations_lmdb_path is not None:
+            self.segmentations_lmdb_handler = LMDBDataHandler(
+                segmentations_lmdb_path, read_only=True
+            )
+
         self.segmentations_env = None
 
         self.patch_names = self.read_csv(csv_path)
@@ -74,13 +81,16 @@ class BaseDataset(Dataset):
         )
 
         segmentation_patch = None
-        if self.segmentations_lmdb_path is not None:
-            (
-                segmentation_patch,
-                self.segmentations_env,
-            ) = self._extract_patch_from_lmdb(
-                idx, self.segmentations_env, self.segmentations_lmdb_path
-            )
+        if self.segmentations_lmdb_handler is not None:
+            # (
+            #     segmentation_patch,
+            #     self.segmentations_env,
+            # ) = self._extract_patch_from_lmdb(
+            #     idx, self.segmentations_env, self.segmentations_lmdb_path
+            # )
+            segmentation_patch = self.segmentations_lmdb_handler[
+                self.get_patch_name(idx)
+            ]
 
         label = self.labels[idx]
         # divide by 255 to get values between 0 and 1
@@ -101,14 +111,20 @@ class BaseDataset(Dataset):
         if env is None:
             env = lmdb.open(
                 str(lmdb_path),
+                max_dbs=1,
                 readonly=True,
                 lock=False,
                 meminit=False,
                 readahead=True,
             )
+            self.db = env.open_db(b"main")
+
         patch_name = self.get_patch_name(idx)
-        with env.begin(write=False) as txn:
+        with env.begin(db=self.db, write=False) as txn:
             byte_flow = txn.get(patch_name.encode("utf-8"))
+        if byte_flow is None:
+            raise ValueError(f"Patch {patch_name} not found in LMDB.")
+
         patch = pickle.loads(byte_flow)
 
         return patch, env
@@ -116,6 +132,42 @@ class BaseDataset(Dataset):
     def __len__(self):
         """Get length of Dataset."""
         return len(self.patch_names)
+
+
+def print_first_5_indices(lmdb_path):
+    """Print the first 5 indices from an LMDB file."""
+    env = lmdb.open(
+        str(lmdb_path),
+        readonly=True,
+        lock=False,
+        meminit=False,
+        readahead=True,
+    )
+
+    with env.begin(write=False) as txn:
+        cursor = txn.cursor()
+        for idx, (key, value) in enumerate(cursor):
+            print(f"Index {idx}: {key.decode('utf-8')}")
+            if idx == 4:  # Stop after printing 5 indices
+                break
+
+    env.close()
+
+
+def write_lmdb_keys_to_file(lmdb_path, output_file_path):
+    """Write all keys from an LMDB database to a file."""
+    env = lmdb.open(
+        str(lmdb_path),
+        readonly=True,
+        lock=False,
+        meminit=False,
+        readahead=True,
+    )
+    with env.begin(write=False) as txn, open(output_file_path, "w") as f:
+        cursor = txn.cursor()
+        for key, _ in cursor:
+            f.write(f"{key.decode('utf-8')}\n")
+    env.close()
 
 
 class Ben19Dataset(BaseDataset):
