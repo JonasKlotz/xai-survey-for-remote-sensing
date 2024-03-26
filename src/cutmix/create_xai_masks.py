@@ -120,9 +120,8 @@ def _save_segmentations_to_lmdb(
                 attr, batch_y=label, threshold=0.5
             )
 
-            segmentation_handler_dict[explanation_method_name].append(
-                patch_name, write_attribution_map
-            )
+            lmdb_handler = segmentation_handler_dict[explanation_method_name]
+            lmdb_handler[patch_name] = write_attribution_map
 
 
 # 935318_210 not found
