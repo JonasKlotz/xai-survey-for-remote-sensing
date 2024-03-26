@@ -12,6 +12,7 @@ class LMDBDataHandler:
             map_size=int(1e12),
             lock=False,
         )
+        self.path = path
         self.read_only = read_only
         self.write_only = write_only
 

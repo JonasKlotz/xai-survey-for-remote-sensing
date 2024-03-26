@@ -125,6 +125,7 @@ def _save_segmentations_to_lmdb(
             )
 
             lmdb_handler = segmentation_handler_dict[explanation_method_name]
+            print(f"Writing {patch_name} to {lmdb_handler.path}")
             lmdb_handler[patch_name] = write_attribution_map
 
 
