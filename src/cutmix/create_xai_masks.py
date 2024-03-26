@@ -64,6 +64,10 @@ def generate_xai_masks(cfg):
             explanation_manager.explanations.keys(),
         )
 
+    for handler in segmentation_handler_dict.values():
+        print(f"Number of entries in {handler.path}: {handler.shape()}")
+    print("Done.")
+
 
 def save_outputs(seg_lmdb_path: str, outputs, threshold: float) -> None:
     path = seg_lmdb_path + f"_{threshold}"
