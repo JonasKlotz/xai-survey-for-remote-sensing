@@ -9,6 +9,7 @@ from visualization.explanation_visualizer import ExplanationVisualizer
 import plotly.io as pio
 import plotly.graph_objects as go
 
+from xai.explanations.explanation_manager import ExplanationsManager
 
 pio.templates["my_modification"] = go.layout.Template(layout=dict(font={"size": 20}))
 
@@ -36,17 +37,17 @@ def visualize(cfg: dict):
     index2name = get_index_to_name(cfg)
     explanation_visualizer = ExplanationVisualizer(cfg, model, index2name)
 
-    # explanation_manager = ExplanationsManager(cfg, model)
+    explanation_manager = ExplanationsManager(cfg, model)
 
     cfg[
         "cgf_save_path"
     ] = f"{cfg['results_path']}/visualizations/{cfg['experiment_name']}"
 
     for i, batch_dict in enumerate(tqdm(data_loader)):
-        # batch_dict = explanation_manager.explain_batch(batch_dict, explain_all=False)
+        batch_dict = explanation_manager.explain_batch(batch_dict, explain_all=False)
         explanation_visualizer.visualize_from_batch_dict(batch_dict, show=True)
 
-        explanation_visualizer.save_last_fig(name=f"sample_{i}")
-
-        if i > 10:
-            break
+        explanation_visualizer.save_last_fig(
+            name=f"sample_{batch_dict["index_data"].item()}", format="png"
+        )
+        break

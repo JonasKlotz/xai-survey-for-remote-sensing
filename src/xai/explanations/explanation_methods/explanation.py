@@ -33,6 +33,7 @@ class Explanation:
         multi_label: bool = False,
         num_classes: int = 6,
         normalize: bool = False,
+        dtype=torch.float32,
     ):
         self.model = model
         self.multilabel = multi_label
@@ -46,6 +47,7 @@ class Explanation:
         self.normalize = normalize
 
         self.device = device
+        self.dtype = dtype
 
     def __call__(self, *args, **kwargs):
         return self.explain(*args, **kwargs)
@@ -111,8 +113,6 @@ class Explanation:
         elif isinstance(target_batch, torch.Tensor):
             target_batch = target_batch.to(self.device)
 
-        self.model.to(self.device)
-
         if self.multilabel:
             return self._handle_mlc_explanation(tensor_batch, target_batch)
 
@@ -146,15 +146,13 @@ class Explanation:
         """
         batchsize, _, height, width = tensor_batch.shape
         # create output tensor without channels (classes * batchsize) x 1 x height x width
-        all_attrs = (
-            torch.zeros((batchsize, self.num_classes, 1, height, width))
-            .to(self.device)
-            .float()
+        all_attrs = torch.zeros((batchsize, self.num_classes, 1, height, width)).to(
+            self.device, dtype=self.dtype
         )
-        self.model.to(self.device)
-        for batch_index in range(batchsize):
-            image_tensor = tensor_batch[batch_index : batch_index + 1].to(self.device)
 
+        for batch_index in range(batchsize):
+            image_tensor = tensor_batch[batch_index : batch_index + 1]
+            image_tensor = image_tensor.to(self.device)
             tmp_target = target_batch[batch_index]
             # if tmp_target is  0 dim tensor expand to 1 dim tensor
             if len(tmp_target.shape) == 0:
@@ -167,6 +165,7 @@ class Explanation:
 
             for target in tmp_target:
                 target = target.to(self.device)
+                image_tensor = image_tensor.to(self.device, dtype=self.dtype)
 
                 attrs = self.explain(
                     image_tensor,
@@ -182,7 +181,7 @@ class Explanation:
                         mode="bilinear",
                         align_corners=False,
                     )
-                all_attrs[batch_index, target] = attrs.float()
+                all_attrs[batch_index, target] = attrs.to(dtype=self.dtype)
         return all_attrs
 
     def _handle_slc_explanation(

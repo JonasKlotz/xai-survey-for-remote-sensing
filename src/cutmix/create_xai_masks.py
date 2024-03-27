@@ -45,7 +45,6 @@ def generate_xai_masks(cfg):
 
     explanation_manager = ExplanationsManager(cfg, model, save=False)
     segmentation_handler_dict = _create_lmdb_handlers(cfg, explanation_manager)
-
     for batch in tqdm.tqdm(data_loader):
         (
             features,
@@ -64,9 +63,28 @@ def generate_xai_masks(cfg):
             explanation_manager.explanations.keys(),
         )
 
-    for handler in segmentation_handler_dict.values():
-        print(f"Number of entries in {handler.path}: {handler.shape()}")
-    print("Done.")
+    # base_path = f"/media/storagecube/jonasklotz/{cfg['experiment_name']}"
+    # # mkdir
+    # os.makedirs(base_path, exist_ok=True)
+    #
+    # lmdb_path = f"{base_path}/deeplift.lmdb"
+    # seg_lmdb = lmdb.open(lmdb_path, lock=False, map_size=int(1e12))
+    # with seg_lmdb.begin(write=True) as txn:
+    #     for batch_dict in results:
+    #         index = batch_dict["index_data"]
+    #         batch_y = batch_dict["y_data"]
+    #         attribution_maps = batch_dict["a_deeplift_data"]
+    #         for idx, write_index in enumerate(index):
+    #             attr = attribution_maps[idx]
+    #             label = batch_y[idx]
+    #             write_index = write_index.item()
+    #             patch_name = data_loader.dataset.get_patch_name(write_index)
+    #
+    #             write_attribution_map = post_process_output(
+    #                 attr, batch_y=label, threshold=0.5
+    #             )
+    #             print(f"Writing {patch_name} to {lmdb_path}, with index {write_index}")
+    #             txn.put(patch_name.encode("utf-8"), pickle.dumps(write_attribution_map))
 
 
 def save_outputs(seg_lmdb_path: str, outputs, threshold: float) -> None:
@@ -101,6 +119,7 @@ def _create_lmdb_handlers(cfg, explanation_manager):
     os.makedirs(base_path, exist_ok=True)
     for explanation_method_name in explanation_manager.explanations.keys():
         lmdb_path = f"{base_path}/{explanation_method_name}.lmdb"
+        logger.debug(f"Creating LMDB for {explanation_method_name} at {lmdb_path}")
         segmentation_handler_dict[explanation_method_name] = LMDBDataHandler(
             path=lmdb_path, write_only=True
         )
@@ -114,7 +133,6 @@ def _save_segmentations_to_lmdb(
         attribution_maps = batch_dict[f"a_{explanation_method_name}_data"]
         index = batch_dict["index_data"]
         batch_y = batch_dict["y_data"]
-        print(f"Index is {index}")
         for idx, write_index in enumerate(index):
             attr = attribution_maps[idx]
             label = batch_y[idx]
@@ -126,9 +144,7 @@ def _save_segmentations_to_lmdb(
             )
 
             lmdb_handler = segmentation_handler_dict[explanation_method_name]
-            print(
-                f"Writing {patch_name} to {lmdb_handler.path}, with index {write_index}"
-            )
+
             with lmdb_handler.env.begin(write=True) as txn:
                 txn.put(patch_name.encode("utf-8"), pickle.dumps(write_attribution_map))
 

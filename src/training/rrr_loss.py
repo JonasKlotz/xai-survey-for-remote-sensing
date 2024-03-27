@@ -87,6 +87,8 @@ class RightForRightReasonsLoss(torch.nn.Module):
         attrs = explanation_method.explain_batch(
             tensor_batch=x_batch, target_batch=y_pred_batch
         )
+        # relu
+        attrs = torch.relu(attrs)
 
         s_batch = segmentations_to_relevancy_map(
             s_batch, num_classes=self.num_classes, dataset_name=self.dataset_name

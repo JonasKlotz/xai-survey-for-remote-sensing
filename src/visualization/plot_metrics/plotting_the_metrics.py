@@ -18,6 +18,14 @@ from visualization.plot_metrics.plot_helpers import (
 )
 from visualization.plot_metrics.stats_analysis import calc_and_plot_correlation
 
+rename_dict = {
+    "gradcam": "Guided GradCAM",
+    "lime": "LIME",
+    "deeplift": "DeepLift",
+    "integrated": "Integrated Gradients",
+    "lrp": "LRP",
+}
+
 
 def main_multilabel():
     # csv_dir = "/home/jonasklotz/Studys/MASTERS/Thesis/Final_Results/deepglobe/metrics"
@@ -46,13 +54,7 @@ def main_multilabel():
     # read the df from the csv
     df_full = pd.read_csv(save_path, sep=";", index_col=None, header=0, dtype=dtypes)
     # Rename the Methods
-    rename_dict = {
-        "gradcam": "Guided GradCAM",
-        "lime": "LIME",
-        "deeplift": "DeepLift",
-        "integrated": "Integrated Gradients",
-        "lrp": "LRP",
-    }
+
     df_full["Method"] = df_full["Method"].replace(rename_dict)
     df_full = recalculate_score_direction(df_full)
     df_full = df_full[df_full["Metric"] != "Monotonicity-Arya"]
@@ -202,7 +204,7 @@ def main_multilabel():
 
 
 def main_singlelabel():
-    res_identifier = "caltech101"
+    dataset_name = "caltech101"
     csv_dir = "/home/jonasklotz/Studys/MASTERS/Final_Results/caltech101/metrics"
 
     # metric_to_plot = "IROF"
@@ -231,30 +233,51 @@ def main_singlelabel():
 
     df_full = recalculate_score_direction(df_full)
     # df = df_full.drop(columns=["SampleIndex"])
+    df_full["Method"] = df_full["Method"].replace(rename_dict)
+    df_full = df_full[df_full["Metric"] != "Monotonicity-Arya"]
 
     plot_matrix(
         df_full,
         visualization_save_dir=visualization_save_dir,
-        title_text=f"{res_identifier}: Metric Matrix",
+        title_text=f"{dataset_name}: Metric Matrix",
     )
+    # categories = get_metrics_categories(df_full["Metric"].unique())
 
-    # plot_best_overall_method(
-    #     df_full,
-    #     all_methods=df_full["Method"].unique(),
-    #     visualization_save_dir=visualization_save_dir,
-    #     title_text=f"{res_identifier}: Best Overall Method",
-    # )
+    rrr_df_path = (
+        "/home/jonasklotz/Studys/MASTERS/Final_Results/caltech101/rrr/rrr_all.csv"
+    )
+    rrr_df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
+    # Rename the Methods
+    rrr_df["Method"] = rrr_df["Method"].replace(rename_dict)
+    for col in rrr_df.columns:
+        if "Method" in col:
+            continue
+
+        calc_and_plot_correlation(
+            df_full,
+            rrr_df,
+            metric_to_correlate=col,
+            visualization_save_dir=visualization_save_dir,
+            title_prefix=f"{dataset_name}: ",
+        )
+
+    plot_best_overall_method(
+        df_full,
+        all_methods=df_full["Method"].unique(),
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Best Overall Method",
+    )
     # categories = get_metrics_categories(df["Metric"].unique())
     #
     # plot_best_metric_per_category(
     #     df_full,
     #     categories,
     #     visualization_save_dir=visualization_save_dir,
-    #     title_text=f"{res_identifier}: Best Metric per Category",
+    #     title_text=f"{dataset_name}: Best Metric per Category",
     # )
 
     # plot_bar_metric_comparison(df,
-    #                            title_text=f"{res_identifier}: Comparison of Methods Across all Metrics",
+    #                            title_text=f"{dataset_name}: Comparison of Methods Across all Metrics",
     #                            visualization_save_dir=visualization_save_dir)
     #
     #
@@ -278,8 +301,8 @@ def log_some_cols(df):
 
 
 if __name__ == "__main__":
-    # main_singlelabel()
-    main_multilabel()
+    main_singlelabel()
+    # main_multilabel()
     # csv_path = "/home/jonasklotz/Studys/MASTERS/XAI/results/caltech101/rrr_loss_acc_results.csv"
     #
     # df = pd.read_csv(csv_path, sep=";", index_col=None, header=0)

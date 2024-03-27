@@ -625,7 +625,7 @@ class ExplanationVisualizer:
         if segmentation_tensor is not None:
             segmentation_map = go.Heatmap(
                 z=np.flipud(segmentation_tensor),
-                zmin=0,
+                zmin=-1,
                 zmax=1,
             )
             data["Segmentation"] = segmentation_map
@@ -667,6 +667,10 @@ class ExplanationVisualizer:
             margin=dict(t=60, b=60),
             title_text=title,
         )
+
+        # enforce the colorscale to be from -1 to 1
+        fig.update_coloraxes(colorscale="RdBu_r", cmin=-1, cmax=1)
+
         self.last_fig = fig
 
         # Show the figure
@@ -938,7 +942,6 @@ class ExplanationVisualizer:
             task=self.cfg["task"],
             normalize=True,
         )
-        self.save_last_fig(name=f"sample_{index_tensor}")
 
 
 class NormalizeInverse(torchvision.transforms.Normalize):

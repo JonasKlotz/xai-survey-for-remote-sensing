@@ -29,16 +29,23 @@ class ExplanationsManager:
         cfg: dict,
         model: torch.nn.Module,
         save=True,
+        dtype=torch.float32,
     ):
         self.explanations_config = cfg
         self.save = save
         self.explanations = {}
         self.explanations_zarr_handler = {}
+
+        self.device = cfg["device"]
+        self.dtype = dtype
+
         self.model = model
         self.model.eval()
+        self.model.to(self.device, dtype=dtype)
 
         self.threshold: float = cfg["threshold"]
         self.device = cfg["device"]
+        self.dtype = dtype
         self.task = cfg["task"]
 
         self._init_explanations()
@@ -99,10 +106,10 @@ class ExplanationsManager:
             _,
         ) = parse_batch(batch)
         features, target = self._to_tensor(features), self._to_tensor(target)
-        # ensure that the model and the input are on the same device
-        features = features.to(self.device, dtype=torch.float)
-        self.model = self.model.to(self.device, dtype=torch.float)
 
+        features = features.to(self.device, dtype=self.dtype)
+
+        # ensure that the model and the input are on the same device
         predictions, logits = self.model.prediction_step(features)
 
         # if we want to generate an explanation for every label

@@ -22,6 +22,10 @@ def CutMix_Xai(
 
     It expects the XAI masks to be parsed as segmentation masks.
 
+    Assert the features to be in the shape [batch_size, channels, height, width]
+    the segmentation masks to be in the shape [batch_size,channel,  height, width, classes] b h w c
+    and the labels to be in the shape [batch_size, classes]
+
     """
 
     features = batch["features"]
@@ -31,6 +35,9 @@ def CutMix_Xai(
 
     targets = batch["targets"]
     segmentations = batch["segmentations"]
+    # test
+    # squeeze the segmentation masks
+    segmentations = segmentations.squeeze()
 
     x1, x2, y1, y2 = generate_mask(
         batch=features,

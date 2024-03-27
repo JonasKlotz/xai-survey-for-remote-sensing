@@ -21,6 +21,7 @@ def main(
     explanations=False,
     evaluations=False,
     visualizations=False,
+    cutmix_explanations=False,
     debug=False,
     debug_explanations_bool=False,
     explanation_methods=None,
@@ -37,7 +38,8 @@ def main(
     from utility.cluster_logging import logger  # noqa: E402
     from visualization.visualize import visualize  # noqa: E402
     from xai.explanations.debug_explanations import debug_explanations  # noqa: E402
-    from cutmix.create_xai_masks import generate_xai_masks
+    from cutmix.create_xai_masks import generate_xai_masks  # noqa: E402
+    from xai.explanations.generate_explanations import generate_explanations  # noqa: E402
 
     # Fix all seeds with lightning
     pl.seed_everything(42)
@@ -91,7 +93,9 @@ def main(
         visualize(general_config)
 
     if explanations:
-        # generate_explanations(general_config)
+        generate_explanations(general_config)
+
+    if cutmix_explanations:
         generate_xai_masks(general_config)
     if evaluations:
         metrics_config = load_yaml(metrics_config_path)
@@ -121,6 +125,11 @@ if __name__ == "__main__":
     # add visualization flag
     parser.add_argument(
         "--visualizations", action="store_true", help="Visualize explanation methods"
+    )
+
+    # add visualization flag
+    parser.add_argument(
+        "--cutmix_explanations", action="store_true", help="Generate explanation masks"
     )
 
     parser.add_argument(
@@ -174,6 +183,7 @@ if __name__ == "__main__":
         explanations=args.explanations,
         evaluations=args.evaluations,
         visualizations=args.visualizations,
+        cutmix_explanations=args.cutmix_explanations,
         debug=args.debug,
         debug_explanations_bool=args.debug_explanations,
         metrics_config_path=args.metrics_config_path,

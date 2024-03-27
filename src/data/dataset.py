@@ -73,15 +73,17 @@ class BaseDataset(Dataset):
             idx, self.images_env, self.lmdb_path
         )
 
-        segmentation_patch = None
-        if self.segmentations_lmdb_path is not None:
-            (
-                segmentation_patch,
-                self.segmentations_env,
-            ) = self._extract_patch_from_lmdb(
-                idx, self.segmentations_env, self.segmentations_lmdb_path
-            )
-
+        segmentation_patch = []
+        try:
+            if self.segmentations_lmdb_path is not None:
+                (
+                    segmentation_patch,
+                    self.segmentations_env,
+                ) = self._extract_patch_from_lmdb(
+                    idx, self.segmentations_env, self.segmentations_lmdb_path
+                )
+        except ValueError:
+            pass
         label = self.labels[idx]
         # divide by 255 to get values between 0 and 1
         patch = patch / 255
@@ -108,9 +110,6 @@ class BaseDataset(Dataset):
                 meminit=False,
                 readahead=True,
             )
-            with env.begin(write=False) as txn:
-                entries = txn.stat()["entries"]
-                print(f"Found {entries} entries in LMDB.")
 
         patch_name = self.get_patch_name(idx)
         with env.begin(write=False) as txn:
