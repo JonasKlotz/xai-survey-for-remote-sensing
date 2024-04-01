@@ -87,6 +87,10 @@ def main(
 
     logger.debug(f"General config: {general_config}")
     if training:
+        if explanation_methods:
+            general_config["data"][
+                "segmentations_lmdb_path"
+            ] = f"/media/storagecube/jonasklotz/deepglobe_vgg_lmdbs/{explanation_methods[0]}.lmdb"
         train(general_config, gpu)
 
     if visualizations:
