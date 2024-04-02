@@ -39,11 +39,6 @@ data:
 # Training parameters
 max_epochs: 20
 learning_rate: 0.025
-momentum: 0.9
-weight_decay: 0.0005
-optimizer: 'sgd'
-scheduler: 'step'
-threshold: 0.5
 
 
 # whether to load the batches from a specific path

@@ -1,6 +1,7 @@
 import os
 
 import torch
+from lightning.pytorch.loggers import WandbLogger
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import (
     StochasticWeightAveraging,
@@ -14,7 +15,7 @@ from models.get_models import get_model
 from utility.cluster_logging import logger
 
 
-def train(cfg: dict, gpu: int):
+def train(cfg: dict, tune=False):
     cfg["method"] = "train"
 
     # load datamodule
@@ -32,6 +33,15 @@ def train(cfg: dict, gpu: int):
         prefix_name = f"{prefix_name}_{cfg['rrr_explanation']}"
 
     cfg["models_path"] = os.path.join(cfg["models_path"], prefix_name)
+
+    # start a new wandb run to track this script
+
+    wandb_logger = WandbLogger(
+        project="xai_for_rs", name=cfg["experiment_name"], log_model="all"
+    )
+
+    # log all hyperparameters
+    wandb_logger.experiment.config.update(cfg)
 
     callbacks = [
         TQDMProgressBar(refresh_rate=20),
@@ -55,7 +65,10 @@ def train(cfg: dict, gpu: int):
         # devices=[gpu],
         inference_mode=False,  # we always want gradients for RRR
         # log_every_n_steps=20,
+        logger=wandb_logger,
     )
+    if tune:
+        tune_trainer(cfg, data_module, model, trainer, tune_batch_size=True)
     # tune_trainer(cfg, data_module, model, trainer, tune_learning_rate=True)
 
     trainer.fit(model, data_module)

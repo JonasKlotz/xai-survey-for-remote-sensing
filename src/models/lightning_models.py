@@ -28,6 +28,8 @@ class LightningBaseModel(LightningModule):
         self.threshold = config["threshold"]
         self.max_epochs = config["max_epochs"]
 
+        self.mode = config.get("mode", "normal")
+
         # Parameters for RRR loss
         self.loss_name = config.get("loss", "regular")
         self.rrr_explanation = config.get("rrr_explanation", None)
@@ -260,6 +262,9 @@ class LightningBaseModel(LightningModule):
         return batch
 
     def on_before_batch_transfer(self, batch, dataloader_idx=0):
+        if self.mode == "normal":
+            return batch
+
         if self.training:
             if self.generate_explanations:
                 attr = self._generate_explanations_as_masks(batch)
