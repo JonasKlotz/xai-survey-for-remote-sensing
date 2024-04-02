@@ -39,6 +39,9 @@ data:
 # Training parameters
 max_epochs: 20
 learning_rate: 0.025
+threshold: 0.5
+momentum: 0.9
+
 
 
 # whether to load the batches from a specific path
