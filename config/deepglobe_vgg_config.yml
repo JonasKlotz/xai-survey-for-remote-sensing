@@ -47,7 +47,7 @@ momentum: 0.9
 # whether to load the batches from a specific path
 zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/metrics/deepglobe_vgg_good/deepglobe_vgg_2024-02-13_12-45-28.zarr'
 #"results/deepglobe_vgg_2024-02-20_16-38-35.zarr"#'results/metrics/deepglobe_vgg_good/deepglobe_vgg_2024-02-13_12-45-28.zarr'
-model_path: 'models/deepglobe_vgg_20EP/final_model.ckpt'
+model_path: 'models_final/deepglobe_vgg_20EP/final_model.ckpt'
 
 
 

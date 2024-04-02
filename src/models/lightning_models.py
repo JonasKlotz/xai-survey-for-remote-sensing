@@ -25,7 +25,7 @@ class LightningBaseModel(LightningModule):
         super(LightningBaseModel, self).__init__()
         self.save_hyperparameters(ignore=["loss"])
         self.task = config["task"]
-        self.threshold = config["threshold"]
+        self.threshold = 0.5
         self.max_epochs = config["max_epochs"]
 
         self.mode = config.get("mode", "normal")
@@ -91,7 +91,7 @@ class LightningBaseModel(LightningModule):
             predictions = torch.argmax(logits, dim=1)
         elif self.task == "multilabel":
             logits = torch.sigmoid(y_hat)
-            predictions = (logits > self.threshold).long()
+            predictions = (logits > 0.5).long()
         else:
             raise ValueError(f"Task {self.task} not supported.")
 
@@ -231,9 +231,9 @@ class LightningBaseModel(LightningModule):
         # dirty hack for quantus input invariance metric, as we have a model wrapper this is necessary
         return self.backbone.features[0].out_channels
 
-    ##########################################################################################################################################
-    ###                                     Functions for the augmentation
-    ##########################################################################################################################################
+    ####################################################################################################################
+    #                                     Functions for the augmentation
+    ####################################################################################################################
     def _augment(self, batch):
         # image only augmentation
 
@@ -310,9 +310,9 @@ class LightningBaseModel(LightningModule):
         # replace segmentations in batch with the explanations
         return attr
 
-    ##########################################################################################################################################
-    ###                                     END Functions for the augmentation
-    ##########################################################################################################################################
+    ####################################################################################################################
+    #                                     END Functions for the augmentation
+    ####################################################################################################################
 
 
 class LightningResnet(LightningBaseModel):

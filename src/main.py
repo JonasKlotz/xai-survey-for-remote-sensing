@@ -12,7 +12,8 @@ quantus_path = os.path.join(project_root, "src/xai/metrics/Quantus")
 sys.path.append(quantus_path)
 print(f"Added {quantus_path} to path.")
 
-app = typer.Typer()
+
+app = typer.Typer(pretty_exceptions_enable=False)
 
 
 @app.command()
