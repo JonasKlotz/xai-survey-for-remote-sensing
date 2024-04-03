@@ -4,6 +4,7 @@ import sys
 import typer
 from typing_extensions import Annotated
 
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(project_root)
@@ -140,6 +141,33 @@ def run_visualize(
     from visualization.visualize import visualize
 
     visualize(general_config)
+
+
+@app.command()
+def run_grid_search(
+    config_path: str,
+    random_seed: Annotated[int, typer.Option()] = 42,
+    debug: Annotated[bool, typer.Option()] = False,
+    explanation_method: Annotated[str, typer.Option()] = None,
+    gpu: Annotated[int, typer.Option()] = 3,
+    mode: Annotated[str, typer.Option()] = "normal",
+    num_trials: Annotated[int, typer.Option()] = 100,
+):
+    from config_utils import setup_everything
+
+    general_config = setup_everything(
+        config_path=config_path,
+        random_seed=random_seed,
+        project_root=project_root,
+        debug=debug,
+        explanation_method=explanation_method,
+        gpu=gpu,
+    )
+    general_config["mode"] = mode
+
+    from cutmix.calculate_threshold import calculate_threshold_for_xai_masks
+
+    calculate_threshold_for_xai_masks(general_config, num_trials=num_trials)
 
 
 if __name__ == "__main__":
