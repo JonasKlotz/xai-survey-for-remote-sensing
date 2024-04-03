@@ -40,7 +40,7 @@ def run_training(
         # Set the path to the lmdb file on the cluster
         general_config["data"][
             "segmentations_lmdb_path"
-        ] = f"/media/storagecube/jonasklotz/deepglobe_vgg_lmdbs/{explanation_method}.lmdb"
+        ] = f"/media/storagecube/jonasklotz/deepglobe_vgg_lmdbs_new/{explanation_method}.lmdb"
 
     if explanation_method and mode == "rrr":
         general_config["rrr_explanation"] = explanation_method

@@ -15,6 +15,7 @@ def CutMix_Xai(
     min_aug_area=0.1,
     aug_p=0.5,
     overhead=10,
+    segmentation_threshold=0.1,
 ):
     """
     The function take a batch = [img_tensors, segmentation_masks, labels] and returns
@@ -30,14 +31,29 @@ def CutMix_Xai(
 
     features = batch["features"]
 
-    # einsum permutes the dimensions of the tensor
     features = rearrange(features, "b c h w -> b h w c")
 
     targets = batch["targets"]
     segmentations = batch["segmentations"]
-    # test
     # squeeze the segmentation masks
     segmentations = segmentations.squeeze()
+
+    # get the mask using the segmentation threshold
+    segmentations_mask = (segmentations > segmentation_threshold).bool()
+
+    # rain check the old targets
+    # my assumption is that the txai segmentation mask does not represent the targets properly
+    # so we derive the targets from the segmentation mask in the style as we do it below for the newly generated
+    # segmentation masks
+    rain_check_target = derive_labels(
+        old_labels=targets,
+        seg_masks=segmentations_mask,
+        not_changed=[],
+        threshold=threshold,
+    )
+
+    # print(f"Rain check: {rain_check_target} vs \nold targets: {targets}")
+    print(f"Error is {torch.sum(rain_check_target != targets)}")
 
     x1, x2, y1, y2 = generate_mask(
         batch=features,
@@ -46,13 +62,13 @@ def CutMix_Xai(
         min_aug_area=min_aug_area,
         overhead=overhead,
     )
-
+    # we generate a permutation
     new_order = np.random.permutation(features.shape[0])
     # its save because of advanced indexing https://numpy.org/doc/stable/user/basics.indexing.html
 
+    # these are the images which we insert into the old images
     new_imgs = features[new_order]
-
-    new_seg_masks = segmentations[new_order]
+    new_seg_masks = segmentations_mask[new_order]
 
     # if labels are not changed we exlcude the multi-labels from derivation function
     not_changed = []
@@ -60,13 +76,13 @@ def CutMix_Xai(
     for i, (xx1, xx2, yy1, yy2) in enumerate(zip(x1, x2, y1, y2)):
         if random.random() < aug_p:
             new_xx1, new_xx2, new_yy1, new_yy2 = get_random_box_location(
-                xx2 - xx1, yy2 - yy1, segmentations[i].shape[:2]
+                xx2 - xx1, yy2 - yy1, segmentations_mask[i].shape[:2]
             )
 
             tmp = new_imgs[i][xx1:xx2, yy1:yy2]
             features[i][new_xx1:new_xx2, new_yy1:new_yy2] = tmp
 
-            segmentations[i][new_xx1:new_xx2, new_yy1:new_yy2] = new_seg_masks[i][
+            segmentations_mask[i][new_xx1:new_xx2, new_yy1:new_yy2] = new_seg_masks[i][
                 xx1:xx2, yy1:yy2
             ]
         else:
@@ -74,7 +90,7 @@ def CutMix_Xai(
 
     targets = derive_labels(
         old_labels=targets,
-        seg_masks=segmentations,
+        seg_masks=segmentations_mask,
         not_changed=not_changed,
         threshold=threshold,
     )
@@ -211,7 +227,10 @@ def derive_labels(old_labels, seg_masks, not_changed, threshold):
         seg_masks = seg_masks.numpy(force=True)
 
     new_labels[np.sum(seg_masks, axis=(1, 2)) > threshold] = 1.0
-    new_labels[not_changed] = old_labels[not_changed]
+
+    if not_changed != []:
+        new_labels[not_changed] = old_labels[not_changed]
+
     return new_labels
 
 

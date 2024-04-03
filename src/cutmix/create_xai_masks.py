@@ -139,9 +139,7 @@ def _save_segmentations_to_lmdb(
             write_index = write_index.item()
             patch_name = data_loader.dataset.get_patch_name(write_index)
 
-            write_attribution_map = post_process_output(
-                attr, batch_y=label, threshold=0.5
-            )
+            write_attribution_map = post_process_output(attr, batch_y=label)
 
             lmdb_handler = segmentation_handler_dict[explanation_method_name]
 

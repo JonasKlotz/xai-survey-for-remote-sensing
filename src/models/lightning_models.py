@@ -245,6 +245,7 @@ class LightningBaseModel(LightningModule):
         self.aug_p: float = 0.5
         self.overhead: int = 10
         self.cutmix_threshold = 10  # TMAP Threshhold
+        self.segmentation_threshold = 0  # 0.1
 
         if self.min_aug_area > self.max_aug_area:
             raise ValueError(
@@ -259,6 +260,7 @@ class LightningBaseModel(LightningModule):
             aug_p=self.aug_p,
             overhead=self.overhead,
             threshold=self.cutmix_threshold,
+            segmentation_threshold=self.segmentation_threshold,
         )
 
         return batch
@@ -328,19 +330,15 @@ class LightningBaseModel(LightningModule):
             row = []
             for class_idx in range(segmentations.shape[1]):
                 caption = f"Class {class_idx}, sum {segmentations[batch_idx, class_idx].sum()}"
-                row.append(
-                    wandb.Image(segmentations[batch_idx, class_idx], caption=caption)
-                )
-                row.append(caption)
+                segmentations_mask = (
+                    segmentations[batch_idx, class_idx] > self.segmentation_threshold
+                ).float()
+                row.append(wandb.Image(segmentations_mask, caption=caption))
             data.append(row)
 
         table = wandb.Table(
             data=data,
-            columns=[
-                item
-                for i in range(segmentations.shape[1])
-                for item in (f"Class {i}", f"Info {i}")
-            ],
+            columns=[f"Class {i}" for i in range(segmentations.shape[1])],
         )
         wandb.log({"Segmentation Masks": table})
 
