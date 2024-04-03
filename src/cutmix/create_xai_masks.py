@@ -97,13 +97,13 @@ def save_outputs(seg_lmdb_path: str, outputs, threshold: float) -> None:
                 txn.put(key.encode(), pickle.dumps(xai_mask))
 
 
-def post_process_output(output: torch.Tensor, batch_y, threshold=0.5):
+def post_process_output(output: torch.Tensor, batch_y):
     output = output.squeeze()
     batch_y = batch_y.squeeze()
     output = output.numpy(force=True)
     cl_sel = np.invert(batch_y.numpy(force=True).astype(bool))
     output[cl_sel, :, :] = 0
-    output = (output > threshold).astype(bool)
+    # output = (output > threshold).astype(bool)
     # expand dimension to (batch, class_maps, h, w)
     output = np.expand_dims(output, axis=0)
 

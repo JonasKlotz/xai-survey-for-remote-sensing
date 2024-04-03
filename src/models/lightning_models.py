@@ -1,8 +1,10 @@
+import json
 import os.path
 from abc import abstractmethod
 
 import torch
 import torch.nn as nn
+import wandb
 from einops import einops
 from pytorch_lightning import LightningModule
 from torchvision import models
@@ -25,7 +27,7 @@ class LightningBaseModel(LightningModule):
         super(LightningBaseModel, self).__init__()
         self.save_hyperparameters(ignore=["loss"])
         self.task = config["task"]
-        self.threshold = 0.5
+        self.cutmix_threshold = 0.5
         self.max_epochs = config["max_epochs"]
 
         self.mode = config.get("mode", "normal")
@@ -210,7 +212,7 @@ class LightningBaseModel(LightningModule):
         if self.task == "multiclass":
             predictions = torch.argmax(normalized_probabilities, dim=1)
         elif self.task == "multilabel":
-            predictions = (normalized_probabilities > self.threshold).long()
+            predictions = (normalized_probabilities > self.cutmix_threshold).long()
         else:
             raise ValueError(f"Task {self.task} not supported.")
         # get prediction values
@@ -242,7 +244,7 @@ class LightningBaseModel(LightningModule):
         self.min_aug_area = 0.1
         self.aug_p: float = 0.5
         self.overhead: int = 10
-        self.threshold = -1
+        self.cutmix_threshold = 10  # TMAP Threshhold
 
         if self.min_aug_area > self.max_aug_area:
             raise ValueError(
@@ -256,7 +258,7 @@ class LightningBaseModel(LightningModule):
             min_aug_area=self.min_aug_area,
             aug_p=self.aug_p,
             overhead=self.overhead,
-            threshold=self.threshold,
+            threshold=self.cutmix_threshold,
         )
 
         return batch
@@ -264,6 +266,9 @@ class LightningBaseModel(LightningModule):
     def on_before_batch_transfer(self, batch, dataloader_idx=0):
         if self.mode == "normal":
             return batch
+        if self.training and not self.first_batch_saved:
+            old_labels = batch["targets"].clone().detach()
+            old_images = batch["features"].clone().detach()
 
         if self.training:
             if self.generate_explanations:
@@ -274,7 +279,13 @@ class LightningBaseModel(LightningModule):
 
         # checking if first batch should be saved
         if self.training and not self.first_batch_saved:
+            new_labels = batch["targets"]
+            new_images = batch["features"]
+
+            self._log_labels(new_labels, old_labels, new_images, old_images)
             print("Save first batch....")
+
+            self.log_xai_segmentations(batch)
 
             # we dont want to override existing files
             if os.path.exists(self.first_batch_save_path):
@@ -286,6 +297,52 @@ class LightningBaseModel(LightningModule):
             self.first_batch_saved = True
 
         return batch
+
+    def _log_labels(self, new_labels, old_labels, new_images, old_images):
+        # Initialize a wandb Table with columns for old and new labels
+        columns = ["Old Labels", "Cutmix Derived Labels", "Old Image", "Cutmix Image"]
+        wandb_table = wandb.Table(columns=columns)
+        # Add rows to the wandb Table
+        for old_label, new_label, new_image, old_image in zip(
+            old_labels, new_labels, new_images, old_images
+        ):
+            wandb_table.add_data(
+                json.dumps(old_label.int().cpu().tolist()),
+                json.dumps(new_label.int().cpu().tolist()),
+                wandb.Image(old_image.cpu(), caption="Old Image"),
+                wandb.Image(new_image.cpu(), caption="Cutmix Image"),
+            )
+        # Log the table to wandb. Ensure your wandb run is initiated before this step.
+        wandb.log({"Batch 1 Label Comparison": wandb_table})
+
+    def log_xai_segmentations(self, batch):
+        if self.mode != "cutmix":
+            return
+
+        segmentations = batch["segmentations"].clone().detach()
+        # squeeze the segmentation masks
+        segmentations = segmentations.squeeze().float()
+        segmentations = einops.rearrange(segmentations, "b h w c -> b c h w")
+        data = []
+        for batch_idx in range(segmentations.shape[0]):
+            row = []
+            for class_idx in range(segmentations.shape[1]):
+                caption = f"Class {class_idx}, sum {segmentations[batch_idx, class_idx].sum()}"
+                row.append(
+                    wandb.Image(segmentations[batch_idx, class_idx], caption=caption)
+                )
+                row.append(caption)
+            data.append(row)
+
+        table = wandb.Table(
+            data=data,
+            columns=[
+                item
+                for i in range(segmentations.shape[1])
+                for item in (f"Class {i}", f"Info {i}")
+            ],
+        )
+        wandb.log({"Segmentation Masks": table})
 
     def _generate_explanations_as_masks(self, batch):
         # generate explanations

@@ -190,6 +190,21 @@ def get_box_version1(batch, max_aug_area, min_aug_area, overhead):
 
 
 def derive_labels(old_labels, seg_masks, not_changed, threshold):
+    """
+    This function derives the new labels from the segmentation masks.
+
+    the threshold here is TMAP in the paper.
+    Parameters
+    ----------
+    old_labels
+    seg_masks
+    not_changed
+    threshold
+
+    Returns
+    -------
+
+    """
     new_labels = torch.zeros_like(old_labels)
 
     if isinstance(seg_masks, torch.Tensor):

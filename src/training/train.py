@@ -43,13 +43,13 @@ def train(cfg: dict, tune=False):
     val_batch = next(iter(val_loader))
     image_tensor, labels_tensor, _, _, index_tensor, _ = parse_batch(val_batch)
     # convert to tensor
-    image_tensor = torch.tensor(image_tensor.clone().detach().cpu().numpy())
-    labels_tensor = torch.tensor(labels_tensor.clone().detach().cpu().numpy())
-    index_tensor = torch.tensor(index_tensor.clone().detach().cpu().numpy())
+    # image_tensor = torch.tensor(image_tensor.clone().detach().cpu().numpy())
+    # labels_tensor = torch.tensor(labels_tensor.clone().detach().cpu().numpy())
+    # index_tensor = torch.tensor(index_tensor.clone().detach().cpu().numpy())
 
-    image_preds_logger = ImagePredictionLogger(
-        image_tensor, labels_tensor, val_indices=index_tensor
-    )
+    # image_preds_logger = ImagePredictionLogger(
+    #     image_tensor, labels_tensor, val_indices=index_tensor
+    # )
 
     # start a new wandb run to track this script
     # group is dataset_mode_explanation_method
@@ -82,7 +82,7 @@ def train(cfg: dict, tune=False):
             dirpath=cfg["training_root_path"],
             filename="{epoch}-{val_accuracy:.2f}",
         ),
-        image_preds_logger,
+        # image_preds_logger,
     ]
     strategy = "auto"
 
