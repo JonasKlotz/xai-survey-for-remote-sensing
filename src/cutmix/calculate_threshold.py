@@ -18,7 +18,7 @@ def calculate_threshold_for_xai_masks(cfg, num_trials=100):
 
     cfg["method"] = "explain"
     cfg["data"]["num_workers"] = 1
-    cfg["data"]["batch_size"] = 1
+    cfg["data"]["batch_size"] = 2
 
     assert cfg["mode"] == "cutmix", f"Mode is not cutmix, but {cfg['mode']}"
     assert cfg["explanation_methods"], "No explanation method provided"
@@ -64,7 +64,7 @@ def objective(trial, cfg, data_loader):
             idx,
             _,
         ) = parse_batch(batch)
-
+        segments = segments.squeeze()
         segmentations_mask = (segments > segmentation_threshold).bool()
         new_targets = derive_labels(
             old_labels=target,
@@ -75,6 +75,8 @@ def objective(trial, cfg, data_loader):
 
         if cfg["task"] == "multilabel":
             new_targets = new_targets.float()
+        target = target.float()
+
         loss_value = loss(target, new_targets)
         total_loss += loss_value.item()
 

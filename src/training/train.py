@@ -100,8 +100,14 @@ def train(cfg: dict, tune=False):
         logger=wandb_logger,
     )
     if tune:
-        tune_trainer(cfg, data_module, model, trainer, tune_batch_size=True)
-    # tune_trainer(cfg, data_module, model, trainer, tune_learning_rate=True)
+        tune_trainer(
+            cfg,
+            data_module,
+            model,
+            trainer,
+            tune_learning_rate=True,
+            tune_batch_size=True,
+        )
 
     trainer.fit(model, data_module)
     model.metrics_manager.plot(stage="val")
@@ -127,7 +133,9 @@ def tune_trainer(
     tuner = Tuner(trainer)
 
     if tune_batch_size:
-        tuner.scale_batch_size(model, datamodule=data_module)
+        tuner.scale_batch_size(
+            model, datamodule=data_module, max_trials=7
+        )  # max batchsize 256
 
     if tune_learning_rate:
         # Run learning rate finder
@@ -139,7 +147,7 @@ def tune_trainer(
 
         # Pick point based on plot, or get suggestion
         new_lr = lr_finder.suggestion()
-        new_lr = max_lr if new_lr > max_lr else new_lr
+        # new_lr = max_lr if new_lr > max_lr else new_lr
 
         logger.debug(f"New learning rate: {new_lr}")
         model.learning_rate = new_lr

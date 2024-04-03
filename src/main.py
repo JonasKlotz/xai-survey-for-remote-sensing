@@ -25,6 +25,7 @@ def run_training(
     explanation_method: Annotated[str, typer.Option()] = None,
     gpu: Annotated[int, typer.Option()] = 3,
     mode: Annotated[str, typer.Option()] = "normal",
+    tune: Annotated[bool, typer.Option()] = False,
 ):
     from config_utils import setup_everything
 
@@ -52,7 +53,7 @@ def run_training(
     general_config["mode"] = mode
     from training.train import train
 
-    train(general_config)
+    train(general_config, tune=tune)
 
 
 @app.command()

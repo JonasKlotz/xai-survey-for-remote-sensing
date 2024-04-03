@@ -41,20 +41,6 @@ def CutMix_Xai(
     # get the mask using the segmentation threshold
     segmentations_mask = (segmentations > segmentation_threshold).bool()
 
-    # rain check the old targets
-    # my assumption is that the txai segmentation mask does not represent the targets properly
-    # so we derive the targets from the segmentation mask in the style as we do it below for the newly generated
-    # segmentation masks
-    rain_check_target = derive_labels(
-        old_labels=targets,
-        seg_masks=segmentations_mask,
-        not_changed=[],
-        threshold=threshold,
-    )
-
-    # print(f"Rain check: {rain_check_target} vs \nold targets: {targets}")
-    print(f"Error is {torch.sum(rain_check_target != targets)}")
-
     x1, x2, y1, y2 = generate_mask(
         batch=features,
         get_box_version=get_box_version,
