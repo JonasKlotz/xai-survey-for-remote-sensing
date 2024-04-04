@@ -11,7 +11,7 @@ from torchvision import models
 from torchvision.models import VGG16_Weights
 
 from src.models.interpretable_resnet import get_resnet
-from training.augmentations import CutMix_Xai
+from training.augmentations import CutMix_Xai, CutMix_segmentations
 from training.metrics import TrainingMetricsManager
 from training.rrr_loss import RightForRightReasonsLoss
 
@@ -238,8 +238,6 @@ class LightningBaseModel(LightningModule):
     ####################################################################################################################
     def _augment(self, batch):
         # image only augmentation
-
-        self.get_box_version = 1
         self.max_aug_area = 0.5
         self.min_aug_area = 0.1
         self.aug_p: float = 0.5
@@ -247,35 +245,68 @@ class LightningBaseModel(LightningModule):
         self.cutmix_threshold = 10  # TMAP Threshhold
         self.segmentation_threshold = 0  # 0.1
 
+        self._assert_augmentations(batch)
+
+        self.cutmix_mode = "segmentations"
+
+        if self.cutmix_mode == "segmentations":
+            batch = CutMix_segmentations(
+                batch=batch,
+                max_aug_area=self.max_aug_area,
+                min_aug_area=self.min_aug_area,
+                aug_p=self.aug_p,
+                overhead=self.overhead,
+            )
+        elif self.cutmix_mode == "XAI":
+            batch = CutMix_Xai(
+                batch=batch,
+                max_aug_area=self.max_aug_area,
+                min_aug_area=self.min_aug_area,
+                aug_p=self.aug_p,
+                overhead=self.overhead,
+                threshold=self.cutmix_threshold,
+                segmentation_threshold=self.segmentation_threshold,
+            )
+
+        return batch
+
+    def _assert_augmentations(self, batch):
         if self.min_aug_area > self.max_aug_area:
             raise ValueError(
                 f"""The value of max_aug_area: {self.max_aug_area} is less or equal than min_aug_area: {self.min_aug_area},
                 but max_aug_area should be strictly greater than min_aug_area!"""
             )
-        batch = CutMix_Xai(
-            batch=batch,
-            get_box_version=self.get_box_version,
-            max_aug_area=self.max_aug_area,
-            min_aug_area=self.min_aug_area,
-            aug_p=self.aug_p,
-            overhead=self.overhead,
-            threshold=self.cutmix_threshold,
-            segmentation_threshold=self.segmentation_threshold,
-        )
-
-        return batch
+        assert (
+            "features" in batch.keys()
+            and "targets" in batch.keys()
+            and "xai_segmentations" in batch.keys()
+        ), f"The batch should contain the keys 'features', 'targets' and 'xai_segmentations'! The keys in the batch are: {batch.keys()}"
 
     def on_before_batch_transfer(self, batch, dataloader_idx=0):
+        """
+        This function is called before the batch is transferred to the device. It is used to augment the batch with
+        cutmix and xai explanations.
+
+        Parameters
+        ----------
+        batch
+        dataloader_idx
+
+        Returns
+        -------
+
+        """
         if self.mode == "normal":
             return batch
         if self.training and not self.first_batch_saved:
             old_labels = batch["targets"].clone().detach()
             old_images = batch["features"].clone().detach()
+            old_segmentations = batch["segmentations"].clone().detach()
 
         if self.training:
             if self.generate_explanations:
                 attr = self._generate_explanations_as_masks(batch)
-                batch["segmentations"] = attr
+                batch["xai_segmentations"] = attr
             # else we use what is provided in the batch
             batch = self._augment(batch)
 
@@ -283,8 +314,16 @@ class LightningBaseModel(LightningModule):
         if self.training and not self.first_batch_saved:
             new_labels = batch["targets"]
             new_images = batch["features"]
+            new_segmentations = batch["segmentations"]
 
-            self._log_labels(new_labels, old_labels, new_images, old_images)
+            self._log_labels(
+                new_labels,
+                old_labels,
+                new_images,
+                old_images,
+                old_segmentations,
+                new_segmentations,
+            )
             print("Save first batch....")
 
             self.log_xai_segmentations(batch)
@@ -300,19 +339,41 @@ class LightningBaseModel(LightningModule):
 
         return batch
 
-    def _log_labels(self, new_labels, old_labels, new_images, old_images):
+    def _log_labels(
+        self,
+        new_labels,
+        old_labels,
+        new_images,
+        old_images,
+        old_segmentations,
+        new_segmentations,
+    ):
         # Initialize a wandb Table with columns for old and new labels
         columns = ["Old Labels", "Cutmix Derived Labels", "Old Image", "Cutmix Image"]
         wandb_table = wandb.Table(columns=columns)
         # Add rows to the wandb Table
-        for old_label, new_label, new_image, old_image in zip(
-            old_labels, new_labels, new_images, old_images
+        for (
+            old_label,
+            new_label,
+            new_image,
+            old_image,
+            old_segmentation,
+            new_segmentation,
+        ) in zip(
+            old_labels,
+            new_labels,
+            new_images,
+            old_images,
+            old_segmentations,
+            new_segmentations,
         ):
             wandb_table.add_data(
                 json.dumps(old_label.int().cpu().tolist()),
                 json.dumps(new_label.int().cpu().tolist()),
                 wandb.Image(old_image.cpu(), caption="Old Image"),
                 wandb.Image(new_image.cpu(), caption="Cutmix Image"),
+                wandb.Image(old_segmentation.cpu(), caption="Old Segmentation"),
+                wandb.Image(new_segmentation.cpu(), caption="Cutmix Segmentation"),
             )
         # Log the table to wandb. Ensure your wandb run is initiated before this step.
         wandb.log({"Batch 1 Label Comparison": wandb_table})
@@ -321,7 +382,7 @@ class LightningBaseModel(LightningModule):
         if self.mode != "cutmix":
             return
 
-        segmentations = batch["segmentations"].clone().detach()
+        segmentations = batch["xai_segmentations"].clone().detach()
         # squeeze the segmentation masks
         segmentations = segmentations.squeeze().float()
         segmentations = einops.rearrange(segmentations, "b h w c -> b c h w")
@@ -356,8 +417,7 @@ class LightningBaseModel(LightningModule):
         # null the attributes of the non-target class
         attr = attr * broadcasted_targets.to(attr.device)
         # threshold the attributes
-        threshold = 0.5
-        attr = (attr > threshold).int()
+        attr = (attr > self.segmentation_threshold).int()
         # squeeze everything but the batch dimension
         attr = attr.squeeze()
         # move cam dimension to last dimension -> (batch, h, w, class_maps) using torch einsum

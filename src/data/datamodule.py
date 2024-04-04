@@ -44,6 +44,7 @@ class DataModule(pl.LightningDataModule):
         transform,
         temporal_views_path=None,
         segmentations_lmdb_path=None,
+        xai_segmentations_lmdb_path=None,
     ):
         raise NotImplementedError
 
@@ -57,6 +58,9 @@ class DataModule(pl.LightningDataModule):
             segmentations_lmdb_path=self.cfg["data"].get(
                 "segmentations_lmdb_path", None
             ),
+            xai_segmentations_lmdb_path=self.cfg["data"].get(
+                "xai_segmentations_lmdb_path", None
+            ),
         )
         self.valset = self.get_dataset(
             lmdb_path=self.cfg["data"]["images_lmdb_path"],
@@ -67,6 +71,9 @@ class DataModule(pl.LightningDataModule):
             segmentations_lmdb_path=self.cfg["data"].get(
                 "segmentations_lmdb_path", None
             ),
+            xai_segmentations_lmdb_path=self.cfg["data"].get(
+                "xai_segmentations_lmdb_path", None
+            ),
         )
         self.testset = self.get_dataset(
             lmdb_path=self.cfg["data"]["images_lmdb_path"],
@@ -76,6 +83,9 @@ class DataModule(pl.LightningDataModule):
             transform=self.transform_te,
             segmentations_lmdb_path=self.cfg["data"].get(
                 "segmentations_lmdb_path", None
+            ),
+            xai_segmentations_lmdb_path=self.cfg["data"].get(
+                "xai_segmentations_lmdb_path", None
             ),
         )
 
@@ -121,6 +131,7 @@ class BigEarthNetDataModule(DataModule):
         transform,
         temporal_views_path=None,
         segmentations_lmdb_path=None,
+        xai_segmentations_lmdb_path=None,
     ):
         return Ben19Dataset(
             lmdb_path,
@@ -129,6 +140,8 @@ class BigEarthNetDataModule(DataModule):
             temporal_views_path,
             transform,
             self.active_classes,
+            segmentations_lmdb_path,
+            xai_segmentations_lmdb_path,
         )
 
     def init_transforms(self):
@@ -221,6 +234,7 @@ class DeepGlobeDataModule(DataModule):
         transform,
         temporal_views_path=None,
         segmentations_lmdb_path=None,
+        xai_segmentations_lmdb_path=None,
     ):
         return DeepGlobeDataset(
             images_lmdb_path=lmdb_path,
@@ -229,6 +243,7 @@ class DeepGlobeDataModule(DataModule):
             transform=transform,
             temporal_views_path=temporal_views_path,
             segmentations_lmdb_path=segmentations_lmdb_path,
+            xai_segmentations_lmdb_path=xai_segmentations_lmdb_path,
         )
 
     def init_transforms(self):
@@ -260,6 +275,7 @@ class EuroSATDataModule(DataModule):
         transform,
         temporal_views_path=None,
         segmentations_lmdb_path=None,
+        xai_segmentations_lmdb_path=None,
     ):
         return EuroSATDataset(
             lmdb_path,
@@ -268,6 +284,7 @@ class EuroSATDataModule(DataModule):
             temporal_views_path,
             transform,
             segmentations_lmdb_path,
+            xai_segmentations_lmdb_path,
         )
 
     def init_transforms(self):

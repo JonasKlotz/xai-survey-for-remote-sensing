@@ -273,3 +273,44 @@ def _parse_zarr_batch(batch: dict):
         index_tensor,
         attributions_dict,
     )
+
+
+def segmask_to_multilabel_torch(segmask, num_classes):
+    """
+    Converts a segmentation mask to a multi-label tensor using PyTorch, without explicit iteration.
+
+    Parameters:
+    segmask (torch.Tensor): The segmentation mask with shape (b, h, w, c), assuming c is 1 for class index.
+    num_classes (int): The number of classes.
+
+    Returns:
+    torch.Tensor: A multi-label tensor with shape (b, num_classes).
+    """
+    # Ensure segmask is a long tensor for use with one_hot
+    segmask = segmask.long()
+
+    # Flatten the mask to simplify one-hot encoding
+    flat_mask = segmask.flatten(start_dim=1)  # Shape: (b, h*w*c)
+
+    # One-hot encode the flattened mask
+    one_hot = torch.nn.functional.one_hot(
+        flat_mask, num_classes=num_classes
+    )  # Shape: (b, h*w*c, num_classes)
+
+    # Reduce along the spatial dimensions to check for the presence of each class
+    # Any non-zero value indicates the presence of the class
+    presence = one_hot.any(dim=1).int()  # Shape: (b, num_classes)
+
+    return presence
+
+
+if __name__ == "__main__":
+    # Example usage
+    b, h, w, c = 1, 3, 3, 1  # Example dimensions
+    num_classes = 5
+    # Creating a mock segmentation mask tensor
+    segmask_example = torch.tensor([[[[0, 0, 0], [0, 0, 1], [2, 1, 1]]]])
+
+    multi_label_tensor = segmask_to_multilabel_torch(segmask_example, num_classes)
+
+    print(multi_label_tensor)

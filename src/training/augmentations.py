@@ -1,16 +1,83 @@
 import random
-from enum import IntEnum
 from typing import Tuple
 
 import numpy as np
 import torch
 from einops import rearrange
 
+from data.data_utils import segmask_to_multilabel_torch
+
+
+def CutMix_segmentations(
+    batch,
+    max_aug_area=0.5,
+    min_aug_area=0.1,
+    aug_p=0.5,
+    overhead=10,
+):
+    """ """
+
+    features = batch["features"]
+    features = rearrange(features, "b c h w -> b h w c")
+    segmentations = batch["segmentations"]
+    segmentations = segmentations.squeeze()
+
+    x1, x2, y1, y2 = generate_mask(
+        batch=features,
+        max_aug_area=max_aug_area,
+        min_aug_area=min_aug_area,
+        overhead=overhead,
+    )
+    # we generate a permutation
+    new_order = np.random.permutation(features.shape[0])
+    # its save because of advanced indexing https://numpy.org/doc/stable/user/basics.indexing.html
+
+    # these are the images which we insert into the old images
+    new_imgs = features[new_order]
+    new_seg_masks = segmentations[new_order]
+
+    # if labels are not changed we exlcude the multi-labels from derivation function
+    not_changed = []
+
+    for i, (xx1, xx2, yy1, yy2) in enumerate(zip(x1, x2, y1, y2)):
+        if random.random() < aug_p:
+            new_xx1, new_xx2, new_yy1, new_yy2 = get_random_box_location(
+                xx2 - xx1, yy2 - yy1, segmentations[i].shape[:2]
+            )
+
+            tmp = new_imgs[i][xx1:xx2, yy1:yy2]
+            features[i][new_xx1:new_xx2, new_yy1:new_yy2] = tmp
+
+            segmentations[i][new_xx1:new_xx2, new_yy1:new_yy2] = new_seg_masks[i][
+                xx1:xx2, yy1:yy2
+            ]
+        else:
+            not_changed.append(i)
+    targets = segmask_to_multilabel_torch(segmentations, num_classes=6).to(
+        dtype=torch.float64
+    )
+    # overwrite the not changed labels
+    targets[not_changed] = batch["targets"][not_changed]
+
+    if isinstance(targets, np.ndarray):
+        targets = torch.from_numpy(targets)
+
+    if isinstance(features, np.ndarray):
+        features = torch.from_numpy(features)
+    features = rearrange(features, "b h w c -> b c h w")
+    segmentations = rearrange(segmentations, "b h w c -> b c h w")
+
+    # overwrite the old values
+    batch["features"] = features
+    batch["targets"] = targets
+    batch["segmentations"] = segmentations
+
+    return batch
+
 
 def CutMix_Xai(
     batch,
     threshold: float,
-    get_box_version=1,
     max_aug_area=0.5,
     min_aug_area=0.1,
     aug_p=0.5,
@@ -28,13 +95,12 @@ def CutMix_Xai(
     and the labels to be in the shape [batch_size, classes]
 
     """
-
     features = batch["features"]
 
     features = rearrange(features, "b c h w -> b h w c")
 
     targets = batch["targets"]
-    segmentations = batch["segmentations"]
+    segmentations = batch["xai_segmentations"]
     # squeeze the segmentation masks
     segmentations = segmentations.squeeze()
 
@@ -43,7 +109,6 @@ def CutMix_Xai(
 
     x1, x2, y1, y2 = generate_mask(
         batch=features,
-        get_box_version=get_box_version,
         max_aug_area=max_aug_area,
         min_aug_area=min_aug_area,
         overhead=overhead,
@@ -94,42 +159,12 @@ def CutMix_Xai(
     return batch
 
 
-def generate_mask(
-    batch, get_box_version=1, max_aug_area=0.5, min_aug_area=0.1, overhead=10
-):
-    # we want to select only the masked values from the batch -> every non selected is 0
-    #    mask = np.zeros_like(batch[:, :, :, 0], dtype=np.bool8)
-
-    if get_box_version == GetBoxVersion.Version1:
-        x1, x2, y1, y2 = get_box_version1(
-            batch, max_aug_area, min_aug_area, overhead=overhead
-        )
-    else:
-        raise NotImplementedError(f"version: {get_box_version} is not implemented yet")
-
-    """
-    # place ones at each selected position (selected by the box)
-    for i, (xx1, xx2, yy1, yy2) in enumerate(zip(x1, x2, y1, y2)):
-        if np.random.random() < aug_p:
-            mask[i, xx1:xx2, yy1:yy2] = 1
-
-    return mask
-    """
+def generate_mask(batch, max_aug_area=0.5, min_aug_area=0.1, overhead=10):
+    x1, x2, y1, y2 = get_box(batch, max_aug_area, min_aug_area, overhead=overhead)
     return x1, x2, y1, y2
 
 
-class GetBoxVersion(IntEnum):
-    """
-    The purpose of this class is to avoid magic numbers in the code
-    and collect the different get_box_versions.
-    """
-
-    Version1 = 1
-    Version2 = 2
-    Version3 = 3
-
-
-def get_box_version1(batch, max_aug_area, min_aug_area, overhead):
+def get_box(batch, max_aug_area, min_aug_area, overhead):
     """
     This function creates coordinates for the box.
     The box will have an area in the open interval (min_aug_area, aug_area).

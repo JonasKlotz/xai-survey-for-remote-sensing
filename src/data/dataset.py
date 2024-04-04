@@ -14,6 +14,20 @@ from src.data.constants import (
 )
 
 
+def read_csv(csv_path):
+    # if file exists, read it
+    if os.path.isfile(csv_path):
+        return pd.read_csv(csv_path, header=None).to_numpy()[:, 0]
+    raise FileNotFoundError(f"CSV file not found at {csv_path}")
+
+
+def read_temporal_views(temporal_views_path):
+    temporal_views = None
+    if temporal_views_path is not None:
+        temporal_views = pd.read_parquet(temporal_views_path)
+    return temporal_views
+
+
 class BaseDataset(Dataset):
     def __init__(
         self,
@@ -23,6 +37,7 @@ class BaseDataset(Dataset):
         temporal_views_path=None,
         transform=None,
         segmentations_lmdb_path=None,
+        xai_segmentations_lmdb_path=None,
     ):
         """
         Parameter
@@ -38,16 +53,13 @@ class BaseDataset(Dataset):
         self.segmentations_lmdb_path = segmentations_lmdb_path
         self.segmentations_env = None
 
-        self.patch_names = self.read_csv(csv_path)
+        self.xai_segmentations_lmdb_path = xai_segmentations_lmdb_path
+        self.xai_segmentations_env = None
+
+        self.patch_names = read_csv(csv_path)
         self.labels = self.read_labels(labels_path, self.patch_names)
         self.transform = transform
-        self.temporal_views = self.read_temporal_views(temporal_views_path)
-
-    def read_csv(self, csv_path):
-        # if file exists, read it
-        if os.path.isfile(csv_path):
-            return pd.read_csv(csv_path, header=None).to_numpy()[:, 0]
-        raise FileNotFoundError(f"CSV file not found at {csv_path}")
+        self.temporal_views = read_temporal_views(temporal_views_path)
 
     def read_labels(self, meta_data_path, patch_names):
         df = pd.read_parquet(meta_data_path)
@@ -57,12 +69,6 @@ class BaseDataset(Dataset):
         string_labels = df_subset.labels.tolist()
         multihot_labels = np.array(list(map(self.convert_to_multihot, string_labels)))
         return multihot_labels
-
-    def read_temporal_views(self, temporal_views_path):
-        temporal_views = None
-        if temporal_views_path is not None:
-            temporal_views = pd.read_parquet(temporal_views_path)
-        return temporal_views
 
     def convert_to_multihot(self, labels):
         raise NotImplementedError
@@ -84,6 +90,20 @@ class BaseDataset(Dataset):
                 )
         except ValueError:
             pass
+
+        xai_segmentation_patch = []
+        try:
+            if self.xai_segmentations_lmdb_path is not None:
+                (
+                    xai_segmentation_patch,
+                    self.xai_segmentations_env,
+                ) = self._extract_patch_from_lmdb(
+                    idx, self.xai_segmentations_env, self.xai_segmentations_lmdb_path
+                )
+        except ValueError:
+            # We don't have XAI segmentations for all patches
+            pass
+
         label = self.labels[idx]
         # divide by 255 to get values between 0 and 1
         patch = patch / 255
@@ -93,6 +113,7 @@ class BaseDataset(Dataset):
             "targets": label,
             "index": idx,
             "segmentations": segmentation_patch,
+            "xai_segmentations": xai_segmentation_patch,
         }
 
     def get_patch_name(self, idx):
@@ -163,6 +184,14 @@ def write_lmdb_keys_to_file(lmdb_path, output_file_path):
     print(f"Keys written to {output_file_path}")
 
 
+def interpolate_bands(bands, img10_shape=(120, 120)):
+    """Interpolate bands. See: https://github.com/lanha/DSen2/blob/master/utils/patches.py."""
+    bands_interp = np.zeros([bands.shape[0]] + img10_shape).astype(np.float32)
+    for i in range(bands.shape[0]):
+        bands_interp[i] = resize(bands[i] / 30000, img10_shape, mode="reflect") * 30000
+    return bands_interp
+
+
 class Ben19Dataset(BaseDataset):
     def __init__(
         self,
@@ -175,6 +204,7 @@ class Ben19Dataset(BaseDataset):
         rgb_only=False,
         discard_empty_labels=True,
         segmentations_lmdb_path=None,
+        xai_segmentations_lmdb_path=None,
     ):
         super().__init__(
             images_lmdb_path,
@@ -226,15 +256,6 @@ class Ben19Dataset(BaseDataset):
         multihot[indices] = 1
         return multihot
 
-    def interpolate_bands(self, bands, img10_shape=[120, 120]):
-        """Interpolate bands. See: https://github.com/lanha/DSen2/blob/master/utils/patches.py."""
-        bands_interp = np.zeros([bands.shape[0]] + img10_shape).astype(np.float32)
-        for i in range(bands.shape[0]):
-            bands_interp[i] = (
-                resize(bands[i] / 30000, img10_shape, mode="reflect") * 30000
-            )
-        return bands_interp
-
     def select_active_classes(self, multihot):
         if self.active_classes is not None:
             multihot = multihot[:, self.active_classes]
@@ -256,7 +277,7 @@ class Ben19Dataset(BaseDataset):
         bands10 = s2_patch.get_stacked_10m_bands()
         bands10 = bands10.astype(np.float32)
         bands20 = s2_patch.get_stacked_20m_bands()
-        bands20 = self.interpolate_bands(bands20)
+        bands20 = interpolate_bands(bands20)
         bands20 = bands20.astype(np.float32)
 
         # put channel to last axis s.t. toTensor can flip them to first axis again
@@ -277,6 +298,7 @@ class DeepGlobeDataset(BaseDataset):
         temporal_views_path=None,
         transform=None,
         segmentations_lmdb_path=None,
+        xai_segmentations_lmdb_path=None,
     ):
         super().__init__(
             images_lmdb_path,
@@ -285,6 +307,7 @@ class DeepGlobeDataset(BaseDataset):
             temporal_views_path,
             transform,
             segmentations_lmdb_path,
+            xai_segmentations_lmdb_path,
         )
 
     def convert_to_multihot(self, labels):
@@ -303,6 +326,7 @@ class EuroSATDataset(BaseDataset):
         temporal_views_path=None,
         transform=None,
         segmentations_lmdb_path=None,
+        xai_segmentations_lmdb_path=None,
     ):
         super().__init__(
             images_lmdb_path,
