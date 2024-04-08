@@ -15,10 +15,11 @@ def CutMix_segmentations(
     aug_p=0.5,
     overhead=10,
 ):
-    """ """
+    """Calculates CutMix using the label information from the segmentation masks."""
 
     features = batch["features"]
     features = rearrange(features, "b c h w -> b h w c")
+
     segmentations = batch["segmentations"]
     segmentations = segmentations.squeeze()
 
@@ -36,7 +37,7 @@ def CutMix_segmentations(
     new_imgs = features[new_order]
     new_seg_masks = segmentations[new_order]
 
-    # if labels are not changed we exlcude the multi-labels from derivation function
+    # if labels are not changed we exclude the multi-labels from derivation function
     not_changed = []
 
     for i, (xx1, xx2, yy1, yy2) in enumerate(zip(x1, x2, y1, y2)):
@@ -53,8 +54,9 @@ def CutMix_segmentations(
             ]
         else:
             not_changed.append(i)
+
     targets = segmask_to_multilabel_torch(segmentations, num_classes=6).to(
-        dtype=torch.float64
+        dtype=batch["targets"].dtype
     )
     # overwrite the not changed labels
     targets[not_changed] = batch["targets"][not_changed]
@@ -65,7 +67,6 @@ def CutMix_segmentations(
     if isinstance(features, np.ndarray):
         features = torch.from_numpy(features)
     features = rearrange(features, "b h w c -> b c h w")
-    segmentations = rearrange(segmentations, "b h w c -> b c h w")
 
     # overwrite the old values
     batch["features"] = features
@@ -281,3 +282,65 @@ def random_coords(max_length: int, should_length: int, start: int = 0) -> Tuple[
     a1 = random.randrange(start, max_length - should_length)
     a2 = a1 + should_length
     return a1, a2
+
+
+def get_box_vectorized(batch, max_aug_area, min_aug_area, overhead):
+    # Ensuring inputs are in torch format for vectorized operations
+    batch_size, a, b, _ = batch.shape
+
+    # Vectorized generation of random start and end points
+    x1, x2 = torch.randint(0, a, (2, overhead * batch_size))
+    y1, y2 = torch.randint(0, b, (2, overhead * batch_size))
+
+    # Ensure x2 is always greater than x1 (and similarly for y1, y2)
+    x1, x2 = torch.min(x1, x2), torch.max(x1, x2)
+    y1, y2 = torch.min(y1, y2), torch.max(y1, y2)
+
+    # Compute areas and filter based on min and max area constraints
+    areas = (x2 - x1) * (y2 - y1) / (a * b)
+    valid = (areas > min_aug_area) & (areas < max_aug_area)
+
+    # Ensure we have at least one valid box per image in the batch
+    while valid.view(batch_size, overhead).sum(dim=1).min() == 0:
+        # Regenerate for invalid ones only
+        not_valid_idx = valid.view(batch_size, overhead).sum(dim=1) == 0
+        nv_size = not_valid_idx.sum() * overhead
+
+        # Regenerate points for not valid cases
+        x1[not_valid_idx], x2[not_valid_idx] = torch.randint(0, a, (2, nv_size))
+        y1[not_valid_idx], y2[not_valid_idx] = torch.randint(0, b, (2, nv_size))
+
+        x1, x2 = torch.min(x1, x2), torch.max(x1, x2)
+        y1, y2 = torch.min(y1, y2), torch.max(y1, y2)
+
+        areas = (x2 - x1) * (y2 - y1) / (a * b)
+        valid = (areas > min_aug_area) & (areas < max_aug_area)
+
+    # Select the first valid set of points for each image
+    x1 = x1[valid][:batch_size]
+    x2 = x2[valid][:batch_size]
+    y1 = y1[valid][:batch_size]
+    y2 = y2[valid][:batch_size]
+
+    return x1, x2, y1, y2
+
+
+if __name__ == "__main__":
+    # Test the vectorized function
+    batch_size, channels, height, width = 10, 3, 224, 224
+    max_aug_area = 0.5
+    min_aug_area = 0.1
+    overhead = 10
+
+    # Original method setup
+    batch = torch.randn(batch_size, channels, height, width)
+    x1, x2, y1, y2 = get_box(batch, max_aug_area, min_aug_area, overhead)
+
+    # Vectorized method setup
+    x1_v, x2_v, y1_v, y2_v = get_box_vectorized(
+        batch, max_aug_area, min_aug_area, overhead
+    )
+
+    # Compare outputs (This is illustrative. Exact matching might not be possible due to randomness)
+    print("Original:", x1, x2, y1, y2)
+    print("Vectorized:", x1_v, x2_v, y1_v, y2_v)

@@ -26,6 +26,7 @@ def run_training(
     gpu: Annotated[int, typer.Option()] = 3,
     mode: Annotated[str, typer.Option()] = "normal",
     tune: Annotated[bool, typer.Option()] = False,
+    normal_segmentations: Annotated[bool, typer.Option()] = False,
 ):
     from config_utils import setup_everything
 
@@ -49,6 +50,9 @@ def run_training(
 
     if mode != "normal":
         general_config["experiment_name"] += f"_{mode}"
+    if normal_segmentations and mode == "cutmix":
+        general_config["experiment_name"] += "_normal_segmentations"
+        general_config["normal_segmentations"] = True
 
     general_config["mode"] = mode
     from training.train import train

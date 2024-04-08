@@ -14,6 +14,7 @@ from src.models.interpretable_resnet import get_resnet
 from training.augmentations import CutMix_Xai, CutMix_segmentations
 from training.metrics import TrainingMetricsManager
 from training.rrr_loss import RightForRightReasonsLoss
+from utility.cluster_logging import logger
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -44,6 +45,15 @@ class LightningBaseModel(LightningModule):
         self.input_channels = config["input_channels"]
         self.num_classes = config["num_classes"]
 
+        if self.mode == "cutmix":
+            # Parameters for the cutmix augmentation
+            if config.get("normal_segmentations", False):
+                self.cutmix_mode = "segmentations"
+            else:
+                self.cutmix_mode = "XAI"
+
+            logger.debug(f"Cutmix mode: {self.cutmix_mode}")
+
         self.backbone = self.get_backbone(config)
 
         self.trained_epochs = 0
@@ -60,6 +70,7 @@ class LightningBaseModel(LightningModule):
 
         # unfreeze the model
         if not freeze:
+            logger.debug("Unfreezing the model")
             for param in self.backbone.parameters():
                 param.requires_grad = True
 
@@ -247,8 +258,6 @@ class LightningBaseModel(LightningModule):
 
         self._assert_augmentations(batch)
 
-        self.cutmix_mode = "segmentations"
-
         if self.cutmix_mode == "segmentations":
             batch = CutMix_segmentations(
                 batch=batch,
@@ -357,23 +366,17 @@ class LightningBaseModel(LightningModule):
             new_label,
             new_image,
             old_image,
-            old_segmentation,
-            new_segmentation,
         ) in zip(
             old_labels,
             new_labels,
             new_images,
             old_images,
-            old_segmentations,
-            new_segmentations,
         ):
             wandb_table.add_data(
                 json.dumps(old_label.int().cpu().tolist()),
                 json.dumps(new_label.int().cpu().tolist()),
                 wandb.Image(old_image.cpu(), caption="Old Image"),
                 wandb.Image(new_image.cpu(), caption="Cutmix Image"),
-                wandb.Image(old_segmentation.cpu(), caption="Old Segmentation"),
-                wandb.Image(new_segmentation.cpu(), caption="Cutmix Segmentation"),
             )
         # Log the table to wandb. Ensure your wandb run is initiated before this step.
         wandb.log({"Batch 1 Label Comparison": wandb_table})
