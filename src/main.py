@@ -39,11 +39,15 @@ def run_training(
         gpu=gpu,
     )
 
-    if explanation_method and mode == "rrr":
-        general_config["rrr_explanation"] = explanation_method
-
     if mode != "normal":
         general_config["experiment_name"] += f"_{mode}"
+
+    if mode == "rrr":
+        # Parameters for RRR loss
+        general_config["rrr_lambda"] = 1
+        general_config["loss"] = "rrr"
+        if explanation_method:
+            general_config["rrr_explanation"] = explanation_method
 
     if normal_segmentations and mode == "cutmix":
         general_config["experiment_name"] += "_normal_segmentations"

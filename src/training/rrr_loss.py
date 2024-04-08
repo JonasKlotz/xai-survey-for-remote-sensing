@@ -18,6 +18,7 @@ class RightForRightReasonsLoss(torch.nn.Module):
         dataset_name: str = "unknown",
         explanation_method_name: str = "deeplift",
         explanation_kwargs: dict = None,
+        norm: str = "l2",
     ):
         """
 

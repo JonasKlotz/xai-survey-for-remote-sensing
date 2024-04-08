@@ -27,7 +27,7 @@ def train(cfg: dict, tune=False):
     logger.debug(f"Loaded data module {data_module}")
 
     # load model
-    model = get_model(cfg, pretrained=False)
+    model = get_model(cfg, pretrained=True)
     model.learning_rate = cfg["learning_rate"]
 
     logger.debug("Start Training")
@@ -44,20 +44,11 @@ def train(cfg: dict, tune=False):
     val_batch = next(iter(val_loader))
     image_tensor, labels_tensor, _, _, index_tensor, _ = parse_batch(val_batch)
 
-    # convert to tensor
-    # image_tensor = torch.tensor(image_tensor.clone().detach().cpu().numpy())
-    # labels_tensor = torch.tensor(labels_tensor.clone().detach().cpu().numpy())
-    # index_tensor = torch.tensor(index_tensor.clone().detach().cpu().numpy())
-
-    # image_preds_logger = ImagePredictionLogger(
-    #     image_tensor, labels_tensor, val_indices=index_tensor
-    # )
-
     # start a new wandb run to track this script
     # group is dataset_mode_explanation_method
     group_name = f"{cfg['dataset_name']}_{cfg['mode']}"
     if cfg["mode"] != "normal":
-        if cfg["normal_segmentations"]:
+        if cfg.get("normal_segmentations", None):
             group_name += "_normal_segmentations"
         else:
             group_name += f"_{cfg['explanation_methods'][0]}"

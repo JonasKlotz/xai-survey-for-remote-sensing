@@ -10,6 +10,7 @@ from pytorch_lightning import LightningModule
 from torchvision import models
 from torchvision.models import VGG16_Weights
 
+from data.constants import DEEPGLOBE_IDX2NAME
 from src.models.interpretable_resnet import get_resnet
 from training.augmentations import CutMix_Xai, CutMix_segmentations
 from training.metrics import TrainingMetricsManager
@@ -26,6 +27,7 @@ class LightningBaseModel(LightningModule):
         config: dict = None,
     ):
         super(LightningBaseModel, self).__init__()
+        self.log_next = False
         self.save_hyperparameters(ignore=["loss"])
         self.task = config["task"]
         self.cutmix_threshold = 0.5
@@ -38,6 +40,7 @@ class LightningBaseModel(LightningModule):
         self.rrr_explanation = config.get("rrr_explanation", None)
         self.rrr_lambda = config.get("rrr_lambda", 1)
         self.dataset_name = config.get("dataset_name", "unknown")
+        self.rrr_logged = False
 
         # Hyperparameters
         self.learning_rate = config["learning_rate"]
@@ -176,6 +179,7 @@ class LightningBaseModel(LightningModule):
             self.log_dict(
                 self.metrics_manager.compute(stage="val"), prog_bar=True, sync_dist=True
             )
+        self.log_next = True
 
     def on_test_epoch_end(self) -> None:
         if self.metrics_manager is not None:
@@ -186,11 +190,15 @@ class LightningBaseModel(LightningModule):
             )
 
     def on_train_epoch_end(self) -> None:
-        self.trained_epochs = +1
+        self.trained_epochs += 1
 
     def calc_loss(self, images, segmentations, stage, target):
         y_hat = self.backbone(images)
-        if self.loss_name == "rrr" and stage == "train":
+        if self.loss_name == "rrr" and stage == "train" and self.trained_epochs >= 3:
+            if not self.rrr_logged:
+                logger.debug("Starting RRR loss")
+                self.rrr_logged = True
+
             loss, normalized_probabilities, explanation_loss = self._calc_rrr_loss(
                 images, segmentations, target, y_hat
             )
@@ -198,6 +206,12 @@ class LightningBaseModel(LightningModule):
             self.log(
                 f"{stage}_explanation_loss",
                 explanation_loss,
+                prog_bar=True,
+                sync_dist=True,
+            )
+            self.log(
+                f"{stage}_regular_loss",
+                loss - explanation_loss,
                 prog_bar=True,
                 sync_dist=True,
             )
@@ -305,19 +319,25 @@ class LightningBaseModel(LightningModule):
         -------
 
         """
-        if self.mode == "normal":
-            return batch
+        if self.mode == "cutmix":
+            return self._on_before_batch_transfer_cutmix(batch)
+        elif self.mode == "rrr":
+            return self._on_before_batch_transfer_rrr(batch)
+        if self.log_next:
+            self._log_segmentation(batch)
+            self.log_next = False
+        return batch
+
+    def _on_before_batch_transfer_cutmix(self, batch):
         if self.training and not self.first_batch_saved:
             old_labels = batch["targets"].clone().detach()
             old_images = batch["features"].clone().detach()
-
         if self.training:
             if self.generate_explanations:
                 attr = self._generate_explanations_as_masks(batch)
                 batch["xai_segmentations"] = attr
             # else we use what is provided in the batch
             batch = self._augment(batch)
-
         # checking if first batch should be saved
         if self.training and not self.first_batch_saved:
             new_labels = batch["targets"]
@@ -341,8 +361,67 @@ class LightningBaseModel(LightningModule):
 
             torch.save(batch, self.first_batch_save_path)
             self.first_batch_saved = True
-
         return batch
+
+    def _on_before_batch_transfer_rrr(self, batch):
+        if self.log_next:
+            self._log_rrr_segmentation(batch)
+            self.log_next = False
+        return batch
+
+    def _log_segmentation(self, batch):
+        # explanation_method_name = (self.rrr_explanation,)
+        # explanation_kwargs = self.config.get("explanation_kwargs", None)
+        # from src.xai.explanations.explanation_manager import _explanation_methods
+        #
+        # explanation_method_constructor = _explanation_methods[explanation_method_name]
+        # explanation_method = explanation_method_constructor(**explanation_kwargs)
+        # explanations = explanation_method.explain_batch(batch)
+        table = wandb.Table(columns=["ID", "Image"])
+        for idx, (img, seg) in enumerate(
+            zip(batch["features"], batch["segmentations"])
+        ):
+            np_seg = seg.clone().detach().cpu().numpy()
+            # parse batch
+            mask_img = wandb.Image(
+                img,
+                masks={
+                    "ground_truth": {
+                        "mask_data": np_seg,
+                        "class_labels": DEEPGLOBE_IDX2NAME,
+                    }
+                },
+            )
+            table.add_data(idx, mask_img)
+        # log the explanations as wandb images
+        wandb.log({"Segmentations": table})
+
+    def _log_rrr_segmentation(self, batch):
+        # explanation_method_name = (self.rrr_explanation,)
+        # explanation_kwargs = self.config.get("explanation_kwargs", None)
+        # from src.xai.explanations.explanation_manager import _explanation_methods
+        #
+        # explanation_method_constructor = _explanation_methods[explanation_method_name]
+        # explanation_method = explanation_method_constructor(**explanation_kwargs)
+        # explanations = explanation_method.explain_batch(batch)
+        table = wandb.Table(columns=["ID", "Image"])
+        for idx, (img, seg) in enumerate(
+            zip(batch["features"], batch["segmentations"])
+        ):
+            np_seg = seg.clone().detach().cpu().numpy()
+            # parse batch
+            mask_img = wandb.Image(
+                img,
+                masks={
+                    "ground_truth": {
+                        "mask_data": np_seg,
+                        "class_labels": DEEPGLOBE_IDX2NAME,
+                    }
+                },
+            )
+            table.add_data(idx, mask_img)
+        # log the explanations as wandb images
+        wandb.log({"Segmentations": table})
 
     def _log_labels(
         self,
