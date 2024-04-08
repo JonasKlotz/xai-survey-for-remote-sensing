@@ -3,21 +3,48 @@ import torch
 import pytest
 
 from training.augmentations import CutMix_segmentations
+from src.training.dataset_sanity_checker import calculate_segmentation_label_mse_loss
 
 
-# A helper function to create a mock batch for testing
 def create_mock_batch(batch_size, channels, height, width, num_classes):
     features = torch.rand(batch_size, channels, height, width)
-    segmentations = torch.randint(0, num_classes - 1, (batch_size, 1, height, width))
+    # Ensure at least one label per batch item
+    targets = torch.zeros(batch_size, num_classes).long()
+    targets[torch.arange(batch_size), torch.randint(0, num_classes, (batch_size,))] = 1
+    targets += (
+        torch.rand(batch_size, num_classes) < 0.3
+    ).long()  # Add more labels randomly
+    # clip at 1,
+    targets = torch.clamp(targets, 0, 1)
 
-    targets = torch.randint(0, 2, (batch_size, num_classes))
+    segmentations = torch.zeros((batch_size, height, width), dtype=torch.long)
+    for i in range(batch_size):
+        class_indices = targets[i].nonzero(as_tuple=False).squeeze(1)
+        pixels_per_class = (height * width) // class_indices.size(0)
+        remaining_pixels = (height * width) % class_indices.size(0)
+
+        pixel_assignments = torch.cat(
+            [
+                torch.full((pixels_per_class,), class_index, dtype=torch.long)
+                for class_index in class_indices
+            ]
+        )
+        if remaining_pixels > 0:
+            pixel_assignments = torch.cat(
+                (pixel_assignments, class_indices[:remaining_pixels])
+            )
+
+        segmentations[i] = pixel_assignments[torch.randperm(height * width)].view(
+            height, width
+        )
+
     return {"features": features, "segmentations": segmentations, "targets": targets}
 
 
 @pytest.fixture
 def mock_batch():
     return create_mock_batch(
-        batch_size=2, channels=3, height=224, width=224, num_classes=6
+        batch_size=2, channels=3, height=10, width=10, num_classes=6
     )
 
 
@@ -41,6 +68,15 @@ def test_CutMix_segmentations(mock_batch):
     # of mock return values and understanding of the expected outcome based on those mocks.
 
 
-# Run the test (this line is for illustration; typically, you'd run tests via the command line with pytest)
+def test_check_labels_and_segments(mock_batch):
+    # Create a mock batch and labels tensor
+    segmentations = mock_batch["segmentations"]
+    targets = mock_batch["targets"]
+
+    # Check if the function correctly identifies that the labels are the same in the segmentation mask
+    x = calculate_segmentation_label_mse_loss(segmentations, targets)
+    assert x == 0.0  # Since the labels are the same as the segmentation mask
+
+
 if __name__ == "__main__":
     pytest.main()

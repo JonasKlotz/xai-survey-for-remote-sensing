@@ -39,17 +39,12 @@ def run_training(
         gpu=gpu,
     )
 
-    if explanation_method and mode == "cutmix":
-        # Set the path to the lmdb file on the cluster
-        general_config["data"][
-            "segmentations_lmdb_path"
-        ] = f"/media/storagecube/jonasklotz/deepglobe_vgg_lmdbs_new/{explanation_method}.lmdb"
-
     if explanation_method and mode == "rrr":
         general_config["rrr_explanation"] = explanation_method
 
     if mode != "normal":
         general_config["experiment_name"] += f"_{mode}"
+
     if normal_segmentations and mode == "cutmix":
         general_config["experiment_name"] += "_normal_segmentations"
         general_config["normal_segmentations"] = True
@@ -173,6 +168,31 @@ def run_grid_search(
     from cutmix.calculate_threshold import calculate_threshold_for_xai_masks
 
     calculate_threshold_for_xai_masks(general_config, num_trials=num_trials)
+
+
+@app.command()
+def run_sanity_checks(
+    config_path: str,
+    random_seed: Annotated[int, typer.Option()] = 42,
+    debug: Annotated[bool, typer.Option()] = False,
+    explanation_method: Annotated[str, typer.Option()] = None,
+    gpu: Annotated[int, typer.Option()] = 3,
+    loader_name: Annotated[str, typer.Option()] = "train",
+):
+    from config_utils import setup_everything
+
+    general_config = setup_everything(
+        config_path=config_path,
+        random_seed=random_seed,
+        project_root=project_root,
+        debug=debug,
+        explanation_method=explanation_method,
+        gpu=gpu,
+    )
+
+    from training.dataset_sanity_checker import sanity_check_labels_and_segmasks
+
+    sanity_check_labels_and_segmasks(general_config, loader_name=loader_name)
 
 
 if __name__ == "__main__":

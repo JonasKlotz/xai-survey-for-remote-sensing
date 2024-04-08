@@ -310,7 +310,6 @@ class LightningBaseModel(LightningModule):
         if self.training and not self.first_batch_saved:
             old_labels = batch["targets"].clone().detach()
             old_images = batch["features"].clone().detach()
-            old_segmentations = batch["segmentations"].clone().detach()
 
         if self.training:
             if self.generate_explanations:
@@ -323,15 +322,12 @@ class LightningBaseModel(LightningModule):
         if self.training and not self.first_batch_saved:
             new_labels = batch["targets"]
             new_images = batch["features"]
-            new_segmentations = batch["segmentations"]
 
             self._log_labels(
                 new_labels,
                 old_labels,
                 new_images,
                 old_images,
-                old_segmentations,
-                new_segmentations,
             )
             print("Save first batch....")
 
@@ -354,8 +350,6 @@ class LightningBaseModel(LightningModule):
         old_labels,
         new_images,
         old_images,
-        old_segmentations,
-        new_segmentations,
     ):
         # Initialize a wandb Table with columns for old and new labels
         columns = ["Old Labels", "Cutmix Derived Labels", "Old Image", "Cutmix Image"]

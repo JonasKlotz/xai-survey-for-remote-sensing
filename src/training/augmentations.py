@@ -6,6 +6,7 @@ import torch
 from einops import rearrange
 
 from data.data_utils import segmask_to_multilabel_torch
+from training.dataset_sanity_checker import calculate_segmentation_label_mse_loss
 
 
 def CutMix_segmentations(
@@ -67,6 +68,10 @@ def CutMix_segmentations(
     if isinstance(features, np.ndarray):
         features = torch.from_numpy(features)
     features = rearrange(features, "b h w c -> b c h w")
+
+    assert (
+        calculate_segmentation_label_mse_loss(segmentations, targets) == 0.0
+    ), f"Error for labels and segmentation: {calculate_segmentation_label_mse_loss(segmentations, targets)}"
 
     # overwrite the old values
     batch["features"] = features

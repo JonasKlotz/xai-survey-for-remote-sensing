@@ -12,6 +12,7 @@ from src.data.constants import (
     DEEPGLOBE_NAME2IDX,
     EUROSAT_NAME2IDX,
 )
+from utility.cluster_logging import logger
 
 
 def read_csv(csv_path):
@@ -60,6 +61,11 @@ class BaseDataset(Dataset):
         self.labels = self.read_labels(labels_path, self.patch_names)
         self.transform = transform
         self.temporal_views = read_temporal_views(temporal_views_path)
+
+        logger.debug(f"Loaded {len(self.patch_names)} patches from {csv_path}")
+        logger.debug(f"Loaded {len(self.labels)} labels from {labels_path}")
+        logger.debug(f"Loaded segmentations from {segmentations_lmdb_path}")
+        logger.debug(f"Loaded XAI segmentations from {xai_segmentations_lmdb_path}")
 
     def read_labels(self, meta_data_path, patch_names):
         df = pd.read_parquet(meta_data_path)

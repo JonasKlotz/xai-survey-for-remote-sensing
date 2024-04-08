@@ -42,6 +42,7 @@ NUM_WORKERS = 8 if torch.cuda.is_available() else 8
 def load_data_module(cfg: dict):
     logger.info(f"Loading data module {cfg['dataset_name']}")
     dataset_name = cfg["dataset_name"]
+
     if dataset_name in dataset_cards:
         data_module = dataset_cards[dataset_name](cfg)
         cfg["task"] = data_module.task

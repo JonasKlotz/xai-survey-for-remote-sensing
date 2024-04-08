@@ -4,6 +4,7 @@ from datetime import datetime
 import yaml
 
 from utility.cluster_logging import logger
+import pprint
 
 
 def parse_config(config_path, project_root, debug=False):
@@ -151,7 +152,6 @@ def setup_everything(
         general_config["training_root_path"] = os.path.join(
             general_config["models_path"], general_config["experiment_name"]
         )
-
-    logger.debug(f"General config: {general_config}")
+    logger.debug(f"General config: {pprint.pformat(general_config)}")
 
     return general_config
