@@ -27,6 +27,8 @@ def run_training(
     mode: Annotated[str, typer.Option()] = "normal",
     tune: Annotated[bool, typer.Option()] = False,
     normal_segmentations: Annotated[bool, typer.Option()] = False,
+    rrr_lambda: Annotated[float, typer.Option()] = 1.0,
+    epochs: Annotated[int, typer.Option()] = None,
 ):
     from config_utils import setup_everything
 
@@ -38,14 +40,17 @@ def run_training(
         explanation_method=explanation_method,
         gpu=gpu,
     )
+    if epochs:
+        general_config["epochs"] = epochs
 
     if mode != "normal":
         general_config["experiment_name"] += f"_{mode}"
 
     if mode == "rrr":
         # Parameters for RRR loss
-        general_config["rrr_lambda"] = 1
+        general_config["rrr_lambda"] = rrr_lambda
         general_config["loss"] = "rrr"
+        general_config["experiment_name"] += f"_lambda{general_config['rrr_lambda']}"
         if explanation_method:
             general_config["rrr_explanation"] = explanation_method
 
