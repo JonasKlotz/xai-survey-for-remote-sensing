@@ -215,8 +215,6 @@ class LightningBaseModel(LightningModule):
                 prog_bar=True,
                 sync_dist=True,
             )
-            # We have to predict again as some of the explanation methods change the gradients
-            _ = self.backbone(images)
         else:
             loss, normalized_probabilities = self._calc_regular_loss(y_hat, target)
         return loss, normalized_probabilities
@@ -319,6 +317,9 @@ class LightningBaseModel(LightningModule):
         -------
 
         """
+        # we dont want any augmentation for multiclass
+        if self.task == "multiclass":
+            return batch
         if self.mode == "cutmix":
             return self._on_before_batch_transfer_cutmix(batch)
         elif self.mode == "rrr":

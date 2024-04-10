@@ -190,6 +190,15 @@ class Explanation:
         attrs = self.explain(tensor_batch, target_batch)
 
         attrs = self._post_process_attribution(attrs)
+
+        if attrs.shape != tensor_batch.shape:
+            # Shape mismatch e.g. from GradCAM without interpolation
+            attrs = torch.nn.functional.interpolate(
+                attrs,
+                size=(tensor_batch.shape[-2], tensor_batch.shape[-1]),
+                mode="bilinear",
+                align_corners=False,
+            )
         return attrs
 
     def _post_process_attribution(self, attribution):

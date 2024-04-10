@@ -111,10 +111,7 @@ def train(cfg: dict, tune=False):
     trainer.test(model, data_module)
     model.metrics_manager.plot(stage="test")
 
-    # try:
-    #     save_model(cfg, model)
-    # except Exception as e:
-    #     logger.error(f"Failed to save model: {e}")
+    save_model(cfg, model)
 
 
 def tune_trainer(

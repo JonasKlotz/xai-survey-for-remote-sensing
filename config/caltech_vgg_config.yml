@@ -22,8 +22,8 @@ explanation_methods:
 
 # Dataset parameters
 data:
-  batch_size: 1
-  num_workers: 0
+  batch_size: 32
+  num_workers: 8
   pin_memory: False
   force_shuffle: False # shuffle also test loader
 

@@ -212,7 +212,6 @@ def _parse_segments(
 
     elif dataset_name == "deepglobe":
         # create tensor empty with shape (batchsize, num_classes, 1, 120, 120) from (batchsize, 1, 120, 120)
-        # todo: maybe broken now for metrics
         unsqueezed_segments = torch.zeros(
             size=(
                 segments_tensor.shape[0],
