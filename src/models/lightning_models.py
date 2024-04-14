@@ -48,14 +48,17 @@ class LightningBaseModel(LightningModule):
         self.input_channels = config["input_channels"]
         self.num_classes = config["num_classes"]
 
+        # Parameters for the cutmix augmentation
         if self.mode == "cutmix":
-            # Parameters for the cutmix augmentation
             if config.get("normal_segmentations", False):
                 self.cutmix_mode = "segmentations"
             else:
                 self.cutmix_mode = "XAI"
 
             logger.debug(f"Cutmix mode: {self.cutmix_mode}")
+
+        self.max_aug_area = config.get("max_aug_area", 0.5)
+        self.min_aug_area = config.get("min_aug_area", 0.1)
 
         self.backbone = self.get_backbone(config)
 
@@ -261,8 +264,7 @@ class LightningBaseModel(LightningModule):
     ####################################################################################################################
     def _augment(self, batch):
         # image only augmentation
-        self.max_aug_area = 0.5
-        self.min_aug_area = 0.1
+
         self.aug_p: float = 0.5
         self.overhead: int = 10
         self.cutmix_threshold = 10  # TMAP Threshhold

@@ -29,6 +29,8 @@ def run_training(
     normal_segmentations: Annotated[bool, typer.Option()] = False,
     rrr_lambda: Annotated[float, typer.Option()] = 1.0,
     epochs: Annotated[int, typer.Option()] = None,
+    min_aug_area: Annotated[float, typer.Option()] = 0.1,
+    max_aug_area: Annotated[float, typer.Option()] = 0.5,
 ):
     from config_utils import setup_everything
 
@@ -54,9 +56,23 @@ def run_training(
         if explanation_method:
             general_config["rrr_explanation"] = explanation_method
 
+    if mode == "cutmix":
+        general_config["experiment_name"] += "_cutmix"
+        general_config["cutmix"] = True
+        general_config["max_aug_area"] = max_aug_area
+        general_config["min_aug_area"] = min_aug_area
+        general_config[
+            "experiment_name"
+        ] += f"_{general_config['min_aug_area']}-{general_config['max_aug_area']}"
+
     if normal_segmentations and mode == "cutmix":
         general_config["experiment_name"] += "_normal_segmentations"
         general_config["normal_segmentations"] = True
+        general_config["max_aug_area"] = max_aug_area
+        general_config["min_aug_area"] = min_aug_area
+        general_config[
+            "experiment_name"
+        ] += f"_{general_config['min_aug_area']}-{general_config['max_aug_area']}"
 
     general_config["mode"] = mode
     from training.train import train
