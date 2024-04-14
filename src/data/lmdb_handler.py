@@ -39,3 +39,6 @@ class LMDBDataHandler:
     def shape(self) -> int:
         with self.env.begin(write=False) as txn:
             return txn.stat()["entries"]
+
+    def close(self):
+        self.env.close()

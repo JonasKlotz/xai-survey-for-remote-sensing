@@ -29,6 +29,8 @@ data:
     segmentations_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
     xai_segmentations_lmdb_path: '/media/storagecube/jonasklotz/deepglobe_vgg_lmdbs/deeplift.lmdb'
 
+    lmdb_base_path: '/media/storagecube/jonasklotz/deepglobe_vgg_lmdbs_new/'
+
 
     batch_size: 32 #128
     num_workers: 8 # 8

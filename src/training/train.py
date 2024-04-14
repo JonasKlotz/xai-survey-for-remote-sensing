@@ -46,12 +46,18 @@ def train(cfg: dict, tune=False):
 
     # start a new wandb run to track this script
     # group is dataset_mode_explanation_method
-    group_name = f"{cfg['dataset_name']}_{cfg['mode']}"
+    group_name = f"{cfg['dataset_name']}_{cfg['model_name']}_{cfg['mode']}"
+
     if cfg["mode"] != "normal":
         if cfg.get("normal_segmentations", None):
             group_name += "_normal_segmentations"
         else:
             group_name += f"_{cfg['explanation_methods'][0]}"
+
+    if cfg["mode"] == "cutmix":
+        group_name += f"_{cfg['min_aug_area']}-{cfg['max_aug_area']}"
+
+    logger.debug(f"Logging with Group name: {group_name}")
 
     wandb_logger = WandbLogger(
         project="xai_for_rs",
@@ -62,6 +68,10 @@ def train(cfg: dict, tune=False):
             cfg["explanation_methods"][0],
             cfg["dataset_name"],
             cfg["mode"],
+            cfg["model_name"],
+            f"{cfg['min_aug_area']}-{cfg['max_aug_area']}"
+            if cfg["mode"] == "cutmix"
+            else None,
         ],
     )
 

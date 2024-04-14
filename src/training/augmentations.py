@@ -47,8 +47,9 @@ def CutMix_segmentations(
                 xx2 - xx1, yy2 - yy1, segmentations[i].shape[:2]
             )
 
-            tmp = new_imgs[i][xx1:xx2, yy1:yy2]
-            features[i][new_xx1:new_xx2, new_yy1:new_yy2] = tmp
+            features[i][new_xx1:new_xx2, new_yy1:new_yy2] = new_imgs[i][
+                xx1:xx2, yy1:yy2
+            ]
 
             segmentations[i][new_xx1:new_xx2, new_yy1:new_yy2] = new_seg_masks[i][
                 xx1:xx2, yy1:yy2

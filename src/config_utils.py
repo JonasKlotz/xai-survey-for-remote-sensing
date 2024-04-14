@@ -108,6 +108,7 @@ def setup_everything(
     random_seed: int,
     explanation_method: str,
     gpu: int,
+    **kwargs,
 ):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
@@ -152,6 +153,9 @@ def setup_everything(
         general_config["training_root_path"] = os.path.join(
             general_config["models_path"], general_config["experiment_name"]
         )
+
+    # Add kwargs to general_config
+    general_config.update(kwargs)
     logger.debug(f"General config: {pprint.pformat(general_config)}")
 
     return general_config

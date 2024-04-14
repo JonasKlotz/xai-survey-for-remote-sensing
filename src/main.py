@@ -4,7 +4,6 @@ import sys
 import typer
 from typing_extensions import Annotated
 
-
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(project_root)
@@ -12,7 +11,6 @@ print(f"Added {project_root} to path.")
 quantus_path = os.path.join(project_root, "src/xai/metrics/Quantus")
 sys.path.append(quantus_path)
 print(f"Added {quantus_path} to path.")
-
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
@@ -25,10 +23,11 @@ def run_training(
     explanation_method: Annotated[str, typer.Option()] = None,
     gpu: Annotated[int, typer.Option()] = 3,
     mode: Annotated[str, typer.Option()] = "normal",
+    model_name: Annotated[str, typer.Option()] = "vgg",
     tune: Annotated[bool, typer.Option()] = False,
     normal_segmentations: Annotated[bool, typer.Option()] = False,
     rrr_lambda: Annotated[float, typer.Option()] = 1.0,
-    epochs: Annotated[int, typer.Option()] = None,
+    epochs: Annotated[int, typer.Option()] = 20,
     min_aug_area: Annotated[float, typer.Option()] = 0.1,
     max_aug_area: Annotated[float, typer.Option()] = 0.5,
 ):
@@ -41,26 +40,25 @@ def run_training(
         debug=debug,
         explanation_method=explanation_method,
         gpu=gpu,
+        model_name=model_name,
+        max_epochs=epochs,
+        max_aug_area=max_aug_area,
+        min_aug_area=min_aug_area,
+        rrr_lambda=rrr_lambda,
+        mode=mode,
     )
-    if epochs:
-        general_config["epochs"] = epochs
 
     if mode != "normal":
         general_config["experiment_name"] += f"_{mode}"
 
     if mode == "rrr":
         # Parameters for RRR loss
-        general_config["rrr_lambda"] = rrr_lambda
         general_config["loss"] = "rrr"
         general_config["experiment_name"] += f"_lambda{general_config['rrr_lambda']}"
         if explanation_method:
             general_config["rrr_explanation"] = explanation_method
 
     if mode == "cutmix":
-        general_config["experiment_name"] += "_cutmix"
-        general_config["cutmix"] = True
-        general_config["max_aug_area"] = max_aug_area
-        general_config["min_aug_area"] = min_aug_area
         general_config[
             "experiment_name"
         ] += f"_{general_config['min_aug_area']}-{general_config['max_aug_area']}"
@@ -68,8 +66,6 @@ def run_training(
     if normal_segmentations and mode == "cutmix":
         general_config["experiment_name"] += "_normal_segmentations"
         general_config["normal_segmentations"] = True
-        general_config["max_aug_area"] = max_aug_area
-        general_config["min_aug_area"] = min_aug_area
         general_config[
             "experiment_name"
         ] += f"_{general_config['min_aug_area']}-{general_config['max_aug_area']}"
@@ -218,6 +214,30 @@ def run_sanity_checks(
     from training.dataset_sanity_checker import sanity_check_labels_and_segmasks
 
     sanity_check_labels_and_segmasks(general_config, loader_name=loader_name)
+
+
+@app.command()
+def run_sanity_check_augmentation_thresholds(
+    config_path: str,
+    random_seed: Annotated[int, typer.Option()] = 42,
+    debug: Annotated[bool, typer.Option()] = False,
+    explanation_method: Annotated[str, typer.Option()] = None,
+    gpu: Annotated[int, typer.Option()] = 3,
+):
+    from config_utils import setup_everything
+
+    general_config = setup_everything(
+        config_path=config_path,
+        random_seed=random_seed,
+        project_root=project_root,
+        debug=debug,
+        explanation_method=explanation_method,
+        gpu=gpu,
+    )
+
+    from cutmix.sanity_check_augmentations import sanity_check_augmentation_thresholds
+
+    sanity_check_augmentation_thresholds(general_config)
 
 
 if __name__ == "__main__":
