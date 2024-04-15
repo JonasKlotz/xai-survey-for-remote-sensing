@@ -159,3 +159,42 @@ def setup_everything(
     logger.debug(f"General config: {pprint.pformat(general_config)}")
 
     return general_config
+
+
+def create_training_experiment_and_group_names(general_config):
+    # Get the timestamp
+    timestamp = general_config["timestamp"]
+    mode = general_config["mode"]
+    normal_segmentations = general_config.get("normal_segmentations", False)
+    explanation_method = general_config.get("explanation_methods", ["no-exp"])[0]
+    # Base experiment name
+    group_name = (
+        f"{general_config['dataset_name']}_{general_config['model_name']}_{mode}"
+    )
+
+    # Mode specific adjustments
+    if mode != "normal":
+        # Adjust group name for non-normal modes
+        if normal_segmentations and mode == "cutmix":
+            group_name += "normal_segmentations"
+        else:
+            group_name += explanation_method
+
+    # Specific configurations for different modes
+    if mode == "rrr":
+        general_config["loss"] = "rrr"
+        lambda_rrr = general_config.get("rrr_lambda", "")
+        distance_rrr = general_config.get("rrr_distance", "")
+        group_name += f"_lambda{lambda_rrr}_distance{distance_rrr}"
+
+    elif mode == "cutmix":
+        min_area = general_config.get("min_aug_area", "")
+        max_area = general_config.get("max_aug_area", "")
+        augmentation_range = f"{min_area}-{max_area}"
+        group_name += f"_{augmentation_range}"
+
+    # Set group name
+    general_config["group_name"] = group_name
+    general_config["experiment_name"] = f"{group_name}_{timestamp}"
+
+    return general_config

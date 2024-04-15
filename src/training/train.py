@@ -31,7 +31,7 @@ def train(cfg: dict, tune=False):
     model.learning_rate = cfg["learning_rate"]
 
     logger.debug("Start Training")
-    prefix_name = f"{cfg['model_name']}_{cfg['dataset_name']}_{cfg['timestamp']}"
+    prefix_name = cfg["experiment_name"]
 
     if cfg.get("rrr_explanation", None) is not None:
         prefix_name = f"{prefix_name}_{cfg['rrr_explanation']}"
@@ -43,22 +43,7 @@ def train(cfg: dict, tune=False):
 
     val_batch = next(iter(val_loader))
     image_tensor, labels_tensor, _, _, index_tensor, _ = parse_batch(val_batch)
-
-    # start a new wandb run to track this script
-    # group is dataset_mode_explanation_method
-    group_name = f"{cfg['dataset_name']}_{cfg['model_name']}_{cfg['mode']}"
-
-    if cfg["mode"] != "normal":
-        if cfg.get("normal_segmentations", None):
-            group_name += "_normal_segmentations"
-        else:
-            group_name += f"_{cfg['explanation_methods'][0]}"
-
-    if cfg["mode"] == "cutmix":
-        group_name += f"_{cfg['min_aug_area']}-{cfg['max_aug_area']}"
-    elif cfg["mode"] == "rrr":
-        group_name += f"_lambda{cfg['rrr_lambda']}_distance{cfg['rrr_distance']}"
-
+    group_name = cfg["group_name"]
     logger.debug(f"Logging with Group name: {group_name}")
     tags = [
         cfg["explanation_methods"][0],
@@ -66,8 +51,6 @@ def train(cfg: dict, tune=False):
         cfg["mode"],
         cfg["model_name"],
     ]
-    if cfg["mode"] == "cutmix":
-        tags += [f"{cfg['min_aug_area']}-{cfg['max_aug_area']}"]
 
     wandb_logger = WandbLogger(
         project="xai_for_rs",

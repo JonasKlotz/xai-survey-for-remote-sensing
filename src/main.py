@@ -32,7 +32,10 @@ def run_training(
     min_aug_area: Annotated[float, typer.Option()] = 0.1,
     max_aug_area: Annotated[float, typer.Option()] = 0.5,
 ):
-    from config_utils import setup_everything
+    from config_utils import (
+        setup_everything,
+        create_training_experiment_and_group_names,
+    )
 
     general_config = setup_everything(
         config_path=config_path,
@@ -48,32 +51,12 @@ def run_training(
         rrr_lambda=rrr_lambda,
         mode=mode,
         rrr_distance=rrr_distance,
+        normal_segmentations=normal_segmentations,
     )
     assert mode in ["normal", "cutmix", "rrr"], f"Mode {mode} not supported."
 
-    if mode != "normal":
-        general_config["experiment_name"] += f"_{mode}"
+    general_config = create_training_experiment_and_group_names(general_config)
 
-    if mode == "rrr":
-        # Parameters for RRR loss
-        general_config["loss"] = "rrr"
-        general_config["experiment_name"] += f"_lambda{general_config['rrr_lambda']}"
-        if explanation_method:
-            general_config["rrr_explanation"] = explanation_method
-
-    if mode == "cutmix":
-        general_config[
-            "experiment_name"
-        ] += f"_{general_config['min_aug_area']}-{general_config['max_aug_area']}"
-
-    if normal_segmentations and mode == "cutmix":
-        general_config["experiment_name"] += "_normal_segmentations"
-        general_config["normal_segmentations"] = True
-        general_config[
-            "experiment_name"
-        ] += f"_{general_config['min_aug_area']}-{general_config['max_aug_area']}"
-
-    general_config["mode"] = mode
     from training.train import train
 
     train(general_config, tune=tune)
