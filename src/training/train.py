@@ -108,6 +108,12 @@ def train(cfg: dict, tune=False):
 
     save_model(cfg, model)
 
+    if cfg["visualize_after_training"]:
+        from visualization.visualize import visualize
+
+        cfg["generate_explanations"] = True
+        visualize(cfg, model)
+
 
 def tune_trainer(
     cfg,

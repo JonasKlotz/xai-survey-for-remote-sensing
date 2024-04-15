@@ -104,8 +104,8 @@ class ExplanationVisualizer:
         self.index_to_name = index_to_name
         self.last_fig = None
         self.num_classes = cfg["num_classes"]
-        self.save_path = (
-            f"{cfg['results_path']}/visualizations/{cfg['experiment_name']}"
+        self.output_path = (
+            f"{cfg['results_path']}/{cfg['experiment_name']}/visualizations"
         )
 
         self.segmentation_colors = [
@@ -117,18 +117,9 @@ class ExplanationVisualizer:
             "yellow",
         ]
 
-        # self.segmentation_colors = px.colors.sample_colorscale(
-        #     "turbo", [n / (self.num_classes - 1) for n in range(self.num_classes)],
-        # )
         torch.set_printoptions(sci_mode=False)
 
         self.size = 400
-        # convert to uint8
-        # self.segmentation_colors = [tuple(int(255 * x) for x in color) for color in self.segmentation_colors]
-
-        # self.explanation_methods = cfg["explanation_methods"]
-        # self.channels_to_visualize = cfg["channels_to_visualize"]
-        # self.strategy = cfg["strategy"]
 
     def visualize(
         self,
@@ -443,9 +434,9 @@ class ExplanationVisualizer:
             Format to save the figure.
         """
         # create save path if it does not exist
-        os.makedirs(self.save_path, exist_ok=True)
+        os.makedirs(self.output_path, exist_ok=True)
         # print(f"Saving figure to {self.save_path}/{name}.{format}")
-        self.last_fig.write_image(f"{self.save_path}/{name}.{format}", format=format)
+        self.last_fig.write_image(f"{self.output_path}/{name}.{format}", format=format)
 
     def _preprocess_image(self, image: Union[torch.Tensor, np.ndarray]) -> np.ndarray:
         """

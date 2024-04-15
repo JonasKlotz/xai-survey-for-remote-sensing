@@ -31,8 +31,9 @@ class ExplanationsManager:
         save=True,
         dtype=torch.float32,
     ):
-        self.explanations_config = cfg
+        self.cfg = cfg
         self.save = save
+        self.output_path = f"{self.cfg['results_path']}/{self.cfg['experiment_name']}"
         self.explanations = {}
         self.explanations_zarr_handler = {}
 
@@ -55,13 +56,13 @@ class ExplanationsManager:
         Initialize the explanation methods.
         """
 
-        for explanation_name in self.explanations_config["explanation_methods"]:
+        for explanation_name in self.cfg["explanation_methods"]:
             self.explanations[explanation_name] = _explanation_methods[
                 explanation_name
             ](
                 model=self.model,
                 device=self.device,
-                num_classes=self.explanations_config["num_classes"],
+                num_classes=self.cfg["num_classes"],
                 multi_label=self.task == "multilabel",
             )
 
@@ -77,7 +78,7 @@ class ExplanationsManager:
             "s_data",
             "index_data",
         ] + explanation_keys
-        zarr_storage_path = f"{self.explanations_config['results_path']}/{self.explanations_config['experiment_name']}.zarr"
+        zarr_storage_path = f"{self.output_path}/{self.cfg['experiment_name']}.zarr"
         self.storage_handler = ZarrGroupHandler(
             path=zarr_storage_path,
             keys=storage_keys,

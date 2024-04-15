@@ -31,6 +31,7 @@ def run_training(
     epochs: Annotated[int, typer.Option()] = 20,
     min_aug_area: Annotated[float, typer.Option()] = 0.1,
     max_aug_area: Annotated[float, typer.Option()] = 0.5,
+    visualize_after_training: Annotated[bool, typer.Option()] = False,
 ):
     from config_utils import (
         setup_everything,
@@ -52,6 +53,7 @@ def run_training(
         mode=mode,
         rrr_distance=rrr_distance,
         normal_segmentations=normal_segmentations,
+        visualize_after_training=visualize_after_training,
     )
     assert mode in ["normal", "cutmix", "rrr"], f"Mode {mode} not supported."
 
@@ -133,6 +135,7 @@ def run_visualize(
     debug: Annotated[bool, typer.Option()] = False,
     explanation_method: Annotated[str, typer.Option()] = None,
     gpu: Annotated[int, typer.Option()] = 3,
+    generate_explanations: Annotated[bool, typer.Option()] = True,
 ):
     from config_utils import setup_everything
 
@@ -143,6 +146,7 @@ def run_visualize(
         debug=debug,
         explanation_method=explanation_method,
         gpu=gpu,
+        generate_explanations=generate_explanations,
     )
 
     from visualization.visualize import visualize

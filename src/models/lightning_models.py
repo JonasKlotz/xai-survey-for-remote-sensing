@@ -35,14 +35,21 @@ class LightningBaseModel(LightningModule):
 
         self.mode = config.get("mode", "normal")
 
-        # Parameters for RRR loss
-        self.loss_name = config.get("loss", "regular")
-        self.rrr_explanation = config.get("rrr_explanation", None)
-        self.rrr_lambda = config.get("rrr_lambda", 1)
-        self.dataset_name = config.get("dataset_name", "unknown")
-        self.rrr_logged = False
+        if self.mode == "rrr":
+            # Parameters for RRR loss
+            self.loss_name = config.get("loss", "regular")
+            self.rrr_explanation = config.get("explanation_methods")[0]
+            self.rrr_lambda = config.get("rrr_lambda", 1)
+            self.rrr_logged = False
+
+            assert (
+                self.rrr_explanation is not None
+            ), "RRR explanation method must be specified"
+            assert self.rrr_lambda is not None, "RRR lambda must be specified"
 
         # Hyperparameters
+        self.dataset_name = config.get("dataset_name", "unknown")
+
         self.learning_rate = config["learning_rate"]
         self.momentum = config["momentum"]
         self.input_channels = config["input_channels"]
