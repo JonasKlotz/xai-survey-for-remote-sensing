@@ -1,3 +1,5 @@
+from enum import Enum
+
 import torch
 
 from data.data_utils import _parse_segments
@@ -9,6 +11,9 @@ from src.xai.explanations.explanation_manager import _explanation_methods
 # messing up gradients
 
 
+RRR_DISTANCE = Enum("RRR_DISTANCE", ["elementwise", "mse"])
+
+
 class RightForRightReasonsLoss(torch.nn.Module):
     def __init__(
         self,
@@ -18,7 +23,7 @@ class RightForRightReasonsLoss(torch.nn.Module):
         dataset_name: str = "unknown",
         explanation_method_name: str = "deeplift",
         explanation_kwargs: dict = None,
-        norm: str = "l2",
+        norm: str = "elementwise",
     ):
         """
 
@@ -53,6 +58,7 @@ class RightForRightReasonsLoss(torch.nn.Module):
         self.task = task
         self.num_classes = num_classes
         self.dataset_name = dataset_name
+        self.norm = norm
 
     def forward(
         self,
@@ -91,12 +97,20 @@ class RightForRightReasonsLoss(torch.nn.Module):
         # relu
         attrs = torch.relu(attrs)
 
-        s_batch = segmentations_to_relevancy_map(
+        relevancy_map = segmentations_to_relevancy_map(
             s_batch, num_classes=self.num_classes, dataset_name=self.dataset_name
         )
         # push to device
-        s_batch = s_batch.to(x_batch.device)
-        rrr_loss = torch.linalg.norm(attrs * s_batch)
+        relevancy_map = relevancy_map.to(x_batch.device)
+
+        if self.norm == "elementwise":
+            rrr_loss = torch.linalg.norm(attrs * relevancy_map)
+        elif self.norm == "mse":
+            mse = torch.nn.MSELoss()
+            # for MSE we want to invert the relevancy map
+            relevancy_map = torch.where(relevancy_map == 0, 1.0, 0.0).to(x_batch.device)
+            rrr_loss = mse(attrs, relevancy_map)
+
         return self.lambda_ * rrr_loss
 
 

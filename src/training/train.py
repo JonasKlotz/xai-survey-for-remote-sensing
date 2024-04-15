@@ -2,6 +2,7 @@ import json
 import os
 
 import torch
+import wandb
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import (
@@ -11,7 +12,6 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.tuner.tuning import Tuner
-import wandb
 
 from data.data_utils import load_data_module, parse_batch, get_dataloader_from_cfg
 from models.get_models import get_model
@@ -56,23 +56,25 @@ def train(cfg: dict, tune=False):
 
     if cfg["mode"] == "cutmix":
         group_name += f"_{cfg['min_aug_area']}-{cfg['max_aug_area']}"
+    elif cfg["mode"] == "rrr":
+        group_name += f"_lambda{cfg['rrr_lambda']}_distance{cfg['rrr_distance']}"
 
     logger.debug(f"Logging with Group name: {group_name}")
+    tags = [
+        cfg["explanation_methods"][0],
+        cfg["dataset_name"],
+        cfg["mode"],
+        cfg["model_name"],
+    ]
+    if cfg["mode"] == "cutmix":
+        tags += [f"{cfg['min_aug_area']}-{cfg['max_aug_area']}"]
 
     wandb_logger = WandbLogger(
         project="xai_for_rs",
         name=cfg["experiment_name"],
         log_model=True,
         group=group_name,
-        tags=[
-            cfg["explanation_methods"][0],
-            cfg["dataset_name"],
-            cfg["mode"],
-            cfg["model_name"],
-            f"{cfg['min_aug_area']}-{cfg['max_aug_area']}"
-            if cfg["mode"] == "cutmix"
-            else None,
-        ],
+        tags=tags,
     )
 
     # log all hyperparameters

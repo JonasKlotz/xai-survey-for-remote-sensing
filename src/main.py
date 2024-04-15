@@ -27,6 +27,7 @@ def run_training(
     tune: Annotated[bool, typer.Option()] = False,
     normal_segmentations: Annotated[bool, typer.Option()] = False,
     rrr_lambda: Annotated[float, typer.Option()] = 1.0,
+    rrr_distance: Annotated[str, typer.Option()] = "elementwise",
     epochs: Annotated[int, typer.Option()] = 20,
     min_aug_area: Annotated[float, typer.Option()] = 0.1,
     max_aug_area: Annotated[float, typer.Option()] = 0.5,
@@ -46,7 +47,9 @@ def run_training(
         min_aug_area=min_aug_area,
         rrr_lambda=rrr_lambda,
         mode=mode,
+        rrr_distance=rrr_distance,
     )
+    assert mode in ["normal", "cutmix", "rrr"], f"Mode {mode} not supported."
 
     if mode != "normal":
         general_config["experiment_name"] += f"_{mode}"

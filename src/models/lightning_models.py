@@ -249,6 +249,7 @@ class LightningBaseModel(LightningModule):
             dataset_name=self.dataset_name,
             explanation_method_name=self.rrr_explanation,
             explanation_kwargs=self.config.get("explanation_kwargs", None),
+            norm=self.config.get("rrr_distance", "elementwise"),
         )
         explanation_loss = rrr(self, images, predictions, segmentations)
         loss = regular_loss + explanation_loss
