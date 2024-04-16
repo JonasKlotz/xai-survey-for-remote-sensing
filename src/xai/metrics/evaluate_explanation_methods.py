@@ -23,13 +23,14 @@ from xai.metrics.metrics_manager import MetricsManager
 def evaluate_explanation_methods(
     cfg: dict,
     metrics_cfg: dict,
-    save_data=False,
+    save_data=True,
 ):
     """
     Evaluate Explanation Methods.
 
     Parameters
     ----------
+    save_data
     cfg : dict
         Configuration dictionary containing all the necessary parameters.
     metrics_cfg : dict

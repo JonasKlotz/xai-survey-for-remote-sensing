@@ -33,7 +33,7 @@ def visualize(cfg: dict, model=None):
     if cfg["generate_explanations"]:
         logger.info("Generating explanations")
         explanation_manager = ExplanationsManager(cfg, model)
-        cfg, data_loader = get_dataloader_from_cfg(cfg)
+        cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="val")
     else:
         logger.info(
             f"Not generating explanations, loading from zarr: {cfg['zarr_path']}"
@@ -47,13 +47,14 @@ def visualize(cfg: dict, model=None):
     index2name = get_index_to_name(cfg)
 
     explanation_visualizer = ExplanationVisualizer(cfg, model, index2name)
-
+    logger.info("Starting visualization")
+    logger.info(f"Saving to {explanation_visualizer.output_path}")
     for i, batch_dict in enumerate(tqdm(data_loader)):
         if cfg["generate_explanations"]:
             batch_dict = explanation_manager.explain_batch(
                 batch_dict, explain_all=False
             )
-        explanation_visualizer.visualize_from_batch_dict(batch_dict, show=True)
+        explanation_visualizer.visualize_from_batch_dict(batch_dict, show=False)
 
         explanation_visualizer.save_last_fig(
             name=f"sample_{batch_dict["index_data"].item()}", format="png"

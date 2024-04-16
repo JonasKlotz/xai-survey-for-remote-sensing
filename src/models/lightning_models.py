@@ -34,10 +34,10 @@ class LightningBaseModel(LightningModule):
         self.max_epochs = config["max_epochs"]
 
         self.mode = config.get("mode", "normal")
+        self.loss_name = config.get("loss", "regular")
 
         if self.mode == "rrr":
             # Parameters for RRR loss
-            self.loss_name = config.get("loss", "regular")
             self.rrr_explanation = config.get("explanation_methods")[0]
             self.rrr_lambda = config.get("rrr_lambda", 1)
             self.rrr_logged = False

@@ -627,7 +627,9 @@ class ExplanationVisualizer:
 
             attr = attr.squeeze()
 
-            data[key] = go.Heatmap(z=np.flipud(attr), colorscale="RdBu_r")
+            data[key] = go.Heatmap(
+                z=np.flipud(attr), colorscale="RdBu_r", zmin=-1, zmax=1
+            )
 
         num_plots = len(data.keys())
         cols = num_plots

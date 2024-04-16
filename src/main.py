@@ -107,6 +107,7 @@ def run_evaluate_explanations(
     explanation_method: Annotated[str, typer.Option()] = None,
     gpu: Annotated[int, typer.Option()] = 3,
     save_data: Annotated[bool, typer.Option()] = False,
+    results_path: Annotated[str, typer.Option()] = None,
 ):
     from config_utils import setup_everything
 
@@ -117,6 +118,7 @@ def run_evaluate_explanations(
         debug=debug,
         explanation_method=explanation_method,
         gpu=gpu,
+        results_path=results_path,
     )
 
     from config_utils import load_yaml

@@ -4,8 +4,8 @@
 # General parameters
 model_name: 'vgg'
 dataset_name: 'deepglobe'
-num_classes: 6
-input_channels: 3
+num_classes: 19
+input_channels: 13
 
 pretrained: False
 
@@ -14,8 +14,10 @@ explanation_methods:
   - 'lime'
   - 'lrp'
   - 'integrated_gradients'
-  - 'gradcam'
   - 'deeplift'
+  - 'guided_gradcam'
+  - 'occlusion'
+  - 'gradcam'
 
 # Dataset parameters
 data:
@@ -24,27 +26,22 @@ data:
     train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_train.csv"
     val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_val.csv"
     test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_test.csv"
-    segmentations_lmdb_path: None # "/media/storagecube/jonasklotz/BigEarthNet-V2/"
 
-  batch_size: 16 #128
-  num_workers: 0 # 8
-  pin_memory: True
-  force_shuffle: True # shuffle also test loader only for metrics evaluation
+
+    batch_size: 32 #128
+    num_workers: 8 # 8
+    pin_memory: False
+    force_shuffle: False # shuffle also test loader
 
 
 # Training parameters
-max_epochs: 50
-learning_rate: 0.05
-momentum: 0.9
-weight_decay: 0.0005
-optimizer: 'sgd'
-scheduler: 'step'
+max_epochs: 20
+learning_rate: 0.025
 threshold: 0.5
+momentum: 0.9
 
 
 # whether to load the batches from a specific path
-zarr_path: 'results/deepglobe_vgg_final.zarr'
-model_path: 'models/deepglobe_vgg_final/final_model.pt'
-
-
+zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/metrics/deepglobe_vgg_good/deepglobe_vgg_2024-02-13_12-45-28.zarr'
+model_path: 'models_final/deepglobe_vgg_20EP/final_model.ckpt'
 

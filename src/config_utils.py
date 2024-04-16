@@ -7,7 +7,7 @@ from utility.cluster_logging import logger
 import pprint
 
 
-def parse_config(config_path, project_root, debug=False):
+def parse_config(config_path, project_root):
     """
     Parse the config file and add important paths to the config dictionary.
     Parameters
@@ -108,6 +108,7 @@ def setup_everything(
     random_seed: int,
     explanation_method: str,
     gpu: int,
+    results_path: str = None,
     **kwargs,
 ):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
@@ -130,6 +131,10 @@ def setup_everything(
 
     general_config = parse_config(config_path, project_root)
     general_config["debug"] = debug
+
+    # overwrite results path if given
+    if results_path is not None:
+        general_config["results_path"] = results_path
 
     print_cuda_informations()
 
