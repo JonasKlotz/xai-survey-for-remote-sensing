@@ -1,4 +1,3 @@
-import copy
 import os
 from abc import abstractmethod
 
@@ -14,6 +13,7 @@ from data.dataset import (
     DeepGlobeDataset,
     EuroSATDataset,
 )
+from utility.cluster_logging import logger
 
 
 class DataModule(pl.LightningDataModule):
@@ -119,9 +119,15 @@ class DataModule(pl.LightningDataModule):
 class BigEarthNetDataModule(DataModule):
     def __init__(self, cfg, transform_tr, transform_te):
         super().__init__(cfg, transform_tr, transform_te)
+        self.train_country = None
+        self.test_country = None
         self.cfg = cfg
         self.init_transforms()
         self.init_active_classes()
+
+        self.task = "multilabel"
+        self.num_classes = len(self.active_classes)
+        self.dims = (10, 120, 120)
 
     def get_dataset(
         self,
@@ -146,18 +152,25 @@ class BigEarthNetDataModule(DataModule):
 
     def init_transforms(self):
         self.train_country = (
-            os.path.basename(self.cfg["data"].train_csv).split("_")[0].capitalize()
+            os.path.basename(self.cfg["data"]["train_csv"]).split("_")[0].capitalize()
         )
-        self.test_country = list(
-            map(
-                lambda x: os.path.basename(x).split("_")[0].capitalize(),
-                self.cfg["data"].test_csv,
-            )
-        )
-        if self.cfg["data"].global_pctl:
+        # self.test_country = list(
+        #     map(
+        #         lambda x: os.path.basename(x).split("_")[0].capitalize(),
+        #         self.cfg["data"]["test_csv"],
+        #     )
+        # )
+        self.test_country = ["All"]
+
+        logger.debug(f"Train Country: {self.train_country}")
+        logger.debug(f"Test Countries: {self.test_country}")
+
+        if self.cfg["data"]["global_pctl"]:
             print("Global Pre-Normalization.")
             tr_percentiles = 10000
-        elif self.cfg["data"].all_percentiles and not self.cfg["data"].global_pctl:
+        elif (
+            self.cfg["data"]["all_percentiles"] and not self.cfg["data"]["global_pctl"]
+        ):
             print("All BEN Pre-Normalization.")
             tr_percentiles = list(BAND_99TH_PERCENTILES["All"].values())
         else:
@@ -166,8 +179,8 @@ class BigEarthNetDataModule(DataModule):
         # te_percentiles = list(map(lambda x: list(BAND_99TH_PERCENTILES[x].values()), self.train_country))
 
         # currently train and test normalized by train norms (!)
-        channel_global = "Global" if self.cfg["data"].global_pctl else "Channel"
-        if self.cfg["data"].all_percentiles:
+        channel_global = "Global" if self.cfg["data"]["global_pctl"] else "Channel"
+        if self.cfg["data"]["all_percentiles"]:
             print("All Percentiles", channel_global)
             means = list(BAND_NORM_STATS[channel_global]["All"]["mean"].values())
             stds = list(BAND_NORM_STATS[channel_global]["All"]["std"].values())
@@ -179,29 +192,33 @@ class BigEarthNetDataModule(DataModule):
             stds = list(
                 BAND_NORM_STATS[channel_global][self.train_country]["std"].values()
             )
+        logger.debug(f"Means: {means}")
+        logger.debug(f"Stds: {stds}")
 
-        # add data transforms to transform_tr
-        self.transform_tr.add_data_transforms(
-            means, stds, tr_percentiles, sentinel2=True
-        )
-        self.transform_tr.setup_compose()
+        logger.debug(f"Percentiles: {tr_percentiles}")
 
-        transform_va_list = []
-        for te_percentile in range(len(self.test_country)):
-            transform = copy.deepcopy(self.transform_te)
-            transform.add_data_transforms(means, stds, tr_percentiles, sentinel2=True)
-            transform.setup_compose()
-            transform_va_list.append(transform)
-        self.transform_val = transform_va_list
-
-        # add data transforms to (all) transform_te's
-        transform_te_list = []
-        for te_percentile in range(len(self.test_country)):
-            transform = copy.deepcopy(self.transform_te)
-            transform.add_data_transforms(means, stds, tr_percentiles, sentinel2=True)
-            transform.setup_compose()
-            transform_te_list.append(transform)
-        self.transform_te = transform_te_list
+        # # add data transforms to transform_tr
+        # self.transform_tr.add_data_transforms(
+        #     means, stds, tr_percentiles, sentinel2=True
+        # )
+        # self.transform_tr.setup_compose()
+        #
+        # transform_va_list = []
+        # for _ in range(len(self.test_country)):
+        #     transform = copy.deepcopy(self.transform_te)
+        #     transform.add_data_transforms(means, stds, tr_percentiles, sentinel2=True)
+        #     transform.setup_compose()
+        #     transform_va_list.append(transform)
+        # self.transform_val = transform_va_list
+        #
+        # # add data transforms to (all) transform_te's
+        # transform_te_list = []
+        # for _ in range(len(self.test_country)):
+        #     transform = copy.deepcopy(self.transform_te)
+        #     transform.add_data_transforms(means, stds, tr_percentiles, sentinel2=True)
+        #     transform.setup_compose()
+        #     transform_te_list.append(transform)
+        # self.transform_te = transform_te_list
 
     def init_active_classes(self):
         active_classes_tr = set(ACTIVE_CLASSES[self.train_country])
@@ -211,7 +228,7 @@ class BigEarthNetDataModule(DataModule):
         active_classes_te = set.intersection(*active_classes_te)
         self.active_classes = list(active_classes_tr.intersection(active_classes_te))
 
-        if self.cfg["data"].intersection_8country:
+        if self.cfg["data"]["intersection_8country"]:
             self.active_classes = ACTIVE_CLASSES["Intersection_8Country"]
         self.num_cls = len(self.active_classes)
 
@@ -307,12 +324,3 @@ class EuroSATDataModule(DataModule):
         self.transform_te.add_data_transforms(means, stds, percentiles, sentinel2=True)
         self.transform_te.setup_compose()
         self.transform_te = [self.transform_te]
-
-
-def get_datamodule(dataset):
-    if dataset == "BigEarthNet":
-        return BigEarthNetDataModule
-    if dataset == "DeepGlobe":
-        return DeepGlobeDataModule
-    if dataset == "EuroSAT":
-        return EuroSATDataModule

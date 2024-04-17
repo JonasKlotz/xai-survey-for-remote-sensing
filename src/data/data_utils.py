@@ -7,7 +7,7 @@ from pytorch_lightning import LightningDataModule
 from torchvision import transforms
 
 from data.constants import DEEPGLOBE_IDX2NAME
-from data.datamodule import DeepGlobeDataModule
+from data.datamodule import DeepGlobeDataModule, BigEarthNetDataModule
 from data.torch_vis.torch_vis_datamodules import Caltech101DataModule, MNISTDataModule
 from data.torch_vis.torchvis_CONSTANTS import CALTECH101_IDX2NAME, MNIST_IDX2NAME
 from data.zarr_handler import get_zarr_dataloader
@@ -95,10 +95,24 @@ def get_caltech101_data_module(cfg):
     return datamodule
 
 
+def get_ben_data_module(cfg):
+    # create normal torch transforms
+    transforms_train = transforms.Compose(
+        [
+            transforms.ToTensor(),
+        ]
+    )
+
+    data_module = BigEarthNetDataModule(cfg, transforms_train, transforms_train)
+
+    return data_module
+
+
 dataset_cards = {
     "mnist": get_mnist_data_module,
     "deepglobe": get_deepglobe_data_module,
     "caltech101": get_caltech101_data_module,
+    "ben": get_ben_data_module,
 }
 
 

@@ -248,9 +248,10 @@ class Ben19Dataset(BaseDataset):
             self.discard_empty_labels()
 
     def read_labels(self, meta_data_path, patch_names):
+        logger.debug(f"Reading labels from {meta_data_path}  ")
         df = pd.read_parquet(meta_data_path)
         df_subset = (
-            df.set_index("name").loc[self.patch_names].reset_index(inplace=False)
+            df.set_index("patch").loc[self.patch_names].reset_index(inplace=False)
         )
         string_labels = df_subset.new_labels.tolist()
         multihot_labels = np.array(list(map(self.convert_to_multihot, string_labels)))
