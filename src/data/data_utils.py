@@ -110,9 +110,9 @@ def get_benv2_data_module(cfg):
     test_df = pd.read_csv(cfg["data"]["test_csv"])
 
     keys = {
-        "train": train_df["patchname"].tolist(),
-        "val": val_df["patchname"].tolist(),
-        "test": test_df["patchname"].tolist(),
+        "train": train_df["patch_id"].tolist(),
+        "validation": val_df["patch_id"].tolist(),
+        "test": test_df["patch_id"].tolist(),
     }
 
     data_module = BENv2DataModule(
@@ -279,7 +279,7 @@ def parse_batch(batch: dict):
 
 def _parse_dataloader_batch(batch: dict):
     image_tensor = batch["features"]
-    segments_tensor = batch["segmentations"]
+    segments_tensor = batch.get("segmentations", None)
     labels_tensor = batch["targets"]
     index_tensor = batch["index"]
     return image_tensor, labels_tensor, None, segments_tensor, index_tensor, None

@@ -26,7 +26,7 @@ data:
     train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/lithuania_train.csv"
     val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/lithuania_val.csv"
     test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/lithuania_test.csv"
-    s2s1_mapping_file: "/media/storagecube/jonasklotz/BigEarthNet-V2/new_s2s1_mapping.parquet.csv"
+    s2s1_mapping_file: "/media/storagecube/jonasklotz/BigEarthNet-V2/new_s2s1_mapping.parquet"
 
     batch_size: 32 #128
     num_workers: 8 # 8
@@ -43,5 +43,5 @@ momentum: 0.9
 
 # whether to load the batches from a specific path
 zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/metrics/deepglobe_vgg_good/deepglobe_vgg_2024-02-13_12-45-28.zarr'
-model_path: 'models_final/deepglobe_vgg_20EP/final_model.ckpt'
+model_path: 'models_final/ben_vgg/early_stopped.ckpt'
 

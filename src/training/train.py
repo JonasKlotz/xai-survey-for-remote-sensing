@@ -38,11 +38,6 @@ def train(cfg: dict, tune=False):
 
     cfg["models_path"] = os.path.join(cfg["models_path"], prefix_name)
 
-    # Samples required by the custom ImagePredictionLogger callback to log image predictions.
-    cfg, val_loader = get_dataloader_from_cfg(cfg, loader_name="val")
-
-    val_batch = next(iter(val_loader))
-    image_tensor, labels_tensor, _, _, index_tensor, _ = parse_batch(val_batch)
     group_name = cfg["group_name"]
     logger.debug(f"Logging with Group name: {group_name}")
     tags = [
@@ -100,10 +95,10 @@ def train(cfg: dict, tune=False):
             tune_batch_size=True,
         )
 
-    trainer.fit(model, data_module)
+    trainer.fit(model=model, datamodule=data_module)
     model.metrics_manager.plot(stage="val")
 
-    trainer.test(model, data_module)
+    trainer.test(model, datamodule=data_module)
     model.metrics_manager.plot(stage="test")
 
     save_model(cfg, model)

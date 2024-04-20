@@ -18,16 +18,19 @@ def generate_explanations(cfg: dict):
     cfg["data"]["num_workers"] = 0
     cfg["data"]["batch_size"] = 1  # for debugging
 
-    cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="train")
+    cfg["results_path"] = f"/media/storagecube/jonasklotz/results/{cfg["dataset_name"]}"
+    logger.debug(f"Updated for Results path: {cfg['results_path']}")
+
+    cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="test")
 
     # load model
     model = get_model(cfg, self_trained=True).to(cfg["device"])
     model.eval()
 
-    explanation_manager = ExplanationsManager(cfg, model, save=False)
+    explanation_manager = ExplanationsManager(cfg, model, save=True)
 
     for batch in tqdm.tqdm(data_loader):
-        explanation_manager.explain_batch(batch, explain_all=True)
+        explanation_manager.explain_batch(batch)
 
 
 def minmax_normalize_tensor(tensor):

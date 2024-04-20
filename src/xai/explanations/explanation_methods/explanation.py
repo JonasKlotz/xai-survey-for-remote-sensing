@@ -202,8 +202,8 @@ class Explanation:
         return attrs
 
     def _post_process_attribution(self, attribution):
-        # If attrs is 3 channel sum over channels
-        if len(attribution.shape) == 4 and attribution.shape[1] == 3:
+        # If attrs is more than 1 channel, sum over the channels
+        if len(attribution.shape) == 4 and attribution.shape[1] != 1:
             attribution = attribution.sum(dim=1, keepdim=True)
 
         # min max normalization

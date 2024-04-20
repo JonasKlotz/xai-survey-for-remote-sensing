@@ -81,10 +81,10 @@ def add_important_paths_to_cfg(config: dict, project_root: str):
 
 
 def _add_task(config):
-    if config["dataset_name"] == "deepglobe":
-        config["task"] = "multilabel"
-    else:
+    if config["dataset_name"] == "caltech":
         config["task"] = "multiclass"
+    else:
+        config["task"] = "multilabel"
     return config
 
 

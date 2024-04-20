@@ -48,6 +48,7 @@ class ExplanationsManager:
         self.device = cfg["device"]
         self.dtype = dtype
         self.task = cfg["task"]
+        self.has_segmentation = cfg["dataset_name"] != "ben"
 
         self._init_explanations()
 
@@ -75,9 +76,11 @@ class ExplanationsManager:
             "x_data",
             "y_data",
             "y_pred_data",
-            "s_data",
             "index_data",
         ] + explanation_keys
+        if self.has_segmentation:
+            storage_keys.append("s_data")
+
         zarr_storage_path = f"{self.output_path}/{self.cfg['experiment_name']}.zarr"
         self.storage_handler = ZarrGroupHandler(
             path=zarr_storage_path,
@@ -91,6 +94,11 @@ class ExplanationsManager:
         Explain a batch of images.
         Parameters
         ----------
+        explain_true_labels: bool
+            If True, the explanation will be generated for the true labels.
+        explain_all: bool
+            If True, the explanation will be generated for all labels.
+
         batch: torch.Tensor
             The batch to explain.
 
@@ -125,9 +133,11 @@ class ExplanationsManager:
             "x_data": features,
             "y_data": target,
             "y_pred_data": predictions,
-            "s_data": segments,
             "index_data": idx,
         }
+        if segments is not None:
+            tmp_storage_dict["s_data"] = segments
+
         # Explain batch for each explanation method
         for explanation_name, explanation in self.explanations.items():
             batch_attrs = explanation.explain_batch(features, explanation_targets)

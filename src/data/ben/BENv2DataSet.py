@@ -3,9 +3,10 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 
-from BENv2Utils import BENv2LDMBReader
+from data.ben.BENv2Utils import BENv2LDMBReader
 
 
 class BENv2DataSet(Dataset):
@@ -74,6 +75,8 @@ class BENv2DataSet(Dataset):
         img, lbl = self.reader[key]
         if self.transforms is not None:
             img = self.transforms(img)
-        if self.return_patchname:
-            return img, lbl, key
-        return img, lbl
+        return {
+            "features": img,
+            "targets": lbl,
+            "index": key,
+        }

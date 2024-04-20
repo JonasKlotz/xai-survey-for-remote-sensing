@@ -9,17 +9,19 @@ from typing import Optional
 from typing import Union
 
 import numpy as np
-from lightning.pytorch import LightningDataModule
+#from lightning.pytorch import LightningDataModule
+
+import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from BENv2DataSet import BENv2DataSet
-from BENv2Stats import means, stds
-from BENv2TorchUtils import ben_19_labels_to_multi_hot
-from BENv2TorchUtils import stack_and_interpolate
-from BENv2Utils import _all_bandnames
+from data.ben.BENv2DataSet import BENv2DataSet
+from data.ben.BENv2Stats import means, stds
+from data.ben.BENv2TorchUtils import ben_19_labels_to_multi_hot
+from data.ben.BENv2TorchUtils import stack_and_interpolate
+from data.ben.BENv2Utils import _all_bandnames
 
 
-class BENv2DataModule(LightningDataModule):
+class BENv2DataModule(pl.LightningDataModule):
     # This setting is dependent on the system being used
     pin_memory = False
 
@@ -86,6 +88,10 @@ class BENv2DataModule(LightningDataModule):
         self.process_labels_fn = process_labels_fn
         self.verbose = verbose
         self.kwargs = kwargs
+
+        self.task = "multilabel"
+        self.num_classes = 19
+        self.dims = [len(bands), img_size, img_size]
 
         # there are different combinations depending on the mode available, select the right mode
         interpolation_method = "no_interpolation"

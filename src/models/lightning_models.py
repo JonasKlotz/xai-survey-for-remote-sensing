@@ -126,7 +126,7 @@ class LightningBaseModel(LightningModule):
     def training_step(self, batch, batch_idx, stage="train"):
         images = batch["features"]
         target = batch["targets"]
-        segmentations = batch["segmentations"]
+        segmentations = batch.get("segmentations", None)
 
         loss, normalized_probabilities = self.calc_loss(
             images, segmentations, stage, target
@@ -141,7 +141,7 @@ class LightningBaseModel(LightningModule):
     def evaluate(self, batch, stage=None):
         images = batch["features"]
         target = batch["targets"]
-        segmentations = batch["segmentations"]
+        segmentations = batch.get("segmentations", None)
 
         loss, normalized_probabilities = self.calc_loss(
             images, segmentations, stage, target
@@ -208,7 +208,7 @@ class LightningBaseModel(LightningModule):
             if not self.rrr_logged:
                 logger.debug("Starting RRR loss")
                 self.rrr_logged = True
-
+            assert segmentations is not None, "Segmentations must be provided for RRR loss"
             loss, normalized_probabilities, explanation_loss = self._calc_rrr_loss(
                 images, segmentations, target, y_hat
             )
@@ -335,7 +335,8 @@ class LightningBaseModel(LightningModule):
         elif self.mode == "rrr":
             return self._on_before_batch_transfer_rrr(batch)
         if self.log_next:
-            self._log_segmentation(batch)
+            if "segmentations" in batch.keys():
+                self._log_segmentation(batch)
             self.log_next = False
         return batch
 
@@ -390,7 +391,8 @@ class LightningBaseModel(LightningModule):
         # explanations = explanation_method.explain_batch(batch)
         table = wandb.Table(columns=["ID", "Image"])
         for idx, (img, seg) in enumerate(
-            zip(batch["features"], batch["segmentations"])
+            zip(batch["features"], batch.get("segmentations", None)
+)
         ):
             np_seg = seg.clone().detach().cpu().numpy()
             # parse batch
@@ -417,7 +419,8 @@ class LightningBaseModel(LightningModule):
         # explanations = explanation_method.explain_batch(batch)
         table = wandb.Table(columns=["ID", "Image"])
         for idx, (img, seg) in enumerate(
-            zip(batch["features"], batch["segmentations"])
+            zip(batch["features"],         segmentations = batch.get("segmentations", None)
+)
         ):
             np_seg = seg.clone().detach().cpu().numpy()
             # parse batch

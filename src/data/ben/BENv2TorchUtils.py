@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from BENv2Utils import ben_19_labels_to_multi_hot as ben_19_labels_to_multi_hot_np
+from data.ben.BENv2Utils import ben_19_labels_to_multi_hot as ben_19_labels_to_multi_hot_np
 
 
 def stack_and_interpolate(
