@@ -5,7 +5,7 @@
 model_name: 'vgg'
 dataset_name: 'ben'
 num_classes: 19
-input_channels: 13
+input_channels: 14
 
 pretrained: False
 
@@ -23,13 +23,10 @@ explanation_methods:
 data:
     images_lmdb_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/BENv2.lmdb"
     labels_path: "/media/storagecube/jonasklotz/BigEarthNet-V2/lbls.parquet"
-    train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_train.csv"
-    val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_val.csv"
-    test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/all_test.csv"
-    all_percentiles: True
-    global_pctl: False
-    intersection_8country: False
-
+    train_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/lithuania_train.csv"
+    val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/lithuania_val.csv"
+    test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/lithuania_test.csv"
+    s2s1_mapping_file: "/media/storagecube/jonasklotz/BigEarthNet-V2/new_s2s1_mapping.parquet.csv"
 
     batch_size: 32 #128
     num_workers: 8 # 8

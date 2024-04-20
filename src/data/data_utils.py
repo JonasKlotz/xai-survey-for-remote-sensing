@@ -1,13 +1,15 @@
 import os
 from typing import List
 
+import pandas as pd
 import torch
 import tqdm
 from pytorch_lightning import LightningDataModule
 from torchvision import transforms
 
+from data.ben.BENv2DataModule import BENv2DataModule
 from data.constants import DEEPGLOBE_IDX2NAME
-from data.datamodule import DeepGlobeDataModule, BigEarthNetDataModule
+from data.datamodule import DeepGlobeDataModule
 from data.torch_vis.torch_vis_datamodules import Caltech101DataModule, MNISTDataModule
 from data.torch_vis.torchvis_CONSTANTS import CALTECH101_IDX2NAME, MNIST_IDX2NAME
 from data.zarr_handler import get_zarr_dataloader
@@ -95,15 +97,32 @@ def get_caltech101_data_module(cfg):
     return datamodule
 
 
-def get_ben_data_module(cfg):
-    # create normal torch transforms
-    transforms_train = transforms.Compose(
-        [
-            transforms.ToTensor(),
-        ]
-    )
+def get_benv2_data_module(cfg):
+    image_lmdb = cfg["data"]["images_lmdb_path"]
+    label_file = cfg["data"]["labels_path"]
+    s2s1_mapping_file = cfg["data"]["s2s1_mapping_file"]
+    batchsize = cfg["data"]["batch_size"]
+    num_workers = cfg["data"]["num_workers"]
 
-    data_module = BigEarthNetDataModule(cfg, transforms_train, transforms_train)
+    # create keys
+    train_df = pd.read_csv(cfg["data"]["train_csv"])
+    val_df = pd.read_csv(cfg["data"]["val_csv"])
+    test_df = pd.read_csv(cfg["data"]["test_csv"])
+
+    keys = {
+        "train": train_df["patchname"].tolist(),
+        "val": val_df["patchname"].tolist(),
+        "test": test_df["patchname"].tolist(),
+    }
+
+    data_module = BENv2DataModule(
+        image_lmdb_file=image_lmdb,
+        label_file=label_file,
+        s2s1_mapping_file=s2s1_mapping_file,
+        batch_size=batchsize,
+        num_workers=num_workers,
+        keys=keys,
+    )
 
     return data_module
 
@@ -112,7 +131,7 @@ dataset_cards = {
     "mnist": get_mnist_data_module,
     "deepglobe": get_deepglobe_data_module,
     "caltech101": get_caltech101_data_module,
-    "ben": get_ben_data_module,
+    "ben": get_benv2_data_module,
 }
 
 
