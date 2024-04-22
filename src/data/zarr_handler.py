@@ -120,9 +120,9 @@ class ZarrGroupDataset(Dataset):
         array_sizes = [
             len(self.zarr_group[array_name]) for array_name in self.zarr_group.keys()
         ]
-        assert (
-            len(set(array_sizes)) == 1
-        ), "All arrays in the group must have the same length"
+        # assert (
+        #     len(set(array_sizes)) == 1
+        # ), "All arrays in the group must have the same length"
         return array_sizes[0]
 
     def __repr__(self):

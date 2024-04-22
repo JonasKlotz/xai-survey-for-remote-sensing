@@ -137,7 +137,7 @@ def run_visualize(
     debug: Annotated[bool, typer.Option()] = False,
     explanation_method: Annotated[str, typer.Option()] = None,
     gpu: Annotated[int, typer.Option()] = 3,
-    generate_explanations: Annotated[bool, typer.Option()] = True,
+    generate_explanations: Annotated[bool, typer.Option()] = False,
 ):
     from config_utils import setup_everything
 

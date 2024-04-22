@@ -70,6 +70,8 @@ _val2idx_new_labels_original_order = {
     x: NEW_LABELS_ORIGINAL_ORDER.index(x) for x in NEW_LABELS_ORIGINAL_ORDER
 }
 
+BEN_IDX2NAME = {i: name for i, name in enumerate(NEW_LABELS)}
+
 
 def ben_19_labels_to_multi_hot(
     labels: Iterable[str], lex_sorted: bool = True

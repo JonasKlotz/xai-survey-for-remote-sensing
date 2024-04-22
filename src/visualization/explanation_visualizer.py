@@ -10,6 +10,9 @@ from plotly.subplots import make_subplots
 from scipy.spatial import cKDTree
 
 from data.data_utils import parse_batch
+from data.ben.BENv2Stats import means as all_mean
+from data.ben.BENv2Stats import stds as all_std
+from utility.cluster_logging import logger
 
 
 def _assert_single_image_and_attrs_shape(
@@ -86,7 +89,7 @@ def remove_axis(fig, row, col):
 
 
 class ExplanationVisualizer:
-    def __init__(self, cfg: dict, explanation_method_name: str, index_to_name: dict):
+    def __init__(self, cfg: dict, index_to_name: dict):
         """
         Initialize the ExplanationVisualizer class.
 
@@ -94,13 +97,11 @@ class ExplanationVisualizer:
         ----------
         cfg : dict
             Configuration dictionary.
-        explanation_method_name : str
-            Name of the explanation method.
+
         index_to_name : dict, optional
             Dictionary mapping index to name.
         """
         self.cfg = cfg
-        self.explanation_method_name = explanation_method_name
         self.index_to_name = index_to_name
         self.last_fig = None
         self.num_classes = cfg["num_classes"]
@@ -251,11 +252,12 @@ class ExplanationVisualizer:
         data["Image"] = go.Image(z=np.flipud(image))
 
         # Add Segmentation
-        segmentation_fig = self.plot_segmentation(segmentations)
-        segmentation_list = []
-        for trace in segmentation_fig.data:
-            segmentation_list.append(trace)
-        data["Segmentation"] = segmentation_list
+        if segmentations is not None:
+            segmentation_fig = self.plot_segmentation(segmentations)
+            segmentation_list = []
+            for trace in segmentation_fig.data:
+                segmentation_list.append(trace)
+            data["Segmentation"] = segmentation_list
 
         for key, attrs in attrs_dict.items():
             attrs = [
@@ -320,7 +322,7 @@ class ExplanationVisualizer:
             predictions_names = ", ".join(predictions_names)
             title = f"Explanation for true label {label_names} and predicted label {predictions_names}"
 
-        image, segmentations = data["Image"], data["Segmentation"]
+        image, segmentations = data["Image"], data.get("Segmentation", None)
         # get all other attrs
         attrs = {
             key: value
@@ -349,24 +351,27 @@ class ExplanationVisualizer:
         # Add image
         fig.add_trace(image, row=1, col=1)
         remove_axis(fig, row=1, col=1)
-        # Add segmentation
-        fig.add_trace(segmentations[0], row=2, col=1)
-        remove_axis(fig, row=2, col=1)
+        if segmentations is not None:
+            # Add segmentation
+            fig.add_trace(segmentations[0], row=2, col=1)
+            remove_axis(fig, row=2, col=1)
+
+            # Add empty plots to add legends
+            for i, plot in enumerate(segmentations[1:], start=1):
+                fig.add_trace(plot, row=1, col=1)
+
+                # Shift the legend to the bottom of the plot
+                fig.update_layout(
+                    legend=dict(
+                        orientation="h", yanchor="top", y=0, xanchor="left", x=0
+                    )
+                )
 
         # # Add each attribution to the subplot and update axes
         for col_key, (attr_name, attr_list) in enumerate(attrs.items(), start=2):
             for row_key, plot in enumerate(attr_list, start=1):
                 fig.add_trace(plot, row=row_key, col=col_key)
                 remove_axis(fig, row=row_key, col=col_key)
-
-        # Add empty plots to add legends
-        for i, plot in enumerate(segmentations[1:], start=1):
-            fig.add_trace(plot, row=1, col=1)
-
-            # Shift the legend to the bottom of the plot
-            fig.update_layout(
-                legend=dict(orientation="h", yanchor="top", y=0, xanchor="left", x=0)
-            )
 
         fig.update_layout(
             height=self.size * rows,
@@ -435,6 +440,9 @@ class ExplanationVisualizer:
         """
         # create save path if it does not exist
         os.makedirs(self.output_path, exist_ok=True)
+        if self.last_fig is None:
+            logger.error("No figure to save.")
+            return
         # print(f"Saving figure to {self.save_path}/{name}.{format}")
         self.last_fig.write_image(f"{self.output_path}/{name}.{format}", format=format)
 
@@ -509,6 +517,19 @@ class ExplanationVisualizer:
             Denormalized image.
         """
         mean, std = self._get_mean_and_std()
+
+        if self.cfg["dataset_name"] == "ben":
+            # select RGB bands
+            #  B04, B03, and B02 are the red, green, and blue (RGB) band
+            image = image[[3, 2, 1]]
+            # convert to torch format BGR
+            image = image[[2, 1, 0]]
+
+            # also permute the mean and std
+            mean = mean[[2, 1, 0]]
+            std = std[[2, 1, 0]]
+
+        mean, std = self._get_mean_and_std()
         return NormalizeInverse(mean, std)(image)
 
     def _get_mean_and_std(self):
@@ -529,7 +550,22 @@ class ExplanationVisualizer:
             mean = torch.tensor([0.485, 0.456, 0.406])
             std = torch.tensor([0.229, 0.224, 0.225])
             return mean, std
+        elif self.cfg["dataset_name"] == "ben":
+            onetwenty_nearest_mean = all_mean["120_nearest"]
+            onetwenty_nearest_std = all_std["120_nearest"]
+            #  B04, B03, and B02 are the red, green, and blue (RGB) bands
+            red_mean = onetwenty_nearest_mean["B04"]
+            red_std = onetwenty_nearest_std["B04"]
 
+            green_mean = onetwenty_nearest_mean["B03"]
+            green_std = onetwenty_nearest_std["B03"]
+
+            blue_mean = onetwenty_nearest_mean["B02"]
+            blue_std = onetwenty_nearest_std["B02"]
+
+            mean = torch.tensor([red_mean, green_mean, blue_mean])
+            std = torch.tensor([red_std, green_std, blue_std])
+            return mean, std
         raise NotImplementedError(f"No mean and std for {self.cfg['dataset_name']}")
 
     def plot_segmentation(
@@ -909,7 +945,7 @@ class ExplanationVisualizer:
         """
         batch = parse_batch(batch_dict)
         batch_tensor_list = batch[:-1]
-        batch_tensor_list = [torch.tensor(t).squeeze() for t in batch_tensor_list]
+        # remove non tensors
 
         attributions_dict = batch[-1]
         attributions_dict = {
@@ -922,8 +958,17 @@ class ExplanationVisualizer:
             true_labels,
             predicted_label_tensor,
             segments_tensor,
-            index_tensor,
+            indices,
         ) = batch_tensor_list
+        image_tensor = torch.tensor(image_tensor).squeeze()
+        true_labels = torch.tensor(true_labels).squeeze()
+        if segments_tensor is not None:
+            segments_tensor = torch.tensor(segments_tensor).squeeze()
+        predicted_label_tensor = torch.tensor(predicted_label_tensor).squeeze()
+        multilabel_only = True
+        if multilabel_only and torch.sum(predicted_label_tensor) <= 1:
+            logger.debug(f"Skipping {indices} as it is not multilabel")
+            return
 
         self.visualize(
             attribution_dict=attributions_dict,

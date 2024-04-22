@@ -42,6 +42,6 @@ momentum: 0.9
 
 
 # whether to load the batches from a specific path
-zarr_path: '/home/jonasklotz/Studys/MASTERS/XAI/results/metrics/deepglobe_vgg_good/deepglobe_vgg_2024-02-13_12-45-28.zarr'
+zarr_path: '/home/jonasklotz/Studys/MASTERS/results_22_4_final/ben/ben_explanations/ben_vgg_2024-04-20_15-48-28.zarr'
 model_path: 'models_final/ben_vgg/early_stopped.ckpt'
 

@@ -48,7 +48,7 @@ def debug_explanations(cfg: dict):
     model.eval()
     explanation_manager = ExplanationsManager(cfg, model)
     index2name = get_index_to_name(cfg)
-    explanation_visualizer = ExplanationVisualizer(cfg, model, index2name)
+    explanation_visualizer = ExplanationVisualizer(cfg, index2name)
 
     i = 0
     for batch in tqdm.tqdm(data_loader):

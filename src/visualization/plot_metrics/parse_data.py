@@ -339,8 +339,63 @@ def recalculate_score_direction(df_test):
     # we want to multiply -1 to the values of the metrics that are lower is better
     for metric_name, metric in metric_objects.items():
         if metric.score_direction.value == "lower":
-            df_test.loc[df_test["Metric"] == metric_name, "Value"] *= -1
+            df_test.loc[df_test["Metric"] == metric_name, "Value"] = (
+                1 - df_test.loc[df_test["Metric"] == metric_name, "Value"]
+            )
     return df_test
+
+
+def scale_df(df, group_col: str = "Metric", value_col: str = "Value"):
+    """
+    Scale the values of the df to a 0-1 scale for each group in the group_col, except for the metrics in
+    not_to_scale_metrics. The scaling is done by min-max scaling.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Columns: SampleIndex, Metric, Value, Method, CorrectPrediction
+
+    group_col
+    value_col
+
+    Returns
+    -------
+
+    """
+    assert group_col in df.columns, f"Group column {group_col} not in df columns"
+    assert value_col in df.columns, f"Value column {value_col} not in df columns"
+
+    # 0-1 scaled columns. These columns are scaled between 0 and 1 by definition.
+    not_to_scale_metrics = [
+        "Attribution Localization",
+        "Monotonicity-Arya",
+        "Pointing Game",
+        "Top-K Intersection",
+        "Relevance Mass Accuracy",
+        "Relevance Rank Accuracy",
+        "Attribution Localisation",
+    ]
+    all_group_col_entries = df[group_col].unique()
+    to_scale_metrics = [
+        metric for metric in all_group_col_entries if metric not in not_to_scale_metrics
+    ]
+
+    # get the min and max values for each group
+    min_values = df.groupby(group_col)[value_col].min()
+    max_values = df.groupby(group_col)[value_col].max()
+
+    # iterate over the groups and scale the values
+    for group_col_entry in to_scale_metrics:
+        # get the min and max value for the group
+        min_val = min_values[group_col_entry]
+        max_val = max_values[group_col_entry]
+        # get the indices of the group
+        group_indices = df[df[group_col] == group_col_entry].index
+        # scale the values
+        df.loc[group_indices, value_col] = (
+            df.loc[group_indices, value_col] - min_val
+        ) / (max_val - min_val) + 0.00000001
+    return df
 
 
 def get_metric_objects(metrics):

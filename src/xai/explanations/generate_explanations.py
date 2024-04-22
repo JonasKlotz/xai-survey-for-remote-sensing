@@ -16,7 +16,7 @@ def generate_explanations(cfg: dict):
     logger.debug(f"Using device: {cfg['device']}")
     cfg["method"] = "explain"
     cfg["data"]["num_workers"] = 0
-    cfg["data"]["batch_size"] = 1  # for debugging
+    cfg["data"]["batch_size"] = 1  # batch size must be 1 for explanations
 
     cfg["results_path"] = f"/media/storagecube/jonasklotz/results/{cfg["dataset_name"]}"
     logger.debug(f"Updated for Results path: {cfg['results_path']}")

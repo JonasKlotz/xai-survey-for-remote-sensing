@@ -183,7 +183,7 @@ def create_training_experiment_and_group_names(general_config):
         if normal_segmentations and mode == "cutmix":
             group_name += "normal_segmentations"
         else:
-            group_name += explanation_method
+            group_name += f"_{explanation_method}"
 
     # Specific configurations for different modes
     if mode == "rrr":

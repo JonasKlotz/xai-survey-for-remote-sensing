@@ -20,18 +20,17 @@ pio.templates.default = "plotly_white+my_modification"
 
 def visualize(cfg: dict, model=None):
     cfg["method"] = "visualize"
-
-    if not model:
-        # load model
-        model = get_model(cfg, self_trained=True)
-
-        model = model.double()
-        model.eval()
-
     cfg["data"]["batch_size"] = 1  # we only want to visualize one sample at a time
 
     if cfg["generate_explanations"]:
         logger.info("Generating explanations")
+        if not model:
+            # load model
+            model = get_model(cfg, self_trained=True)
+
+            model = model.double()
+            model.eval()
+
         explanation_manager = ExplanationsManager(cfg, model)
         cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="val")
     else:
@@ -46,7 +45,7 @@ def visualize(cfg: dict, model=None):
 
     index2name = get_index_to_name(cfg)
 
-    explanation_visualizer = ExplanationVisualizer(cfg, model, index2name)
+    explanation_visualizer = ExplanationVisualizer(cfg, index2name)
     logger.info("Starting visualization")
     logger.info(f"Saving to {explanation_visualizer.output_path}")
     for i, batch_dict in enumerate(tqdm(data_loader)):
@@ -54,8 +53,11 @@ def visualize(cfg: dict, model=None):
             batch_dict = explanation_manager.explain_batch(
                 batch_dict, explain_all=False
             )
-        explanation_visualizer.visualize_from_batch_dict(batch_dict, show=False)
+        explanation_visualizer.visualize_from_batch_dict(batch_dict, show=True)
 
-        explanation_visualizer.save_last_fig(
-            name=f"sample_{batch_dict["index_data"].item()}", format="png"
-        )
+        if "index_data" in batch_dict:
+            idx = batch_dict["index_data"]
+        else:
+            idx = [i]
+
+        explanation_visualizer.save_last_fig(name=f"sample_{idx[0]}", format="png")

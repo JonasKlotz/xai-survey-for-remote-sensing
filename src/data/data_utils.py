@@ -8,6 +8,7 @@ from pytorch_lightning import LightningDataModule
 from torchvision import transforms
 
 from data.ben.BENv2DataModule import BENv2DataModule
+from data.ben.BENv2Utils import BEN_IDX2NAME
 from data.constants import DEEPGLOBE_IDX2NAME
 from data.datamodule import DeepGlobeDataModule
 from data.torch_vis.torch_vis_datamodules import Caltech101DataModule, MNISTDataModule
@@ -190,6 +191,7 @@ def get_index_to_name(cfg):
         "deepglobe": DEEPGLOBE_IDX2NAME,
         "caltech101": CALTECH101_IDX2NAME,
         "mnist": MNIST_IDX2NAME,
+        "ben": BEN_IDX2NAME,
     }
 
     if cfg["dataset_name"] not in dataset_name_to_idx_name:
@@ -287,7 +289,12 @@ def _parse_dataloader_batch(batch: dict):
 
 def _parse_zarr_batch(batch: dict):
     tmp_batch = batch.copy()
-    tmp_batch = {k: torch.tensor(v) for k, v in tmp_batch.items()}
+    for k, v in tmp_batch.items():
+        if not isinstance(v, torch.Tensor):
+            try:
+                tmp_batch[k] = torch.tensor(v)
+            except:  # noqa: E722
+                pass
     image_tensor = tmp_batch.pop("x_data").numpy(force=True)
     label_tensor = tmp_batch.pop("y_data").numpy(force=True)
     predicted_label_tensor = tmp_batch.pop("y_pred_data").numpy(force=True)
@@ -296,8 +303,15 @@ def _parse_zarr_batch(batch: dict):
     else:
         segments_tensor = None
 
-    index_tensor = tmp_batch.pop("index_data")
+    if "index_data" in tmp_batch:
+        index_tensor = tmp_batch.pop("index_data")
+        if isinstance(index_tensor, torch.Tensor):
+            index_tensor = index_tensor.numpy(force=True)
+    else:
+        index_tensor = [i for i in range(len(image_tensor))]
+
     attributions_dict = tmp_batch  # rename for clarity
+
     return (
         image_tensor,
         label_tensor,

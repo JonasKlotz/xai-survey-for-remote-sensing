@@ -289,6 +289,27 @@ def plot_best_overall_method(
     return fig
 
 
+def plot_result_distribution(df, dataset_name, visualization_save_dir):
+    metrics = df["Metric"].unique()
+    for metric in metrics:
+        fig = px.histogram(
+            df[df["Metric"] == metric],
+            x="Value",
+            color="Method",
+            nbins=20,
+            title=f"{dataset_name}: Distribution of {metric} Results",
+            labels={"Value": metric},
+            marginal="box",  # One of 'rug', 'box', 'violin', or 'histogram'.
+        )
+        save_fig(
+            fig,
+            f"Distribution of {dataset_name} Results for {metric}",
+            visualization_save_dir,
+        )
+
+        fig.show()
+
+
 def get_metrics_categories(metrics):
     metrics_dict = {k: None for k in metrics}
     # Map metrics to AVAILABLE_METRICS
@@ -368,16 +389,26 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
     new_columns = [li for sublist in categories_lists.values() for li in sublist]
     df_grouped = df_grouped[new_columns]
 
-    row_order = ["gradcam", "lime", "deeplift", "integrated", "lrp"]
-    rename_dict = {
-        "gradcam": "Guided GradCAM",
-        "lime": "LIME",
-        "deeplift": "DeepLift",
-        "integrated": "Integrated Gradients",
-        "lrp": "LRP",
-    }
-
-    row_order = [rename_dict[row] for row in row_order]
+    row_order = [
+        "Guided GradCAM",
+        "LIME",
+        "DeepLift",
+        "Integrated Gradients",
+        "LRP",
+        "GradCAM",
+        "Occlusion",
+    ]
+    #
+    # ["gradcam", "lime", "deeplift", "integrated", "lrp"]
+    # rename_dict = {
+    #     "gradcam": "Guided GradCAM",
+    #     "lime": "LIME",
+    #     "deeplift": "DeepLift",
+    #     "integrated": "Integrated Gradients",
+    #     "lrp": "LRP",
+    # }
+    #
+    # row_order = [rename_dict[row] for row in row_order]
     # reorder the rows
     df_grouped = df_grouped.loc[row_order]
 
@@ -393,8 +424,10 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
             y=df_scaled.index,  # Methods as y
             hoverongaps=False,  # Don't allow hovering over gaps
             colorscale=COLORSCALE,
+            text=matrix,  # Set text to the same z-values
+            texttemplate="%{text:.2f}",
         ),
-    )  # You can change the colorscale as needed
+    )
     if title_text is None:
         title_text = "Standard Scaled Metrics"
 

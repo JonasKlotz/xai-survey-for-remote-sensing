@@ -13,7 +13,7 @@ from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.tuner.tuning import Tuner
 
-from data.data_utils import load_data_module, parse_batch, get_dataloader_from_cfg
+from data.data_utils import load_data_module
 from models.get_models import get_model
 from models.lightning_models import LightningBaseModel
 from utility.cluster_logging import logger
@@ -94,6 +94,7 @@ def train(cfg: dict, tune=False):
             tune_learning_rate=True,
             tune_batch_size=True,
         )
+    trainer.test(model, datamodule=data_module)
 
     trainer.fit(model=model, datamodule=data_module)
     model.metrics_manager.plot(stage="val")
