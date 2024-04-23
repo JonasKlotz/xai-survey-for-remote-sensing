@@ -208,7 +208,9 @@ class LightningBaseModel(LightningModule):
             if not self.rrr_logged:
                 logger.debug("Starting RRR loss")
                 self.rrr_logged = True
-            assert segmentations is not None, "Segmentations must be provided for RRR loss"
+            assert (
+                segmentations is not None
+            ), "Segmentations must be provided for RRR loss"
             loss, normalized_probabilities, explanation_loss = self._calc_rrr_loss(
                 images, segmentations, target, y_hat
             )
@@ -337,8 +339,19 @@ class LightningBaseModel(LightningModule):
         if self.log_next:
             if "segmentations" in batch.keys():
                 self._log_segmentation(batch)
+            else:
+                self.log_batch(batch)
             self.log_next = False
         return batch
+
+    def log_batch(self, batch):
+        """We want to log the image and the target of the first batch"""
+
+        table = wandb.Table(columns=["ID", "Image"])
+        for idx, img in enumerate(batch["features"]):
+            img = wandb.Image(img)
+            table.add_data(idx, img)
+        wandb.log({"Images": table})
 
     def _on_before_batch_transfer_cutmix(self, batch):
         if self.training and not self.first_batch_saved:
@@ -365,13 +378,6 @@ class LightningBaseModel(LightningModule):
 
             self.log_xai_segmentations(batch)
 
-            # we dont want to override existing files
-            if os.path.exists(self.first_batch_save_path):
-                raise FileExistsError(
-                    f"The path {self.first_batch_save_path} already exists. Please specify a different location by specifying first_batch_save_path!"
-                )
-
-            torch.save(batch, self.first_batch_save_path)
             self.first_batch_saved = True
         return batch
 
@@ -382,17 +388,9 @@ class LightningBaseModel(LightningModule):
         return batch
 
     def _log_segmentation(self, batch):
-        # explanation_method_name = (self.rrr_explanation,)
-        # explanation_kwargs = self.config.get("explanation_kwargs", None)
-        # from src.xai.explanations.explanation_manager import _explanation_methods
-        #
-        # explanation_method_constructor = _explanation_methods[explanation_method_name]
-        # explanation_method = explanation_method_constructor(**explanation_kwargs)
-        # explanations = explanation_method.explain_batch(batch)
         table = wandb.Table(columns=["ID", "Image"])
         for idx, (img, seg) in enumerate(
-            zip(batch["features"], batch.get("segmentations", None)
-)
+            zip(batch["features"], batch.get("segmentations", None))
         ):
             np_seg = seg.clone().detach().cpu().numpy()
             # parse batch
@@ -419,8 +417,7 @@ class LightningBaseModel(LightningModule):
         # explanations = explanation_method.explain_batch(batch)
         table = wandb.Table(columns=["ID", "Image"])
         for idx, (img, seg) in enumerate(
-            zip(batch["features"],         segmentations = batch.get("segmentations", None)
-)
+            zip(batch["features"], segmentations=batch.get("segmentations", None))
         ):
             np_seg = seg.clone().detach().cpu().numpy()
             # parse batch

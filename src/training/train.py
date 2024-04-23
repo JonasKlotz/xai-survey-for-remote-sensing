@@ -48,7 +48,7 @@ def train(cfg: dict, tune=False):
     ]
 
     wandb_logger = WandbLogger(
-        project="xai_for_rs",
+        project=f"xai_for_rs_{cfg["dataset_name"]}",
         name=cfg["experiment_name"],
         log_model=True,
         group=group_name,

@@ -8,6 +8,7 @@ import torch
 import torchvision
 from plotly.subplots import make_subplots
 from scipy.spatial import cKDTree
+from skimage import exposure
 
 from data.data_utils import parse_batch
 from data.ben.BENv2Stats import means as all_mean
@@ -465,7 +466,11 @@ class ExplanationVisualizer:
 
         image = self._denormalize(image)
         image = _min_max_normalize(image)
+
         image = _tensor_to_numpy(image)
+
+        if self.cfg["dataset_name"] == "ben":
+            image = exposure.equalize_hist(image, nbins=256)
         if image.dtype != np.uint8:
             image = (image * 255).astype(np.uint8)
         image = image[:, :, ::-1]  # bgr to rgb
@@ -931,7 +936,9 @@ class ExplanationVisualizer:
         mask = mask.reshape(attr_shape)
         return mask
 
-    def visualize_from_batch_dict(self, batch_dict, show=True):
+    def visualize_from_batch_dict(
+        self, batch_dict, show=True, skip_non_multilabel=True
+    ):
         """
 
         Parameters
@@ -965,8 +972,8 @@ class ExplanationVisualizer:
         if segments_tensor is not None:
             segments_tensor = torch.tensor(segments_tensor).squeeze()
         predicted_label_tensor = torch.tensor(predicted_label_tensor).squeeze()
-        multilabel_only = True
-        if multilabel_only and torch.sum(predicted_label_tensor) <= 1:
+
+        if skip_non_multilabel and torch.sum(predicted_label_tensor) <= 1:
             logger.debug(f"Skipping {indices} as it is not multilabel")
             return
 
@@ -980,6 +987,32 @@ class ExplanationVisualizer:
             task=self.cfg["task"],
             normalize=True,
         )
+
+    def visualize_image(self, batch_dict, show=True):
+        batch = parse_batch(batch_dict)
+        (
+            image_tensor,
+            true_labels,
+            predicted_label_tensor,
+            segments_tensor,
+            indices,
+            attributions_dict,
+        ) = batch
+
+        for i in range(len(image_tensor)):
+            image = image_tensor[i]
+            label = true_labels[i]
+            image = torch.tensor(image).squeeze()
+            image = self._preprocess_image(image)
+            fig = go.Figure(go.Image(z=image))
+            fig.update_layout(
+                title=f"True label: {label}",
+                xaxis=dict(title="", showgrid=False, showticklabels=False),
+                yaxis=dict(title="", showgrid=False, showticklabels=False),
+            )
+            if show:
+                fig.show()
+            self.last_fig = fig
 
 
 class NormalizeInverse(torchvision.transforms.Normalize):

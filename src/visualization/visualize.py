@@ -53,7 +53,10 @@ def visualize(cfg: dict, model=None):
             batch_dict = explanation_manager.explain_batch(
                 batch_dict, explain_all=False
             )
-        explanation_visualizer.visualize_from_batch_dict(batch_dict, show=True)
+        explanation_visualizer.visualize_from_batch_dict(
+            batch_dict, show=False, skip_non_multilabel=True
+        )
+        # explanation_visualizer.visualize_image(batch_dict, show=False)
 
         if "index_data" in batch_dict:
             idx = batch_dict["index_data"]
