@@ -94,7 +94,6 @@ def train(cfg: dict, tune=False):
             tune_learning_rate=True,
             tune_batch_size=True,
         )
-    trainer.test(model, datamodule=data_module)
 
     trainer.fit(model=model, datamodule=data_module)
     model.metrics_manager.plot(stage="val")

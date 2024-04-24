@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from data.data_utils import get_index_to_name, get_dataloader_from_cfg
+from data.data_utils import get_index_to_name
 from data.zarr_handler import get_zarr_dataloader
 from models.get_models import get_model
 from utility.cluster_logging import logger
@@ -32,8 +32,8 @@ def visualize(cfg: dict, model=None):
             model.eval()
 
         explanation_manager = ExplanationsManager(cfg, model)
-        cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="val")
-    else:
+        #     cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="val")
+        # else:
         logger.info(
             f"Not generating explanations, loading from zarr: {cfg['zarr_path']}"
         )
@@ -50,9 +50,7 @@ def visualize(cfg: dict, model=None):
     logger.info(f"Saving to {explanation_visualizer.output_path}")
     for i, batch_dict in enumerate(tqdm(data_loader)):
         if cfg["generate_explanations"]:
-            batch_dict = explanation_manager.explain_batch(
-                batch_dict, explain_all=False
-            )
+            batch_dict = explanation_manager.explain_batch(batch_dict)
         explanation_visualizer.visualize_from_batch_dict(
             batch_dict, show=False, skip_non_multilabel=True
         )

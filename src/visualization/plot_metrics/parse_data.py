@@ -345,7 +345,21 @@ def recalculate_score_direction(df_test):
     return df_test
 
 
-def scale_df(df, group_col: str = "Metric", value_col: str = "Value"):
+def _z_score_scale(df, group_col, to_scale_metrics, value_col):
+    for group_col_entry in to_scale_metrics:
+        # get the indices of the group
+        group_indices = df[df[group_col] == group_col_entry].index
+        # calculate mean and standard deviation for the group
+        mean_val = df.loc[group_indices, value_col].mean()
+        std_val = df.loc[group_indices, value_col].std()
+        # scale the values
+        df.loc[group_indices, value_col] = (
+            df.loc[group_indices, value_col] - mean_val
+        ) / std_val
+    return df
+
+
+def scale_df(df, group_col: str = "Metric", value_col: str = "Value", scale="min_max"):
     """
     Scale the values of the df to a 0-1 scale for each group in the group_col, except for the metrics in
     not_to_scale_metrics. The scaling is done by min-max scaling.
@@ -380,10 +394,30 @@ def scale_df(df, group_col: str = "Metric", value_col: str = "Value"):
         metric for metric in all_group_col_entries if metric not in not_to_scale_metrics
     ]
 
+    if scale == "min_max":
+        df = _min_max_scale(df, group_col, to_scale_metrics, value_col)
+    elif scale == "z_score":
+        df = _z_score_scale(df, group_col, to_scale_metrics, value_col)
+    return df
+
+
+def remove_outliers(df_full, group_col: str = "Metric", value_col: str = "Value"):
+    medians = df_full.groupby(group_col)[value_col].median()
+    stds = df_full.groupby(group_col)[value_col].std()
+    for group_col_entry in df_full[group_col].unique():
+        group_indices = df_full[df_full[group_col] == group_col_entry].index
+        median = medians[group_col_entry]
+        std = stds[group_col_entry]
+        df_full.loc[group_indices, value_col] = df_full.loc[
+            group_indices, value_col
+        ].apply(lambda x: x if abs(x - median) < 3 * std else np.nan)
+    return df_full.dropna()
+
+
+def _min_max_scale(df, group_col, to_scale_metrics, value_col):
     # get the min and max values for each group
     min_values = df.groupby(group_col)[value_col].min()
     max_values = df.groupby(group_col)[value_col].max()
-
     # iterate over the groups and scale the values
     for group_col_entry in to_scale_metrics:
         # get the min and max value for the group

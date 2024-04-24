@@ -25,6 +25,18 @@ def setup_device_and_data_config(cfg):
 
 
 def sanity_check_augmentation_thresholds(cfg):
+    """
+    This function calculates the accuracies and f1 scores for different thresholds of cutmix and segmentation
+    for each explanation method. The results are saved to a csv file.
+
+    Parameters
+    ----------
+    cfg
+
+    Returns
+    -------
+
+    """
     logger.debug("Calculating threshold for cutmix and segmentation")
     logger.debug(f"Using CUDA: {torch.cuda.is_available()}")
 
@@ -65,14 +77,12 @@ def sanity_check_augmentation_thresholds(cfg):
         explanation_method: np.zeros(shape=(5, 5))
         for explanation_method in cfg["explanation_methods"]
     }
-    csv_dir_path = f"{cfg["results_path"]}{cfg["experiment_name"]}/sanity_check_augmentation_thresholds"
+    csv_dir_path = f"{cfg["results_path"]}/{cfg["experiment_name"]}/sanity_check_augmentation_thresholds"
     os.makedirs(csv_dir_path, exist_ok=True)
 
     i = 0
     # Iterate over the data loader
     for batch in tqdm.tqdm(data_loader):
-        if i >= 1024:
-            break
         i += cfg["data"]["batch_size"]
 
         # This method does inplace operations on the accuracy and f1 arrays

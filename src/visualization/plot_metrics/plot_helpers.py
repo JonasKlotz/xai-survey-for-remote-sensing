@@ -292,14 +292,12 @@ def plot_best_overall_method(
 def plot_result_distribution(df, dataset_name, visualization_save_dir):
     metrics = df["Metric"].unique()
     for metric in metrics:
-        fig = px.histogram(
+        fig = px.violin(
             df[df["Metric"] == metric],
             x="Value",
             color="Method",
-            nbins=20,
             title=f"{dataset_name}: Distribution of {metric} Results",
             labels={"Value": metric},
-            marginal="box",  # One of 'rug', 'box', 'violin', or 'histogram'.
         )
         save_fig(
             fig,
@@ -308,6 +306,7 @@ def plot_result_distribution(df, dataset_name, visualization_save_dir):
         )
 
         fig.show()
+        exit()
 
 
 def get_metrics_categories(metrics):
@@ -398,21 +397,12 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
         "GradCAM",
         "Occlusion",
     ]
-    #
-    # ["gradcam", "lime", "deeplift", "integrated", "lrp"]
-    # rename_dict = {
-    #     "gradcam": "Guided GradCAM",
-    #     "lime": "LIME",
-    #     "deeplift": "DeepLift",
-    #     "integrated": "Integrated Gradients",
-    #     "lrp": "LRP",
-    # }
-    #
+
     # row_order = [rename_dict[row] for row in row_order]
     # reorder the rows
     df_grouped = df_grouped.loc[row_order]
 
-    df_scaled = standart_scale_df(df_grouped)
+    df_scaled = df_grouped  # standart_scale_df(df_grouped)
     # Convert the DataFrame to a 2D array
     matrix = df_scaled.values
 
