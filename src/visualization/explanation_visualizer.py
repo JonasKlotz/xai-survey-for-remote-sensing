@@ -339,9 +339,8 @@ class ExplanationVisualizer:
         rows = max(plots_per_attr, 2)  # at least 2 rows for segmentation
         titles = list(attrs.keys())
         # titles = [title[2:-5] if title.startswith("a_") and title.endswith("_data") else title for title in titles]
-
         subplot_titles = self._create_subplot_titles(
-            titles, cols, predictions_tensor, rows
+            titles, cols, predictions_tensor, rows, segmentations is not None
         )
 
         fig = make_subplots(
@@ -390,7 +389,9 @@ class ExplanationVisualizer:
         fig.update_annotations(font_size=15)
         return fig
 
-    def _create_subplot_titles(self, attr_names, cols, labels, rows):
+    def _create_subplot_titles(
+        self, attr_names, cols, labels, rows, has_segmentation=False
+    ):
         """
         Create figure from data.
 
@@ -414,8 +415,8 @@ class ExplanationVisualizer:
         ]  # Use list comprehension here
 
         subplot_titles[0][0] = "Image"
-
-        subplot_titles[1][0] = "Segmentation"
+        if has_segmentation:
+            subplot_titles[1][0] = "Segmentation"
 
         # # Add each attribution to the subplot and update axes
 

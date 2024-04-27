@@ -50,7 +50,7 @@ NEW_LABELS_ORIGINAL_ORDER = (
     "Permanent crops",
     "Pastures",
     "Complex cultivation patterns",
-    "Land principally occupied by agriculture, with significant areas of natural vegetation",
+    "Agriculture with natural veg.",  # "Land principally occupied by agriculture, with significant areas of natural vegetation",
     "Agro-forestry areas",
     "Broad-leaved forest",
     "Coniferous forest",

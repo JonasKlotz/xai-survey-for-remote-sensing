@@ -84,24 +84,28 @@ def sanity_check_augmentation_thresholds(cfg):
     # Iterate over the data loader
     for batch in tqdm.tqdm(data_loader):
         i += cfg["data"]["batch_size"]
+        try:
+            # This method does inplace operations on the accuracy and f1 arrays
+            process_batch(
+                accuracy,
+                accuracy_arrays,
+                batch,
+                cfg,
+                cutmix_thresholds,
+                data_loader,
+                f1_arrays,
+                f1_score,
+                lmdb_hander_dict,
+                max_aug_area,
+                min_aug_area,
+                new_order,
+                overhead,
+                segmentation_thresholds,
+            )
 
-        # This method does inplace operations on the accuracy and f1 arrays
-        process_batch(
-            accuracy,
-            accuracy_arrays,
-            batch,
-            cfg,
-            cutmix_thresholds,
-            data_loader,
-            f1_arrays,
-            f1_score,
-            lmdb_hander_dict,
-            max_aug_area,
-            min_aug_area,
-            new_order,
-            overhead,
-            segmentation_thresholds,
-        )
+        except Exception as e:
+            logger.error(f"Error in batch {i}: {e}")
+            continue
 
     # divide number of samples to get the average
     for explanation_method in cfg["explanation_methods"]:

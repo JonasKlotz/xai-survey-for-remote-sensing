@@ -81,7 +81,7 @@ def add_important_paths_to_cfg(config: dict, project_root: str):
 
 
 def _add_task(config):
-    if config["dataset_name"] == "caltech":
+    if config["dataset_name"] == "caltech101":
         config["task"] = "multiclass"
     else:
         config["task"] = "multilabel"

@@ -402,8 +402,27 @@ def scale_df(df, group_col: str = "Metric", value_col: str = "Value", scale="min
 
 
 def remove_outliers(df_full, group_col: str = "Metric", value_col: str = "Value"):
+    """
+    Remove outliers from the df_full by replacing the values that are more than 3 standard deviations away from the
+    median with np.nan.
+
+    Parameters
+    ----------
+    df_full : pd.DataFrame
+        Columns: SampleIndex, Metric, Value, Method, CorrectPrediction
+    group_col
+        Column to group by
+    value_col
+        Column to remove outliers from
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame without outliers
+    """
+    df_full = df_full.copy()
     medians = df_full.groupby(group_col)[value_col].median()
     stds = df_full.groupby(group_col)[value_col].std()
+    print(medians)
     for group_col_entry in df_full[group_col].unique():
         group_indices = df_full[df_full[group_col] == group_col_entry].index
         median = medians[group_col_entry]

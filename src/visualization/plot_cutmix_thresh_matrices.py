@@ -1,13 +1,14 @@
-import os
-
-import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+from visualization.plot_metrics.plot_helpers import save_fig
 
 COLORSCALE = "RdBu_r"
 
 
-def plot_cutmix_thresh_matrices(acc_dfs, titles):
+def plot_cutmix_thresh_matrices(
+    acc_dfs, titles, visualization_save_dir=None, title=None
+):
     total_plots = len(acc_dfs)
     cols = 3
     rows = total_plots // cols + 1
@@ -49,32 +50,25 @@ def plot_cutmix_thresh_matrices(acc_dfs, titles):
     # Set layout size to maintain square cells
     fig_width = cols * subplot_width * aspect_ratio
     fig_height = rows * subplot_height / aspect_ratio
+    if not title:
+        title = "Accuracy for different CutMix and Segmentation Thresholds"
     fig.update_layout(
-        title_text="Accuracy for different CutMix and Segmentation Thresholds",
+        title_text=title,
         height=fig_height,
         width=fig_width,
         title_font_size=20,
         font=dict(size=15),  # Adjust font size for better readability
     )
+
+    # Updating axis titles
+    for i in range(total_plots):
+        row = (i // cols) + 1
+        col = (i % cols) + 1
+        fig["layout"][f'xaxis{"" if i == 0 else i + 1}'].title = "CutMix Thresholds"
+        fig["layout"][
+            f'yaxis{"" if i == 0 else i + 1}'
+        ].title = "Segmentation Thresholds"
+
     fig.show()
 
-
-def main():
-    csv_dir_path = "/home/jonasklotz/Studys/MASTERS/XAI/results/sanity_check_augmentation_thresholds"
-
-    csv_files = os.listdir(csv_dir_path)
-    csv_files = [file for file in csv_files if file.endswith(".csv")]
-
-    acc_csvs = [file for file in csv_files if "acc" in file]
-    # f1_csvs = [file for file in csv_files if "f1" in file]
-
-    acc_dfs = [
-        pd.read_csv(os.path.join(csv_dir_path, file), index_col=0) for file in acc_csvs
-    ]
-    acc_filenames = [file.split(".")[0] for file in acc_csvs]
-
-    plot_cutmix_thresh_matrices(acc_dfs, acc_filenames)
-
-
-if __name__ == "__main__":
-    main()
+    save_fig(fig, title, visualization_save_dir)

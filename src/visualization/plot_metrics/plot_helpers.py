@@ -306,7 +306,6 @@ def plot_result_distribution(df, dataset_name, visualization_save_dir):
         )
 
         fig.show()
-        exit()
 
 
 def get_metrics_categories(metrics):
@@ -413,9 +412,11 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
             x=df_scaled.columns,  # Metrics as x
             y=df_scaled.index,  # Methods as y
             hoverongaps=False,  # Don't allow hovering over gaps
-            colorscale=COLORSCALE,
+            colorscale="OrRd",
             text=matrix,  # Set text to the same z-values
             texttemplate="%{text:.2f}",
+            zmin=0,
+            zmax=1,
         ),
     )
     if title_text is None:

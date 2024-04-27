@@ -278,7 +278,7 @@ class LightningBaseModel(LightningModule):
         self.aug_p: float = 0.5
         self.overhead: int = 10
         self.cutmix_threshold = 10  # TMAP Threshhold
-        self.segmentation_threshold = 0.1  # 0.1
+        self.segmentation_threshold = 0.0  # 0.1
 
         self._assert_augmentations(batch)
 
