@@ -4,7 +4,6 @@ from datetime import datetime
 import yaml
 
 from utility.cluster_logging import logger
-import pprint
 
 
 def parse_config(config_path, project_root):
@@ -161,7 +160,6 @@ def setup_everything(
 
     # Add kwargs to general_config
     general_config.update(kwargs)
-    logger.debug(f"General config: {pprint.pformat(general_config)}")
 
     return general_config
 

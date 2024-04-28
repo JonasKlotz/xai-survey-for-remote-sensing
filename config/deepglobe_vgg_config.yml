@@ -27,9 +27,7 @@ data:
     val_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_val.csv"
     test_csv: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/splits/deepglobe_version2_test.csv"
     segmentations_lmdb_path: "/media/storagecube/data/shared/datasets/deepGlobe/ML_DeepGlobe/segmentations.lmdb"
-    xai_segmentations_lmdb_path: '/media/storagecube/jonasklotz/deepglobe_vgg_lmdbs/deeplift.lmdb'
-
-    lmdb_base_path: '/media/storagecube/jonasklotz/deepglobe_vgg_lmdbs_new/'
+    lmdb_base_path: '/media/storagecube/jonasklotz/xai_segmentations/deepglobe_vgg_seed_43'
 
 
     batch_size: 32 #128

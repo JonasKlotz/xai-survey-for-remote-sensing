@@ -1,5 +1,6 @@
 import json
 import os
+import pprint
 
 import torch
 import wandb
@@ -21,9 +22,14 @@ from utility.cluster_logging import logger
 
 def train(cfg: dict, tune=False):
     cfg["method"] = "train"
+    if cfg["mode"] == "cutmix":
+        cfg["data"][
+            "xai_segmentations_lmdb_path"
+        ] = f"{cfg["data"]["lmdb_base_path"]}/{cfg["explanation_methods"][0]}.lmdb"
 
     # load datamodule
     data_module, cfg = load_data_module(cfg)
+    logger.debug(f"General config: {pprint.pformat(cfg)}")
     logger.debug(f"Loaded data module {data_module}")
 
     # load model
