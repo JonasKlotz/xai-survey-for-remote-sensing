@@ -336,12 +336,12 @@ class LightningBaseModel(LightningModule):
             return self._on_before_batch_transfer_cutmix(batch)
         elif self.mode == "rrr":
             return self._on_before_batch_transfer_rrr(batch)
-        if self.log_next:
-            if "segmentations" in batch.keys():
-                self._log_segmentation(batch)
-            else:
-                self.log_batch(batch)
-            self.log_next = False
+        # if self.log_next:
+        #     if "segmentations" in batch.keys():
+        #         self._log_segmentation(batch)
+        #     else:
+        #         self.log_batch(batch)
+        #     self.log_next = False
         return batch
 
     def log_batch(self, batch):
@@ -382,9 +382,9 @@ class LightningBaseModel(LightningModule):
         return batch
 
     def _on_before_batch_transfer_rrr(self, batch):
-        if self.log_next:
-            self._log_rrr_segmentation(batch)
-            self.log_next = False
+        # if self.log_next:
+        #     # self._log_rrr_segmentation(batch)
+        #     # self.log_next = False
         return batch
 
     def _log_segmentation(self, batch):
@@ -417,7 +417,7 @@ class LightningBaseModel(LightningModule):
         # explanations = explanation_method.explain_batch(batch)
         table = wandb.Table(columns=["ID", "Image"])
         for idx, (img, seg) in enumerate(
-            zip(batch["features"], segmentations=batch.get("segmentations", None))
+            zip(batch["features"], batch.get("segmentations", None))
         ):
             np_seg = seg.clone().detach().cpu().numpy()
             # parse batch
