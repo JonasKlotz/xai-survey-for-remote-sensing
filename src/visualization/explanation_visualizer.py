@@ -16,6 +16,23 @@ from data.ben.BENv2Stats import stds as all_std
 from utility.cluster_logging import logger
 
 
+rename_dict = {
+    "gradcam": "GradCAM",
+    "guided_gradcam": "Guided GradCAM",
+    "lime": "LIME",
+    "deeplift": "DeepLift",
+    "integrated_gradients": "Integrated Gradients",
+    "lrp": "LRP",
+    "occlusion": "Occlusion",
+    "Segmentation": "Segmentation",
+    "Image": "Image",
+}
+RELU = True
+zmin = 0 if RELU else -1
+
+COLORSCALE = "OrRd"
+
+
 def _assert_single_image_and_attrs_shape(
     attrs: torch.Tensor, image_tensor: torch.Tensor
 ):
@@ -273,7 +290,7 @@ class ExplanationVisualizer:
             attrs = [attr for attr in attrs if not np.all(attr == 0)]
 
             data[key] = [
-                go.Heatmap(z=attr, colorscale="RdBu_r", zmin=-1, zmax=1)
+                go.Heatmap(z=attr, colorscale=COLORSCALE, zmin=0, zmax=1)
                 for attr in attrs
             ]
 
@@ -384,7 +401,7 @@ class ExplanationVisualizer:
         )
 
         # enforce the colorscale to be from -1 to 1
-        fig.update_coloraxes(colorscale="RdBu_r", cmin=-1, cmax=1)
+        fig.update_coloraxes(colorscale=COLORSCALE, zmin=0, zmax=1)
 
         fig.update_annotations(font_size=15)
         return fig
@@ -499,8 +516,7 @@ class ExplanationVisualizer:
         # if 3 channels sum over channels
         if len(attrs.shape) == 3:
             attrs = attrs.sum(axis=0)
-        relu = False
-        if relu:
+        if RELU:
             attrs = torch.nn.functional.relu(attrs)
         if normalize:
             attrs = scale_tensor(attrs)
@@ -609,7 +625,7 @@ class ExplanationVisualizer:
             data=go.Heatmap(
                 z=segmentation,
                 colorscale=colorscale,  # Use the custom colorscale
-                zmin=0,
+                zmin=zmin,
                 zmax=self.num_classes - 1,  # Set the fixed scale range from 0 to 6
                 showscale=False,  # Hide the default color scale
             )
@@ -658,7 +674,7 @@ class ExplanationVisualizer:
         if segmentation_tensor is not None:
             segmentation_map = go.Heatmap(
                 z=np.flipud(segmentation_tensor),
-                zmin=-1,
+                zmin=zmin,
                 zmax=1,
             )
             data["Segmentation"] = segmentation_map
@@ -670,28 +686,65 @@ class ExplanationVisualizer:
             attr = attr.squeeze()
 
             data[key] = go.Heatmap(
-                z=np.flipud(attr), colorscale="RdBu_r", zmin=-1, zmax=1
+                z=np.flipud(attr), colorscale=COLORSCALE, zmin=zmin, zmax=1
             )
 
         num_plots = len(data.keys())
-        cols = num_plots
-        rows = 1
-        titles = list(data.keys())
-        # remove a_ prefix and _data suffix
+        if num_plots > 5:
+            cols = 5
+            rows = int(np.ceil(num_plots / cols))
+        else:
+            cols = num_plots
+            rows = 1
+
         titles = [
-            title[2:-5] if title.startswith("a_") and title.endswith("_data") else title
-            for title in titles
+            "Image",
+            "deeplift",
+            "gradcam",
+            "guided_gradcam",
+            "integrated_gradients",
+            "Segmentation",
+            "lime",
+            "lrp",
+            "occlusion",
         ]
+        data_keys = [
+            "deeplift",
+            "gradcam",
+            "guided_gradcam",
+            "integrated_gradients",
+            "lime",
+            "lrp",
+            "occlusion",
+        ]
+        # remove a_ prefix and _data suffix in data
+        image = data.pop("Image")
+        segmentation = data.pop("Segmentation")
+        data = {
+            title: data[f"a_{title}_data"]
+            for title in titles
+            if f"a_{title}_data" in data
+        }
         fig = make_subplots(
             rows=rows,
             cols=cols,
-            subplot_titles=titles,
+            subplot_titles=[rename_dict[title] for title in titles],
         )
+        # add image
+        fig.add_trace(image, row=1, col=1)
+        remove_axis(fig, row=1, col=1)
 
-        # Add each plot to the subplot and update axes
-        for i, (key, plot) in enumerate(data.items(), start=1):
-            fig.add_trace(plot, row=1, col=i)
-            remove_axis(fig, row=1, col=i)
+        fig.add_trace(segmentation, row=2, col=1)
+        remove_axis(fig, row=2, col=1)
+
+        for row in range(1, rows + 1):
+            for col in range(2, cols + 1):
+                # remove first data_key
+                if not data_keys:
+                    continue
+                value = data[data_keys.pop(0)]
+                fig.add_trace(value, row=row, col=col)
+                remove_axis(fig, row=row, col=col)
 
         if not title:
             title = f"Explanation for true label {label_tensor.item()} and predicted label {predictions_tensor.item()}"
@@ -704,7 +757,7 @@ class ExplanationVisualizer:
         )
 
         # enforce the colorscale to be from -1 to 1
-        fig.update_coloraxes(colorscale="RdBu_r", cmin=-1, cmax=1)
+        fig.update_coloraxes(colorscale=COLORSCALE, cmin=0, cmax=1)
 
         self.last_fig = fig
 
@@ -737,7 +790,9 @@ class ExplanationVisualizer:
                     continue
 
                 # here normalization has to happen before masking
-                attr = _min_max_normalize(attr)
+                # todo
+                attr = scale_tensor(attr)
+                # attr = _min_max_normalize(attr)
 
                 mask = self.get_top_k_mask(attr, k_image, largest)
                 # multiply the attributions with the mask
@@ -845,7 +900,7 @@ class ExplanationVisualizer:
             if show:
                 fig.show()
             if save_name:
-                self.save_last_fig(name=save_name + title, format="svg")
+                self.save_last_fig(name=save_name + title, format="png")
 
             return fig
 
@@ -872,7 +927,8 @@ class ExplanationVisualizer:
             tmp_new_titles = []
 
             # here normalization has to happen before masking
-            attr = _min_max_normalize(attr)
+            # todo: attr = _min_max_normalize(attr)
+            attr = scale_tensor(attr)
             tmp_attribution_dict[attr_name][index] = attr
 
             for k_index, k in enumerate(k_list):
@@ -885,7 +941,7 @@ class ExplanationVisualizer:
 
                 masked_image = image_tensor.clone() * mask
                 masked_predictions, logits = model.prediction_step(
-                    masked_image.unsqueeze(0).double()
+                    masked_image.unsqueeze(0).float()
                 )
                 pred = round(logits.squeeze()[index].item(), 2)
                 tmp_new_titles.append(

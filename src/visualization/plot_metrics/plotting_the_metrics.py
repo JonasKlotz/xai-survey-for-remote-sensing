@@ -281,14 +281,20 @@ def main_singlelabel(
         df_full = parse_data_single_label(csv_dir)
         # # save the df to a csv
         df_full.to_csv(save_path, index=False, sep=";")
+    # drop all methods where value
+    df_full = df_full[(df_full["Metric"] == "Relative Input Stability")]  # |
+    # (df_full["Metric"] == "Relative Output Stability")]
 
-    plot_result_distribution(df_full, dataset_name, visualization_save_dir)
-
+    df_full = remove_outliers(df_full)
     df_full = scale_df(df_full)
 
     # df_full = log_some_cols(df_full)
 
     df_full = recalculate_score_direction(df_full)
+
+    # clip data to 0-1
+    df_full["Value"] = df_full["Value"].clip(0, 1)
+
     # df = df_full.drop(columns=["SampleIndex"])
     df_full["Method"] = df_full["Method"].replace(rename_dict)
     df_full = df_full[df_full["Metric"] != "Monotonicity-Arya"]
@@ -329,7 +335,7 @@ def main_singlelabel(
         df_full,
         categories,
         visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Best Metric per Category",
+        title_text=f"{dataset_name}: Best Metric per Category ",
     )
 
     plot_bar_metric_comparison(

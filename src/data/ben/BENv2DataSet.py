@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 
 import numpy as np
-import torch
 from torch.utils.data import Dataset
 
 from data.ben.BENv2Utils import BENv2LDMBReader
