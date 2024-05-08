@@ -63,29 +63,6 @@ def generate_xai_masks(cfg):
             explanation_manager.explanations.keys(),
         )
 
-    # base_path = f"/media/storagecube/jonasklotz/{cfg['experiment_name']}"
-    # # mkdir
-    # os.makedirs(base_path, exist_ok=True)
-    #
-    # lmdb_path = f"{base_path}/deeplift.lmdb"
-    # seg_lmdb = lmdb.open(lmdb_path, lock=False, map_size=int(1e12))
-    # with seg_lmdb.begin(write=True) as txn:
-    #     for batch_dict in results:
-    #         index = batch_dict["index_data"]
-    #         batch_y = batch_dict["y_data"]
-    #         attribution_maps = batch_dict["a_deeplift_data"]
-    #         for idx, write_index in enumerate(index):
-    #             attr = attribution_maps[idx]
-    #             label = batch_y[idx]
-    #             write_index = write_index.item()
-    #             patch_name = data_loader.dataset.get_patch_name(write_index)
-    #
-    #             write_attribution_map = post_process_output(
-    #                 attr, batch_y=label, threshold=0.5
-    #             )
-    #             print(f"Writing {patch_name} to {lmdb_path}, with index {write_index}")
-    #             txn.put(patch_name.encode("utf-8"), pickle.dumps(write_attribution_map))
-
 
 def save_outputs(seg_lmdb_path: str, outputs, threshold: float) -> None:
     path = seg_lmdb_path + f"_{threshold}"

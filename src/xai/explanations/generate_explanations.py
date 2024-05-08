@@ -1,12 +1,13 @@
 import torch
 import tqdm
-import yaml
 
 from data.data_utils import (
     get_dataloader_from_cfg,
+    get_index_to_name,
 )
 from models.get_models import get_model
 from utility.cluster_logging import logger
+from visualization.explanation_visualizer import ExplanationVisualizer
 from xai.explanations.explanation_manager import ExplanationsManager
 
 
@@ -28,42 +29,13 @@ def generate_explanations(cfg: dict):
     model.eval()
 
     explanation_manager = ExplanationsManager(cfg, model, save=True)
+    explanation_visualizer = ExplanationVisualizer(cfg, get_index_to_name(cfg))
 
     for batch in tqdm.tqdm(data_loader):
-        explanation_manager.explain_batch(batch)
-
-
-def minmax_normalize_tensor(tensor):
-    """
-    Min-Max normalizes a PyTorch tensor along all axes.
-
-    Parameters:
-    - tensor (torch.Tensor): The input tensor to normalize.
-
-    Returns:
-    - torch.Tensor: The Min-Max normalized tensor.
-    """
-    tensor_min = tensor.min()
-    tensor_max = tensor.max()
-    # Avoid division by zero
-    if tensor_min == tensor_max:
-        return torch.zeros_like(tensor)
-    normalized_tensor = (tensor - tensor_min) / (tensor_max - tensor_min)
-    return normalized_tensor
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="config/explanations_config.yml",
-    )
-
-    args = parser.parse_args()
-    with open(args.config) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-
-    generate_explanations(config)
+        batch_dict = explanation_manager.explain_batch(batch)
+        explanation_visualizer.visualize_from_batch_dict(
+            batch_dict, show=False, skip_non_multilabel=False
+        )
+        explanation_visualizer.save_last_fig(
+            name=f"sample_{batch_dict["index_data"][0]}", format="png"
+        )
