@@ -34,7 +34,7 @@ def generate_xai_masks(cfg):
     cfg["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.debug(f"Using device: {cfg['device']}")
     cfg["method"] = "explain"
-    cfg["data"]["num_workers"] = 1
+    cfg["data"]["num_workers"] = 0
     cfg["data"]["batch_size"] = 1
 
     cfg, data_loader = get_dataloader_from_cfg(cfg, loader_name="train")
@@ -104,7 +104,7 @@ def _create_lmdb_handlers(cfg, explanation_manager):
 
 
 def _save_segmentations_to_lmdb(
-    data_loader, batch_dict, segmentation_handler_dict, explanation_method_names
+    data_loader, batch_dict, segmentation_handler_dict, explanation_method_names, dataset_name="BEN"
 ):
     for explanation_method_name in explanation_method_names:
         attribution_maps = batch_dict[f"a_{explanation_method_name}_data"]
@@ -113,8 +113,11 @@ def _save_segmentations_to_lmdb(
         for idx, write_index in enumerate(index):
             attr = attribution_maps[idx]
             label = batch_y[idx]
-            write_index = write_index.item()
-            patch_name = data_loader.dataset.get_patch_name(write_index)
+            if dataset_name == "BEN":
+                patch_name = write_index
+            else:
+                write_index = write_index.item()
+                patch_name = data_loader.dataset.get_patch_name(write_index)
 
             write_attribution_map = post_process_output(attr, batch_y=label)
 
