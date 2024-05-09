@@ -1,17 +1,17 @@
 import os
 
-import numpy as np
 import pandas as pd
 import typer
 from typing_extensions import Annotated
 
 from visualization.plot_cutmix_thresh_matrices import plot_cutmix_thresh_matrices
 from visualization.plot_metrics.parse_data import (
-    parse_data_single_label,
     recalculate_score_direction,
     scale_df,
-    parse_data,
-    remove_outliers,
+    log_some_cols,
+    _load_df,
+    read_all_csvs,
+    read_into_dfs,
 )
 from visualization.plot_metrics.plot_helpers import (
     plot_matrix,
@@ -20,10 +20,10 @@ from visualization.plot_metrics.plot_helpers import (
     plot_best_metric_per_category,
     get_metrics_categories,
     plot_bar_metric_comparison,
-    plot_result_distribution,
     plot_bar_double_metric,
     plot_metrics_comparison_scatter,
     plot_bar_single_metric,
+    plot_time_matrix,
 )
 from visualization.plot_metrics.stats_analysis import calc_and_plot_correlation
 
@@ -37,7 +37,7 @@ rename_dict = {
     "occlusion": "Occlusion",
 }
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_enable=False)
 
 
 @app.command()
@@ -59,73 +59,32 @@ def main_multilabel(
     # metric_to_plot = "IROF"
     # metric_1 = "Region Segmentation LERF"
     # metric_2 = "Region Segmentation MORF"
-    save_path = f"{visualization_save_dir}/df_full.csv"
-    save_path = os.path.abspath(save_path)
-    # if file does not exist read df
-    if os.path.isfile(save_path):
-        dtypes = {
-            "SampleIndex": int,
-            "Method": str,
-            "Metric": str,
-            "Value": float,
-            "CorrectPrediction": bool,
-        }
-        # read the df from the csv
-        df_full = pd.read_csv(
-            save_path, sep=";", index_col=None, header=0, dtype=dtypes
-        )
-    else:
-        # we parse the data and save it
-        df_full = parse_data(csv_dir, n_classes=6)
-        # # save the df to a csv
-        df_full.to_csv(save_path, index=False, sep=";")
-
-    plot_result_distribution(df_full, dataset_name, visualization_save_dir)
-    # Rename the Methods
-    print(f"Before removing outliers: {df_full.shape[0]}")
-
-    df_no_outliers = remove_outliers(df_full)
-    print(f"After removing outliers: {df_no_outliers.shape[0]}")
-    # plot_result_distribution(df_full, dataset_name, visualization_save_dir)
-
-    df_no_outliers = scale_df(df_no_outliers)
-    # df_full = log_some_cols(df_full)
-    df_no_outliers = recalculate_score_direction(df_no_outliers)
-    df_no_outliers["Method"] = df_no_outliers["Method"].replace(rename_dict)
-    df_no_outliers = df_no_outliers[df_no_outliers["Metric"] != "Monotonicity-Arya"]
-    plot_matrix(
-        df_no_outliers,
-        visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Metric Matrix, without outliers",
-    )
-
-    df_full = scale_df(df_full)
-    # df_full = log_some_cols(df_full)
-    df_full = recalculate_score_direction(df_full)
-
+    df_full, time_df_long = _load_df(csv_dir, visualization_save_dir)
+    time_df_long["Method"] = time_df_long["Method"].replace(rename_dict)
     df_full["Method"] = df_full["Method"].replace(rename_dict)
-    df_full = df_full[df_full["Metric"] != "Monotonicity-Arya"]
+
+    # plot_result_distribution(df_full, dataset_name, visualization_save_dir)
 
     plot_matrix(
         df_full,
         visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Unprocessed Metric Matrix",
+    )
+    df_preprocessed = preprocess_metrics(df_full)
+
+    plot_matrix(
+        df_preprocessed,
+        visualization_save_dir=visualization_save_dir,
         title_text=f"{dataset_name}: Metric Matrix",
     )
+    (
+        df_only_correct,
+        df_only_correct_grouped,
+        df_only_false,
+        df_only_false_grouped,
+    ) = extract_correct_and_false_preds(df_preprocessed)
 
-    df_only_correct = df_full[df_full["CorrectPrediction"] == True]  # noqa: E712 necessary for filtering
-    df_only_correct = df_only_correct.drop(columns=["CorrectPrediction", "SampleIndex"])
-
-    df_only_false = df_full[df_full["CorrectPrediction"] == False]  # noqa: E712 necessary for filtering
-    df_only_false = df_only_false.drop(columns=["CorrectPrediction", "SampleIndex"])
-
-    df_only_false_grouped = (
-        df_only_false.groupby(["Method", "Metric"])["Value"].mean().reset_index()
-    )
-    df_only_correct_grouped = (
-        df_only_correct.groupby(["Method", "Metric"])["Value"].mean().reset_index()
-    )
-
-    categories = get_metrics_categories(df_full["Metric"].unique())
+    categories = get_metrics_categories(df_preprocessed["Metric"].unique())
 
     rrr_df_path = (
         "/home/jonasklotz/Studys/MASTERS/Thesis/Final_Results/deepglobe/rrr/rrr_all.csv"
@@ -138,7 +97,7 @@ def main_multilabel(
             continue
 
         calc_and_plot_correlation(
-            df_full,
+            df_preprocessed,
             rrr_df,
             metric_to_correlate=col,
             visualization_save_dir=visualization_save_dir,
@@ -146,21 +105,21 @@ def main_multilabel(
         )
 
     plot_bar_metric_categories(
-        df_full,
+        df_preprocessed,
         categories,
         visualization_save_dir=visualization_save_dir,
         title_prefix=f"{dataset_name}: ",
     )
     plot_best_metric_per_category(
-        df_full,
+        df_preprocessed,
         categories,
         visualization_save_dir=visualization_save_dir,
         title_text=f"{dataset_name}: Best Method per Category ",
     )
 
     plot_best_overall_method(
-        df_full,
-        all_methods=df_full["Method"].unique(),
+        df_preprocessed,
+        all_methods=df_preprocessed["Method"].unique(),
         visualization_save_dir=visualization_save_dir,
         title_text=f"{dataset_name}: Best Overall Method",
     )
@@ -190,14 +149,14 @@ def main_multilabel(
     )
 
     plot_best_overall_method(
-        df_full,
-        all_methods=df_full["Method"].unique(),
+        df_preprocessed,
+        all_methods=df_preprocessed["Method"].unique(),
         visualization_save_dir=visualization_save_dir,
         title_text=f"{dataset_name}: Best Overall Method",
     )
 
     # df without correct prediction column and sample index
-    df = df_full.drop(columns=["CorrectPrediction", "SampleIndex"])
+    df = df_preprocessed.drop(columns=["CorrectPrediction", "SampleIndex"])
 
     # Plotting all metrics
     plot_bar_metric_comparison(
@@ -247,6 +206,42 @@ def main_multilabel(
     )
 
 
+def preprocess_metrics(df_full):
+    metrics_to_apply_log = [
+        "Relative Input Stability",
+        "Relative Output Stability",
+        # "Effective Complexity",
+    ]
+    df_full = log_some_cols(df_full, metrics_to_apply_log=metrics_to_apply_log, base=2)
+    df_full = scale_df(df_full, scale="robust")
+    df_full = recalculate_score_direction(df_full)
+    # clip data to 0-1
+    df_full["Value"] = df_full["Value"].clip(0, 1)
+    df_full["Method"] = df_full["Method"].replace(rename_dict)
+    # round to 2 decimals
+    df_full["Value"] = df_full["Value"].round(2)
+    return df_full
+
+
+def extract_correct_and_false_preds(df_full):
+    df_only_correct = df_full[df_full["CorrectPrediction"] == True]  # noqa: E712 necessary for filtering
+    df_only_correct = df_only_correct.drop(columns=["CorrectPrediction", "SampleIndex"])
+    df_only_false = df_full[df_full["CorrectPrediction"] == False]  # noqa: E712 necessary for filtering
+    df_only_false = df_only_false.drop(columns=["CorrectPrediction", "SampleIndex"])
+    df_only_false_grouped = (
+        df_only_false.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    )
+    df_only_correct_grouped = (
+        df_only_correct.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    )
+    return (
+        df_only_correct,
+        df_only_correct_grouped,
+        df_only_false,
+        df_only_false_grouped,
+    )
+
+
 @app.command()
 def main_singlelabel(
     csv_dir: Annotated[str, typer.Option()] = None,
@@ -258,46 +253,29 @@ def main_singlelabel(
     visualization_save_dir = f"{csv_dir}/visualizations"
     os.makedirs(visualization_save_dir, exist_ok=True)
 
+    metrics_csvs, time_csvs, labels_csvs = read_all_csvs(csv_dir)
+    labels_dfs, metrics_dfs, time_dfs = read_into_dfs(
+        labels_csvs, metrics_csvs, time_csvs
+    )
+
     # metric_to_plot = "IROF"
     # metric_1 = "Region Segmentation LERF"
     # metric_2 = "Region Segmentation MORF"
     save_path = f"{visualization_save_dir}/df_full.csv"
     save_path = os.path.abspath(save_path)
     # if file does not exist read df
-    if os.path.isfile(save_path):
-        dtypes = {
-            "SampleIndex": int,
-            "Method": str,
-            "Metric": str,
-            "Value": float,
-            "CorrectPrediction": bool,
-        }
-        # read the df from the csv
-        df_full = pd.read_csv(
-            save_path, sep=";", index_col=None, header=0, dtype=dtypes
-        )
-    else:
-        # we parse the data and save it
-        df_full = parse_data_single_label(csv_dir)
-        # # save the df to a csv
-        df_full.to_csv(save_path, index=False, sep=";")
-    # drop all methods where value
-    df_full = df_full[(df_full["Metric"] == "Relative Input Stability")]  # |
-    # (df_full["Metric"] == "Relative Output Stability")]
 
-    df_full = remove_outliers(df_full)
-    df_full = scale_df(df_full)
+    df_full, time_df_long = _load_df(
+        csv_dir, visualization_save_dir, task="singlelabel"
+    )
+    time_df_long["Method"] = time_df_long["Method"].replace(rename_dict)
 
-    # df_full = log_some_cols(df_full)
-
-    df_full = recalculate_score_direction(df_full)
-
-    # clip data to 0-1
-    df_full["Value"] = df_full["Value"].clip(0, 1)
-
-    # df = df_full.drop(columns=["SampleIndex"])
-    df_full["Method"] = df_full["Method"].replace(rename_dict)
-    df_full = df_full[df_full["Metric"] != "Monotonicity-Arya"]
+    plot_time_matrix(
+        time_df_long,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Seconds spent per sample for each method and metric",
+    )
+    df_full = preprocess_metrics(df_full)
 
     plot_matrix(
         df_full,
@@ -355,22 +333,6 @@ def main_singlelabel(
         title_text=f"{dataset_name}: Comparison of Methods Across all Metrics",
         visualization_save_dir=visualization_save_dir,
     )
-
-
-def log_some_cols(df):
-    metrics_to_apply_log = [
-        "Relative Input Stability",
-        "Relative Output Stability",
-        "Complexity",
-        "Infidelity",
-    ]
-    for metric in metrics_to_apply_log:
-        # apply logarithm to all Values where the Column MEtric is metric
-        df.loc[df["Metric"] == metric, "Value"] = df.loc[
-            df["Metric"] == metric, "Value"
-        ].apply(np.log2)
-
-    return df
 
 
 @app.command()

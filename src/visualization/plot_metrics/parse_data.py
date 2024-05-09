@@ -1,5 +1,6 @@
 import ast
 import glob
+import os
 
 import numpy as np
 import pandas as pd
@@ -264,59 +265,86 @@ def parse_data_df_single_label(df):
     return df
 
 
-def parse_data_single_label(csv_dir, n_classes=6):
-    """
+def parse_time_df_single_label(df):
+    # infer the correct dtypes
+    df = df.infer_objects()
 
-    Returns df like:
-        df = pd.DataFrame({
-        'Method': ['Method 1', 'Method 1', 'Method 2', 'Method 2'],
-        'Metric': ['Metric 1', 'Metric 2', 'Metric 1', 'Metric 2'],
-        'Value': [100, 200, 150, 250]
-    })
+    df_list = []
+    for metric in df.columns:
+        tmp_df = pd.DataFrame(
+            {
+                "SampleIndex": df.index,
+                "Metric": metric,
+                "Value": df[metric],
+            }
+        )
+        df_list.append(tmp_df)
+    df = pd.concat(df_list, ignore_index=True)
+    return df
 
-    """
-    metrics_csvs, time_csvs, labels_csvs = read_all_csvs(csv_dir)
-    labels_dfs, metrics_dfs, time_dfs = read_into_dfs(
-        labels_csvs, metrics_csvs, time_csvs
-    )
 
-    # get minimal length to cut all dfs to the same length
-    min_length = min([len(df) for df in metrics_dfs])
-    max_length = max([len(df) for df in metrics_dfs])
+def preprocess_dataframes(dfs):
+    min_length = min(len(df) for df in dfs)
+    max_length = max(len(df) for df in dfs)
     if min_length != max_length:
         logger.warning("The length of the dfs is not the same")
+    return [df.iloc[:min_length] for df in dfs]
 
-    # cut all dfs to the same length
-    metrics_dfs = [df.iloc[:min_length] for df in metrics_dfs]
-    time_dfs = [df.iloc[:min_length] for df in time_dfs]
-    labels_dfs = [df.iloc[:min_length] for df in labels_dfs]
-    labels_df = labels_dfs[0]
 
-    correct_predictions_data = (
-        labels_df.iloc[:, 0].values == labels_df.iloc[:, 1].values
-    )
-    correct_predictions = pd.Series(correct_predictions_data, name="CorrectPrediction")
+def calculate_correct_predictions_single_label(label_df):
+    correct_predictions_data = label_df.iloc[:, 0].values == label_df.iloc[:, 1].values
+    return pd.Series(correct_predictions_data, name="CorrectPrediction")
 
-    metrics_dfs = [parse_data_df_single_label(df) for df in metrics_dfs]
 
-    # take csv as key
-    keys = [file.split("/")[-1].split("_")[0] for file in metrics_csvs]
-    # add key as method column to each df
-    for key, df in zip(keys, metrics_dfs):
+def expand_and_annotate_single_label_dfs(
+    dfs,
+    csv_files,
+):
+    expanded_dfs = [parse_data_df_single_label(df) for df in dfs]
+    keys = [file.split("/")[-1].split("_")[0] for file in csv_files]
+    for key, df in zip(keys, expanded_dfs):
         df["Method"] = key
+    return expanded_dfs
 
-    # concatenate all dfs
-    df_long = pd.concat(metrics_dfs, ignore_index=True)
 
-    # join on correct predictions to df_long using index and SampleIndex
-    df_long = df_long.merge(
+def merge_dataframes_single_label(dfs, correct_predictions):
+    df_long = pd.concat(dfs, ignore_index=True)
+    return df_long.merge(
         correct_predictions,
         how="inner",
         left_on="SampleIndex",
         right_index=True,
         validate="many_to_many",
     )
-    return df_long
+
+
+def parse_data_single_label(csv_dir):
+    metrics_csvs, time_csvs, labels_csvs = read_all_csvs(csv_dir)
+    labels_dfs, metrics_dfs, time_dfs = read_into_dfs(
+        labels_csvs, metrics_csvs, time_csvs
+    )
+
+    # Preprocess DataFrames: trim all to minimum length
+    metrics_dfs = preprocess_dataframes(metrics_dfs)
+    time_dfs = preprocess_dataframes(time_dfs)
+    labels_dfs = preprocess_dataframes(labels_dfs)
+
+    # Calculate correct predictions for single labels
+    correct_predictions = calculate_correct_predictions_single_label(labels_dfs[0])
+
+    # Expand and annotate DataFrames
+    metrics_dfs = expand_and_annotate_single_label_dfs(metrics_dfs, metrics_csvs)
+
+    time_dfs = [parse_time_df_single_label(df) for df in time_dfs]
+    keys = [file.split("/")[-1].split("_")[0] for file in time_csvs]
+    for key, df in zip(keys, time_dfs):
+        df["Method"] = key
+
+    # Merge DataFrames with predictions
+    metrics_df_long = merge_dataframes_single_label(metrics_dfs, correct_predictions)
+    time_df_long = merge_dataframes_single_label(time_dfs, correct_predictions)
+
+    return metrics_df_long, time_df_long
 
 
 def read_into_dfs(labels_csvs, metrics_csvs, time_csvs):
@@ -359,6 +387,33 @@ def _z_score_scale(df, group_col, to_scale_metrics, value_col):
     return df
 
 
+def _robust_scale(
+    df, group_col, to_scale_metrics, value_col, quantile_range=(0.25, 0.75)
+):
+    from sklearn.preprocessing import RobustScaler, MinMaxScaler
+
+    # Iterate over each unique entry in to_scale_metrics to apply scaling
+    for metric in to_scale_metrics:
+        # Initialize scalers inside the loop to ensure fresh scaling each time
+        robust_scaler = RobustScaler(quantile_range=quantile_range)
+        min_max_scaler = MinMaxScaler()
+
+        # Filter the DataFrame for the current metric
+        mask = df[group_col] == metric
+        values = df.loc[mask, value_col].to_numpy().reshape(-1, 1)
+
+        # Apply robust scaling
+        values = robust_scaler.fit_transform(values)
+
+        # Apply min-max scaling
+        values = min_max_scaler.fit_transform(values)
+
+        # Assign scaled values back to the DataFrame
+        df.loc[mask, value_col] = values.flatten()
+
+    return df
+
+
 def scale_df(df, group_col: str = "Metric", value_col: str = "Value", scale="min_max"):
     """
     Scale the values of the df to a 0-1 scale for each group in the group_col, except for the metrics in
@@ -371,6 +426,9 @@ def scale_df(df, group_col: str = "Metric", value_col: str = "Value", scale="min
 
     group_col
     value_col
+    scale : str
+        The scaling method to use. Options: min_max, z_score, robust
+
 
     Returns
     -------
@@ -398,6 +456,8 @@ def scale_df(df, group_col: str = "Metric", value_col: str = "Value", scale="min
         df = _min_max_scale(df, group_col, to_scale_metrics, value_col)
     elif scale == "z_score":
         df = _z_score_scale(df, group_col, to_scale_metrics, value_col)
+    elif scale == "robust":
+        df = _robust_scale(df, group_col, to_scale_metrics, value_col)
     return df
 
 
@@ -460,3 +520,86 @@ def get_metric_objects(metrics):
                 if metric_name in m_name:
                     metrics_dict[m_name] = metric
     return metrics_dict
+
+
+def log_some_cols(df, metrics_to_apply_log=None, base=2):
+    """
+    Applies logarithmic transformation to specified metrics within the 'Value' column of a DataFrame.
+
+    Parameters:
+    df (pd.DataFrame): DataFrame containing the data.
+    metrics_to_apply_log (list of str): List of metric names to apply the logarithmic transformation to.
+        Defaults to ["Relative Input Stability", "Relative Output Stability", "Effective Complexity"].
+    base (int): Base of the logarithm. Default is 2 for log base 2.
+
+    Returns:
+    pd.DataFrame: DataFrame with the logarithmic transformation applied to specified metrics.
+
+    Raises:
+    ValueError: If there are non-positive values in the columns to which the logarithm is applied.
+    """
+    if metrics_to_apply_log is None:
+        metrics_to_apply_log = [
+            "Relative Input Stability",
+            "Relative Output Stability",
+            "Effective Complexity",
+        ]
+
+    for metric in metrics_to_apply_log:
+        # Select the values to be transformed
+        mask = df["Metric"] == metric
+        values = df.loc[mask, "Value"]
+
+        # Check for non-positive values to avoid math domain error
+        if (values <= 0).any():
+            # clip the values to 0.0001
+            values = values.clip(0.0000001)
+            #
+            # raise ValueError(f"Non-positive values encountered in metric '{metric}'. Logarithm cannot be applied.")
+
+        # Apply logarithmic transformation directly with numpy for efficiency
+        df.loc[mask, "Value"] = np.log(values) / np.log(base)
+
+    return df
+
+
+def _load_df(csv_dir, visualization_save_dir, task="multilabel"):
+    data_save_path = f"{visualization_save_dir}/df_full_new.csv"
+    data_save_path = os.path.abspath(data_save_path)
+    time_save_path = f"{visualization_save_dir}/time_df_full_new.csv"
+    time_save_path = os.path.abspath(time_save_path)
+
+    # if file does not exist read df
+    if os.path.isfile(data_save_path):
+        dtypes = {
+            "SampleIndex": int,
+            "Method": str,
+            "Metric": str,
+            "Value": float,
+            "CorrectPrediction": bool,
+        }
+        # read the df from the csv
+        metrics_df_long = pd.read_csv(
+            data_save_path, sep=";", index_col=None, header=0, dtype=dtypes
+        )
+        time_df_long = pd.read_csv(
+            time_save_path,
+            sep=";",
+            index_col=None,
+            header=0,
+        )
+    else:
+        # we parse the data and save it
+        if task == "multilabel":
+            metrics_df_long = parse_data(csv_dir)
+            metrics_df_long.to_csv(data_save_path, index=False, sep=";")
+
+            time_df_long = None
+        elif task == "singlelabel":
+            metrics_df_long, time_df_long = parse_data_single_label(csv_dir)
+            metrics_df_long.to_csv(data_save_path, index=False, sep=";")
+            time_df_long.to_csv(time_save_path, index=False, sep=";")
+        else:
+            raise ValueError(f"Task {task} not supported")
+        # # save the df to a csv
+    return metrics_df_long, time_df_long

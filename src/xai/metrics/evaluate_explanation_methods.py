@@ -1,3 +1,4 @@
+import pprint
 from datetime import datetime
 from typing import Union, List, Dict
 
@@ -42,6 +43,7 @@ def evaluate_explanation_methods(
     # enforce single batch size and no workers
     cfg["data"]["num_workers"] = 0
     cfg["data"]["batch_size"] = 1
+    logger.debug(f"General config: {pprint.pformat(cfg)}")
 
     image_shape = (3, 120, 120) if cfg["dataset_name"] == "deepglobe" else (3, 224, 224)
 

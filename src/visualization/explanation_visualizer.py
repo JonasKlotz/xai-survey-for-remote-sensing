@@ -401,7 +401,7 @@ class ExplanationVisualizer:
         )
 
         # enforce the colorscale to be from -1 to 1
-        fig.update_coloraxes(colorscale=COLORSCALE, cmin=0, cmax=1)
+        fig.update_coloraxes(colorscale=COLORSCALE, zmin=0, zmax=1)
 
         fig.update_annotations(font_size=15)
         return fig

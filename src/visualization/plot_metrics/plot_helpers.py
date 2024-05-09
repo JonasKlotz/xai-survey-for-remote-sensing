@@ -126,10 +126,11 @@ def plot_bar_metric_comparison(
     if title_text is None:
         title_text = "Comparison of Methods Across all Metrics"
 
-    df_grouped = input_df.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    df_mean = input_df.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    df_mean["Value"] = df_mean["Value"].round(2)
 
     plot_generalized(
-        df_grouped,
+        df_mean,
         "Metric",
         title_text,
         visualization_save_dir=visualization_save_dir,
@@ -230,10 +231,15 @@ def plot_best_overall_method(
 
     # calculate mean over all metrics
     df_mean = df_test.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    # round to 2 decimal places
+    df_mean["Value"] = df_mean["Value"].round(2)
+
     # count which methods have the highest mean value for each metric
-    idx = df_mean.groupby("Metric")["Value"].idxmax()
+    # idx = df_mean.groupby("Metric")["Value"].idxmax()
     # Select the rows that correspond to the max values
-    max_value_methods = df_mean.loc[idx]
+    # max_value_methods = df_mean.loc[idx]
+    max_indices = df_mean.groupby("Metric")["Value"].transform(max) == df_mean["Value"]
+    max_value_methods = df_mean[max_indices]
     # Assuming 'max_value_methods' is your DataFrame with the methods that achieved the max values for each metric
     # First, get the count of metrics where each method achieved the max value
     method_performance_count = max_value_methods["Method"].value_counts().reset_index()
@@ -244,7 +250,13 @@ def plot_best_overall_method(
     )
     metrics_per_method.columns = ["Method", "Metrics"]
     # Merge to get a single DataFrame with method, count of max performance, and the metrics names
-    plot_data = pd.merge(method_performance_count, metrics_per_method, on="Method")
+    plot_data = pd.merge(
+        method_performance_count,
+        metrics_per_method,
+        on="Method",
+        how="inner",
+        validate="many_to_many",
+    )
 
     # Add methods that did not achieve the max value for any metric
     missing_methods = list(set(all_methods) - set(plot_data["Method"]))
@@ -365,107 +377,12 @@ def plot_bar_double_metric(
 
     df_filtered = input_df[input_df["Metric"].isin(metrics_to_plot)]
 
-    df_grouped = df_filtered.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    df_mean = df_filtered.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    df_mean["Value"] = df_mean["Value"].round(2)
 
     plot_generalized(
-        df_grouped, "Metric", title_text, visualization_save_dir=visualization_save_dir
+        df_mean, "Metric", title_text, visualization_save_dir=visualization_save_dir
     )
-
-
-def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
-    df_grouped = df_full.groupby(["Method", "Metric"])["Value"].mean().reset_index()
-    # reorder the df that the columns are the metrics and the rows are the methods
-    df_grouped = df_grouped.pivot(index="Method", columns="Metric", values="Value")
-    # get categories
-    categories = get_metrics_categories(df_full["Metric"].unique())
-    # reorder the columns using the categories dict
-    category_names = sorted(set(categories.values()))
-    categories_lists = {k: [] for k in category_names}
-    for metric, category in categories.items():
-        categories_lists[category].append(metric)
-    # reorder the columns
-    new_columns = [li for sublist in categories_lists.values() for li in sublist]
-    df_grouped = df_grouped[new_columns]
-
-    row_order = [
-        "Guided GradCAM",
-        "LIME",
-        "DeepLift",
-        "Integrated Gradients",
-        "LRP",
-        "GradCAM",
-        "Occlusion",
-    ]
-
-    # row_order = [rename_dict[row] for row in row_order]
-    # reorder the rows
-    df_grouped = df_grouped.loc[row_order]
-
-    df_scaled = df_grouped  # standart_scale_df(df_grouped)
-    # Convert the DataFrame to a 2D array
-    matrix = df_scaled.values
-
-    # Create the heatmap
-    fig = go.Figure(
-        data=go.Heatmap(
-            z=matrix,
-            x=df_scaled.columns,  # Metrics as x
-            y=df_scaled.index,  # Methods as y
-            hoverongaps=False,  # Don't allow hovering over gaps
-            colorscale="OrRd",
-            text=matrix,  # Set text to the same z-values
-            texttemplate="%{text:.2f}",
-            zmin=0,
-            zmax=1,
-        ),
-    )
-    if title_text is None:
-        title_text = "Standard Scaled Metrics"
-
-    # Update the layout if needed
-    fig.update_layout(
-        title=title_text,
-        xaxis_title="Metrics",
-        yaxis_title="Methods",
-        xaxis={"side": "bottom"},
-    )  # Ensure the x-axis (metrics) is at the top
-
-    categories = get_metrics_categories(df_full["Metric"].unique())
-
-    # Add annotations for each category
-    for i, metric in enumerate(df_scaled.columns):
-        # Assuming you have a function or a way to get the category of a metric
-        category = categories[
-            metric
-        ]  # Assuming 'categories' dictionary maps metrics to their categories
-        fig.add_annotation(
-            x=i,
-            y=1.05,
-            xref="x",
-            yref="paper",
-            text=category,
-            showarrow=False,
-            font=dict(family="Arial", size=20, color="black"),
-            align="center",
-        )
-
-    # Adjust layout to ensure annotations are visible
-    fig.update_layout(margin=dict(t=100))
-
-    # set figure size
-    fig.update_layout(
-        autosize=False,
-        width=2500,
-        height=1000,
-    )
-
-    # increase fontsize
-    fig.update_layout(font=dict(size=20))
-
-    save_fig(fig, title_text, visualization_save_dir)
-
-    # Show the figure
-    fig.show()
 
 
 def plot_correlation(results, visualization_save_dir=None, title=None):
@@ -555,3 +472,228 @@ def standart_scale_df(df):
     df_scaled = pd.DataFrame(scaled_data, columns=df.columns, index=df.index)
 
     return df_scaled
+
+
+def barplot_metrics_time(df, visualization_save_dir=None, title_text=None):
+    if df["Value"].dtype == object:
+        df["Value"] = pd.to_timedelta(df["Value"])
+
+    avg_times = df.groupby("Metric")["Value"].mean().reset_index()
+    avg_times["AvgTimeSeconds"] = avg_times["Value"].dt.total_seconds()
+
+    # Sort by average time
+    avg_times = avg_times.sort_values(by="AvgTimeSeconds", ascending=False)
+
+    # Creating a bar plot with sorted values and uniform color
+    fig = px.bar(
+        avg_times,
+        x="Metric",
+        y="AvgTimeSeconds",
+        labels={"AvgTimeSeconds": "Average Time (seconds)"},
+        title=title_text if title_text else "Average Time by Metric",
+        color_discrete_sequence=["grey"],
+    )
+    fig.update_layout(
+        yaxis_type="log",  # Set y-axis to logarithmic scale
+        title_font_size=20,
+        font=dict(size=16, color="black"),
+        xaxis_title_font_size=18,
+        yaxis_title_font_size=18,
+    )
+    fig.show()
+
+    save_fig(fig, title_text, visualization_save_dir)
+
+
+def plot_time_matrix(df_full, visualization_save_dir=None, title_text=None):
+    df_full["Value"] = pd.to_timedelta(df_full["Value"]).dt.total_seconds()
+    df_mean = df_full.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+
+    # reorder the df that the columns are the metrics and the rows are the methods
+    df_mean = df_mean.pivot(index="Method", columns="Metric", values="Value")
+    # get categories
+    categories = get_metrics_categories(df_full["Metric"].unique())
+    # reorder the columns using the categories dict
+    category_names = sorted(set(categories.values()))
+    categories_lists = {k: [] for k in category_names}
+    for metric, category in categories.items():
+        categories_lists[category].append(metric)
+    # reorder the columns
+    new_columns = [li for sublist in categories_lists.values() for li in sublist]
+    df_mean = df_mean[new_columns]
+
+    row_order = [
+        "Guided GradCAM",
+        "LIME",
+        "DeepLift",
+        "Integrated Gradients",
+        "LRP",
+        "GradCAM",
+        "Occlusion",
+    ]
+
+    # row_order = [rename_dict[row] for row in row_order]
+    # reorder the rows
+    df_mean = df_mean.loc[row_order]
+
+    df_scaled = df_mean  # standart_scale_df(df_grouped)
+    # Convert the DataFrame to a 2D array
+    matrix = df_scaled.values
+
+    # Create the heatmap
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=matrix,
+            x=df_scaled.columns,  # Metrics as x
+            y=df_scaled.index,  # Methods as y
+            hoverongaps=False,  # Don't allow hovering over gaps
+            colorscale="OrRd",
+            text=matrix,  # Set text to the same z-values
+            texttemplate="%{text:.2f}",
+        ),
+    )
+    if title_text is None:
+        title_text = "Standard Scaled Metrics"
+
+    # Update the layout if needed
+    fig.update_layout(
+        title=title_text,
+        xaxis_title="Metrics",
+        yaxis_title="Methods",
+        xaxis={"side": "bottom"},
+    )  # Ensure the x-axis (metrics) is at the top
+
+    categories = get_metrics_categories(df_full["Metric"].unique())
+
+    # Add annotations for each category
+    for i, metric in enumerate(df_scaled.columns):
+        # Assuming you have a function or a way to get the category of a metric
+        category = categories[
+            metric
+        ]  # Assuming 'categories' dictionary maps metrics to their categories
+        fig.add_annotation(
+            x=i,
+            y=1.05,
+            xref="x",
+            yref="paper",
+            text=category,
+            showarrow=False,
+            font=dict(family="Arial", size=20, color="black"),
+            align="center",
+        )
+
+    # Adjust layout to ensure annotations are visible
+    fig.update_layout(margin=dict(t=100))
+
+    # set figure size
+    fig.update_layout(
+        autosize=False,
+        width=2500,
+        height=1000,
+    )
+
+    # increase fontsize
+    fig.update_layout(font=dict(size=20))
+
+    save_fig(fig, title_text, visualization_save_dir)
+
+    # Show the figure
+    fig.show()
+
+
+def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
+    df_mean = df_full.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    df_mean["Value"] = df_mean["Value"].round(2)
+
+    # reorder the df that the columns are the metrics and the rows are the methods
+    df_mean = df_mean.pivot(index="Method", columns="Metric", values="Value")
+    # get categories
+    categories = get_metrics_categories(df_full["Metric"].unique())
+    # reorder the columns using the categories dict
+    category_names = sorted(set(categories.values()))
+    categories_lists = {k: [] for k in category_names}
+    for metric, category in categories.items():
+        categories_lists[category].append(metric)
+    # reorder the columns
+    new_columns = [li for sublist in categories_lists.values() for li in sublist]
+    df_mean = df_mean[new_columns]
+
+    row_order = [
+        "Guided GradCAM",
+        "LIME",
+        "DeepLift",
+        "Integrated Gradients",
+        "LRP",
+        "GradCAM",
+        "Occlusion",
+    ]
+
+    # row_order = [rename_dict[row] for row in row_order]
+    # reorder the rows
+    df_mean = df_mean.loc[row_order]
+
+    df_scaled = df_mean  # standart_scale_df(df_grouped)
+    # Convert the DataFrame to a 2D array
+    matrix = df_scaled.values
+
+    # Create the heatmap
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=matrix,
+            x=df_scaled.columns,  # Metrics as x
+            y=df_scaled.index,  # Methods as y
+            hoverongaps=False,  # Don't allow hovering over gaps
+            colorscale="OrRd",
+            text=matrix,  # Set text to the same z-values
+            texttemplate="%{text:.2f}",
+            zmin=0,
+            zmax=1,
+        ),
+    )
+    if title_text is None:
+        title_text = "Standard Scaled Metrics"
+
+    # Update the layout if needed
+    fig.update_layout(
+        title=title_text,
+        xaxis_title="Metrics",
+        yaxis_title="Methods",
+        xaxis={"side": "bottom"},
+    )  # Ensure the x-axis (metrics) is at the top
+
+    categories = get_metrics_categories(df_full["Metric"].unique())
+
+    # Add annotations for each category
+    for i, metric in enumerate(df_scaled.columns):
+        # Assuming you have a function or a way to get the category of a metric
+        category = categories[
+            metric
+        ]  # Assuming 'categories' dictionary maps metrics to their categories
+        fig.add_annotation(
+            x=i,
+            y=1.05,
+            xref="x",
+            yref="paper",
+            text=category,
+            showarrow=False,
+            font=dict(family="Arial", size=20, color="black"),
+            align="center",
+        )
+
+    # Adjust layout to ensure annotations are visible
+    fig.update_layout(margin=dict(t=100))
+
+    # set figure size
+    fig.update_layout(
+        autosize=False,
+        width=2500,
+        height=1000,
+    )
+
+    # increase fontsize
+    fig.update_layout(font=dict(size=20))
+
+    save_fig(fig, title_text, visualization_save_dir)
+
+    # Show the figure
+    fig.show()
