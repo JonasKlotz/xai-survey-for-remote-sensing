@@ -10,8 +10,6 @@ from visualization.plot_metrics.parse_data import (
     scale_df,
     log_some_cols,
     _load_df,
-    read_all_csvs,
-    read_into_dfs,
 )
 from visualization.plot_metrics.plot_helpers import (
     plot_matrix,
@@ -253,11 +251,6 @@ def main_singlelabel(
     visualization_save_dir = f"{csv_dir}/visualizations"
     os.makedirs(visualization_save_dir, exist_ok=True)
 
-    metrics_csvs, time_csvs, labels_csvs = read_all_csvs(csv_dir)
-    labels_dfs, metrics_dfs, time_dfs = read_into_dfs(
-        labels_csvs, metrics_csvs, time_csvs
-    )
-
     # metric_to_plot = "IROF"
     # metric_1 = "Region Segmentation LERF"
     # metric_2 = "Region Segmentation MORF"
@@ -359,6 +352,43 @@ def run_plot_cutmix_thresh_matrices(csv_dir: Annotated[str, typer.Option()] = No
         save_dir,
         title="DeepGlobe: Accuracy for different CutMix and Segmentation Thresholds",
     )
+
+
+@app.command()
+def rrr_singlelabel():
+    csv_dir = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/caltech/metrics"
+    # dataset_name = "caltech101"
+    visualization_save_dir = f"{csv_dir}/visualizations"
+    os.makedirs(visualization_save_dir, exist_ok=True)
+    rrr_df_path = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/caltech/rrr/explanations/caltech_rrr_cleaned.csv"
+    rrr_df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
+
+    df_full, _ = _load_df(csv_dir, visualization_save_dir, task="singlelabel")
+    df_full = preprocess_metrics(df_full)
+    df_full["Method"] = df_full["Method"].replace(rename_dict)
+    # average
+    # merge on the method column
+    df_full = pd.merge(
+        df_full,
+        rrr_df,
+        on="Method",
+        how="inner",
+        validate="many_to_one",
+    )
+    parameter_columns = [
+        "1.0_distancemse",
+        "10.0_distancemse",
+        "1.0_distanceelementwise",
+        "10.0_distanceelementwise",
+    ]
+    for col in parameter_columns:
+        for metric_name in df_full["Metric"].unique():
+            # plot
+            import plotly.express as px
+
+            df_to_plot = df_full[df_full["Metric"] == metric_name]
+            fig = px.scatter(df_to_plot, x=col, y="Value", color="Method")
+            fig.show()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,26 @@
+# Metrics
+
+Faithfulness:
+    IROF:
+    Selectivity:
+    Region Segmentation MORF:
+    Region Segmentation LERF:
+
+Robustness:
+    Max-Sensitivity:
+    Relative Input Stability:
+    Relative Output Stability:
+
+Randomisation:
+    Random Logit:
+
+Localisation:
+    Pointing Game:
+    Top-K Intersection:
+    Relevance Mass Accuracy:
+    Relevance Rank Accuracy:
+    Attribution Localisation:
+
+Complexity:
+    Sparseness:
+    Effective Complexity:
