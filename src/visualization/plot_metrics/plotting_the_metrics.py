@@ -3,7 +3,6 @@ import os
 import pandas as pd
 import typer
 from typing_extensions import Annotated
-
 from visualization.plot_cutmix_thresh_matrices import plot_cutmix_thresh_matrices
 from visualization.plot_metrics.parse_data import (
     recalculate_score_direction,
@@ -22,6 +21,7 @@ from visualization.plot_metrics.plot_helpers import (
     plot_metrics_comparison_scatter,
     plot_bar_single_metric,
     plot_time_matrix,
+    plot_with_correlation,
 )
 from visualization.plot_metrics.stats_analysis import calc_and_plot_correlation
 
@@ -366,6 +366,8 @@ def rrr_singlelabel():
     df_full, _ = _load_df(csv_dir, visualization_save_dir, task="singlelabel")
     df_full = preprocess_metrics(df_full)
     df_full["Method"] = df_full["Method"].replace(rename_dict)
+    # get categories for the metrics
+    # add the categories to the
     # average
     # merge on the method column
     df_full = pd.merge(
@@ -375,20 +377,63 @@ def rrr_singlelabel():
         how="inner",
         validate="many_to_one",
     )
+    categories = get_metrics_categories(df_full["Metric"].unique())
+    # add the categories to the df
+    df_full["Category"] = df_full["Metric"].apply(lambda x: categories[x])
     parameter_columns = [
         "1.0_distancemse",
         "10.0_distancemse",
         "1.0_distanceelementwise",
         "10.0_distanceelementwise",
     ]
-    for col in parameter_columns:
-        for metric_name in df_full["Metric"].unique():
-            # plot
-            import plotly.express as px
+    rename_parameter_dict = {
+        "1.0_distancemse": "MSE Distance with  λ = 1",
+        "10.0_distancemse": "MSE Distance with  λ = 10",
+        "1.0_distanceelementwise": "Elementwise Distance with  λ = 1",
+        "10.0_distanceelementwise": "Elementwise Distance with  λ = 10",
+    }
+    id_vars = [col for col in df_full.columns if col not in parameter_columns]
 
-            df_to_plot = df_full[df_full["Metric"] == metric_name]
-            fig = px.scatter(df_to_plot, x=col, y="Value", color="Method")
-            fig.show()
+    # Use melt to stack the parameter columns into a single column
+    df_long = df_full.melt(
+        id_vars=id_vars,
+        value_vars=parameter_columns,
+        var_name="Parameter",
+        value_name="Parameter_Value",
+    )
+
+    df = (
+        df_long.groupby(
+            ["Method", "Metric", "Category", "Parameter", "Parameter_Value"]
+        )["Value"]
+        .mean()
+        .reset_index()
+    )
+
+    # remove all rows where Method==  GradCAM and Parameter "1.0_distanceelementwise",
+    # as it is a hard outllier
+    df = df[
+        ~((df["Method"] == "GradCAM") & (df["Parameter"] == "10.0_distanceelementwise"))
+    ]
+    df = df[~((df["Method"] == "GradCAM") & (df["Parameter"] == "1.0_distancemse"))]
+    df["Parameter"] = df["Parameter"].replace(rename_parameter_dict)
+
+    plot_with_correlation(
+        df,
+        "Metric",
+        "Parameter_Value",
+        "Parameter",
+        "Caltech 101: Correlational Analysis of xAI Metrics with Test Accuracy in xAI-Guided Training",
+        visualization_save_dir,
+    )
+    plot_with_correlation(
+        df,
+        "Category",
+        "Parameter_Value",
+        "Parameter",
+        "Caltech 101: Correlational Analysis of xAI Metric Categories with Test Accuracy in xAI-Guided Training",
+        visualization_save_dir,
+    )
 
 
 if __name__ == "__main__":

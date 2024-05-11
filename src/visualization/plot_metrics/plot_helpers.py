@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import pandas as pd
 from plotly import express as px, graph_objects as go
@@ -6,6 +7,7 @@ from plotly.subplots import make_subplots
 from sklearn.preprocessing import StandardScaler
 
 from quantus import AVAILABLE_METRICS
+from scipy.stats import pearsonr
 
 COLORSCALE = "RdBu_r"
 
@@ -113,11 +115,17 @@ def save_fig(fig, title_text, visualization_save_dir):
 
     os.makedirs(visualization_save_dir, exist_ok=True)
 
-    save_path = visualization_save_dir + "/" + title_text + ".svg"
-    # fig.write_image(save_path)
-    jpg_save_path = save_path.replace(".svg", ".jpg")
-    fig.write_image(jpg_save_path)
-    print(f"Figure saved to {jpg_save_path}")
+    # Replace problematic characters in filenames
+    filename = title_text.replace(" ", "_").replace("/", "_").replace("\\", "_")
+    save_path = os.path.join(visualization_save_dir, filename + ".png")
+
+    # fig.update_layout(
+    #     autosize=False,
+    #     width=1920,
+    #     height=1080)
+    # Save as JPEG, specify the dimensions directly within write_image if needed
+    fig.write_image(save_path)
+    print(f"Figure saved to {save_path}")
 
 
 def plot_bar_metric_comparison(
@@ -697,3 +705,125 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
 
     # Show the figure
     fig.show()
+
+
+def plot_with_correlation(
+    df: pd.DataFrame,
+    grouping_column: str,
+    col: str,
+    parameter_column: str,
+    title: str,
+    visualization_save_dir: Optional[str] = None,
+):
+    """
+    Creates a faceted scatter plot with correlations annotated in the subplot titles,
+    where plots are ordered by the calculated correlation values.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the data to be plotted. Must include the specified columns.
+    grouping_column : str
+        The name of the column in `df` used to group data and create facets.
+    col : str
+        The column name representing the numerical data to be used on the x-axis and to calculate correlation against 'Value'.
+    parameter_column : str
+        The column name used to symbolize different markers in the scatter plot, adding another dimension to the facets.
+    title : str
+        The title for the scatter plot.
+    visualization_save_dir : Optional[str], default None
+        The directory where the plot will be saved. If None, the plot will not be saved.
+
+    Returns
+    -------
+    None
+        The function generates a plot and shows it using `fig.show()`. Optionally, saves the plot if a directory is provided.
+
+    """
+    if grouping_column == "Metric":
+        plots_per_row = 3
+        plot_height = 200
+    else:
+        plots_per_row = 2
+        plot_height = 400
+    # Calculate correlation for the specified grouping
+    results = df.groupby(grouping_column).apply(
+        calculate_correlation_and_significance, col=col
+    )
+    corr_dict = results["Correlation"].to_dict()
+    p_value_dict = results["P-value"].to_dict()
+    # Sort the correlations, and extract the index (group names) in the order of correlation
+    sorted_groups = results["Correlation"].sort_values(ascending=False).index.tolist()
+
+    # Determine the number of facets
+    num_facets = len(sorted_groups)
+
+    # Add a new column to df for correlation annotations in the plot
+    df["Correlation"] = (
+        df[grouping_column].map(corr_dict).apply(lambda x: f"Correlation: {x:.2f}")
+    )
+
+    # Adjust the height based on the number of facets
+    height = max(
+        plot_height, plot_height * ((num_facets + 1) // 2)
+    )  # Adjust the multiplier for height as needed
+
+    # Creating a faceted scatter plot with correlation in titles and ordering plots by correlation
+    fig = px.scatter(
+        df,
+        x=col,
+        y="Value",
+        color="Method",
+        symbol=parameter_column,
+        title=title,
+        labels={"Value": "Metric Performance", col: "Training Accuracy"},
+        facet_col=grouping_column,
+        facet_col_wrap=plots_per_row,
+        category_orders={
+            grouping_column: sorted_groups
+        },  # Use sorted order for plotting
+        height=height,
+        width=height,
+    )  # Dynamic height based on the number of plots
+
+    # Update subplot titles with correlation values and adjust layout for better readability
+    for key, corr in corr_dict.items():
+        fig.for_each_annotation(
+            lambda a: a.update(
+                text=a.text.split("=")[-1]
+                + f", Corr: {corr:.2f}, p-value: {p_value_dict[key]:.2f}"
+            )
+            if key in a.text
+            else ()
+        )
+
+    # Update layout settings to improve readability and spacing
+    fig.update_layout(
+        title_font_size=18,
+        font_size=12,
+        legend_title_font_size=12,
+        legend_font_size=10,
+        # Adjusting margins and spacing between plots
+        margin=dict(
+            l=50, r=50, t=80, b=50
+        ),  # Adjust left, right, top, bottom margins as needed
+        grid={
+            "rows": (num_facets + 1) // 2,
+            "columns": 2,
+            "pattern": "independent",
+            "xgap": 1,
+            "ygap": 1,
+        },  # Increased gaps
+    )
+    # Ensure x-axis and y-axis tick labels are visible on all subplots
+    fig.update_xaxes(tickmode="auto", showticklabels=True)
+    fig.update_yaxes(tickmode="auto", showticklabels=True)
+
+    fig.show()
+    save_fig(fig, title, visualization_save_dir)
+
+
+def calculate_correlation_and_significance(x, col):
+    # Calculate Pearson's correlation coefficient and the p-value
+    correlation, p_value = pearsonr(x[col], x["Value"])
+    return pd.Series({"Correlation": correlation, "P-value": p_value})

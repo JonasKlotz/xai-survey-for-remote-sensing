@@ -104,7 +104,11 @@ def _create_lmdb_handlers(cfg, explanation_manager):
 
 
 def _save_segmentations_to_lmdb(
-    data_loader, batch_dict, segmentation_handler_dict, explanation_method_names, dataset_name="BEN"
+    data_loader,
+    batch_dict,
+    segmentation_handler_dict,
+    explanation_method_names,
+    dataset_name="BEN",
 ):
     for explanation_method_name in explanation_method_names:
         attribution_maps = batch_dict[f"a_{explanation_method_name}_data"]
