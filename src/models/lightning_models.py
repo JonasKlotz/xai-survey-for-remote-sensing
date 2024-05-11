@@ -1,7 +1,9 @@
 import json
 import os.path
 from abc import abstractmethod
+from typing import Union
 
+import numpy as np
 import torch
 import torch.nn as nn
 import wandb
@@ -54,6 +56,10 @@ class LightningBaseModel(LightningModule):
         self.momentum = config["momentum"]
         self.input_channels = config["input_channels"]
         self.num_classes = config["num_classes"]
+        # self.classification_thresholdstorchs used to set the classification thresholds for the model
+        # standart is 0.5 for each class
+        self.classification_thresholds = torch.ones(self.num_classes) * 0.5
+        self.classification_thresholds = self.classification_thresholds.to(device)
 
         # Parameters for the cutmix augmentation
         if self.mode == "cutmix":
@@ -117,7 +123,9 @@ class LightningBaseModel(LightningModule):
             predictions = torch.argmax(logits, dim=1)
         elif self.task == "multilabel":
             logits = torch.sigmoid(y_hat)
-            predictions = (logits > 0.5).long()
+            # calculate predictions using the self.classification_thresholds
+            # self.classification_thresholds is torch for each class one entry
+            predictions = (logits > self.classification_thresholds).long()
         else:
             raise ValueError(f"Task {self.task} not supported.")
 
@@ -149,6 +157,10 @@ class LightningBaseModel(LightningModule):
 
         target = target.long()
         self.log(f"{stage}_loss", loss, prog_bar=True, sync_dist=True)
+        preds = (
+            normalized_probabilities
+            > self.classification_thresholds.to(device=normalized_probabilities.device)
+        ).float()
         if self.metrics_manager is not None:
             self.metrics_manager.update(normalized_probabilities, target, stage=stage)
 
@@ -515,6 +527,14 @@ class LightningBaseModel(LightningModule):
     ####################################################################################################################
     #                                     END Functions for the augmentation
     ####################################################################################################################
+
+    def set_classification_thresholds(
+        self, thresholds: Union[torch.Tensor, np.ndarray]
+    ):
+        if isinstance(thresholds, np.ndarray):
+            thresholds = torch.from_numpy(thresholds)
+        assert isinstance(thresholds, torch.Tensor), "Thresholds must be a torch tensor"
+        self.classification_thresholds = thresholds.to(self.device)
 
 
 class LightningResnet(LightningBaseModel):

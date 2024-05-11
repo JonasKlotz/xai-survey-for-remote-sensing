@@ -302,9 +302,9 @@ def get_new_true_target(
     y1_i,
     y2_i,
 ):
-    true_segmentation[
-        to_replace_x1:to_replace_x2, to_replace_y1:to_replace_y2
-    ] = new_seg_masks[i][x1_i:x2_i, y1_i:y2_i]
+    true_segmentation[to_replace_x1:to_replace_x2, to_replace_y1:to_replace_y2] = (
+        new_seg_masks[i][x1_i:x2_i, y1_i:y2_i]
+    )
     # unsqueeze the true segmentation
     true_segmentation = true_segmentation.unsqueeze(0)
     new_true_target = segmask_to_multilabel_torch(true_segmentation, num_classes=6).to(

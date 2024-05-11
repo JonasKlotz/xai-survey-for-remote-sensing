@@ -4,6 +4,7 @@ import sys
 import typer
 from typing_extensions import Annotated
 
+
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(project_root)
@@ -96,6 +97,32 @@ def run_generate_explanations(
 
     else:
         raise ValueError(f"Mode {mode} not supported.")
+
+
+@app.command()
+def run_calculate_classification_thresholds(
+    config_path: str,
+    random_seed: Annotated[int, typer.Option()] = 42,
+    debug: Annotated[bool, typer.Option()] = False,
+    explanation_method: Annotated[str, typer.Option()] = None,
+    gpu: Annotated[int, typer.Option()] = 3,
+):
+    from config_utils import setup_everything
+
+    general_config = setup_everything(
+        config_path=config_path,
+        random_seed=random_seed,
+        project_root=project_root,
+        debug=debug,
+        explanation_method=explanation_method,
+        gpu=gpu,
+    )
+
+    from data.calculate_classification_thresholds import (
+        calculate_classification_thresholds,
+    )
+
+    calculate_classification_thresholds(cfg=general_config)
 
 
 @app.command()

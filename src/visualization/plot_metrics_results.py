@@ -127,9 +127,9 @@ def main():
         mean_metrics_df.drop(columns=column_name, inplace=True)
 
         # add the column to the category_df_dict
-        category_df_dict[metric.evaluation_category.value][
-            new_column_name
-        ] = mean_metrics_df[new_column_name]
+        category_df_dict[metric.evaluation_category.value][new_column_name] = (
+            mean_metrics_df[new_column_name]
+        )
 
     localisation_df = category_df_dict["Localisation"]
     faithfulness_df = category_df_dict["Faithfulness"]

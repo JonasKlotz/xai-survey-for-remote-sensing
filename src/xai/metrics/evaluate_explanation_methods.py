@@ -59,6 +59,12 @@ def evaluate_explanation_methods(
     # Load Model
     model = get_model(cfg, self_trained=True).to(cfg["device"])
     model.eval()
+    if cfg["dataset_name"] == "ben":
+        t_path = "/home/jonas/git/xai-survey-for-remote-sensing/config/ben_train_optimal_thresholds.txt"
+        # read the optimal thresholds
+        optimal_thresholds_loaded = np.loadtxt(t_path)
+        model.set_classification_thresholds(optimal_thresholds_loaded)
+        logger.debug(f"Optimal thresholds loaded from {t_path}")
 
     metrics_manager_dict, explanation_manager = setup_metrics_manager(
         cfg=cfg,

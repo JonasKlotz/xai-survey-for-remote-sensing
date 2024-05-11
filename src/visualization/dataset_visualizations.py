@@ -1,13 +1,14 @@
 from typing import Union
 
 import numpy as np
+import plotly
 import plotly.graph_objects as go
 import torch
 
-from data.constants import DEEPGLOBE_IDX2NAME
 from data.zarr_handler import load_batches
 from utility.cluster_logging import logger
 from xai.metrics.metrics_utiliies import get_colors
+from data.data_utils import get_index_to_name
 
 
 def plot_dataset_distribution_zarr(cfg: dict):
@@ -37,14 +38,16 @@ def plot_pixel_distribution_zarr(cfg):
     plot_pixel_distribution(cfg, s_batch)
 
 
-def plot_distribution(cfg, label_distribution: torch.Tensor):
+def plot_distribution(
+    cfg, label_distribution: torch.Tensor
+) -> "plotly.graph_objects.Figure":
     # Convert the tensor to a numpy array and flatten it
     data = label_distribution.numpy().flatten()
 
     # Prepare the data: sort by occurrence and get corresponding labels
     sorted_indices = data.argsort()
     sorted_data = data[sorted_indices]
-    labels = [DEEPGLOBE_IDX2NAME[i] for i in sorted_indices]
+    labels = [get_index_to_name(cfg) for i in sorted_indices]
 
     # get and sort colors
     colors = get_colors(n_colors=len(labels))
@@ -65,9 +68,6 @@ def plot_distribution(cfg, label_distribution: torch.Tensor):
         xaxis=dict(title="Labels"),
         yaxis=dict(title="Occurrences"),
     )
-
-    # Show the plot
-    fig.show()
     return fig
 
 
