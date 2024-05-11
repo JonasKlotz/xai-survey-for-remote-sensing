@@ -44,10 +44,16 @@ def evaluate_explanation_methods(
     cfg["data"]["num_workers"] = 0
     cfg["data"]["batch_size"] = 1
     logger.debug(f"General config: {pprint.pformat(cfg)}")
+    if cfg["dataset_name"] == "deepglobe":
+        image_shape = (3, 120, 120)
+    elif cfg["dataset_name"] == "ben":
+        image_shape = (14, 120, 120)
+    elif cfg["dataset_name"] == "caltech101":
+        image_shape = (3, 224, 224)
+    else:
+        raise ValueError(f"Unknown dataset name: {cfg['dataset_name']}")
 
-    image_shape = (3, 120, 120) if cfg["dataset_name"] == "deepglobe" else (3, 224, 224)
-
-    one_hot_encoding = cfg["dataset_name"] == "deepglobe"
+    one_hot_encoding = cfg["task"] == "multilabel"
     # multilabel = cfg["task"] == "multilabel"
 
     recompute_attributions = True
@@ -76,7 +82,7 @@ def evaluate_explanation_methods(
 
     # max_iterations = 200 // cfg["data"]["batch_size"]
     i = 0
-
+    logger.debug(f"Writing results to: {cfg['results_path']}")
     start_time = datetime.now()
     for batch in tqdm(data_loader):
         (

@@ -33,7 +33,7 @@ class ExplanationsManager:
     ):
         self.cfg = cfg
         self.save = save
-        self.output_path = f"{self.cfg['results_path']}/{self.cfg['experiment_name']}"
+        self.output_path = f"{self.cfg['results_path']}/{cfg["dataset_name"]}_metrics/{self.cfg['experiment_name']}"
         self.explanations = {}
         self.explanations_zarr_handler = {}
 

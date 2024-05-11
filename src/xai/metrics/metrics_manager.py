@@ -93,6 +93,7 @@ class MetricsManager:
             "explanation_method_name": explanation.attribution_name,
             "device": self.device,
             "multi_label": self.multi_label,
+            "num_classes": self.num_classes,
         }
 
         self.general_args = {

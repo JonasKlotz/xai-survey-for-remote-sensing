@@ -4,7 +4,7 @@ import sys
 import typer
 from typing_extensions import Annotated
 
-
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(project_root)
@@ -150,6 +150,9 @@ def run_evaluate_explanations(
 
     from config_utils import load_yaml
 
+    # if metrics_config_path not startwwitch project root
+    if not metrics_config_path.startswith(project_root):
+        metrics_config_path = os.path.join(project_root, metrics_config_path)
     metrics_config = load_yaml(metrics_config_path)
 
     from xai.metrics.evaluate_explanation_methods import evaluate_explanation_methods

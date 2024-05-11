@@ -14,13 +14,6 @@ Robustness:
 Randomisation:
     Random Logit:
 
-Localisation:
-    Pointing Game:
-    Top-K Intersection:
-    Relevance Mass Accuracy:
-    Relevance Rank Accuracy:
-    Attribution Localisation:
-
 Complexity:
     Sparseness:
     Effective Complexity:
