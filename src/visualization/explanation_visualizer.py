@@ -396,14 +396,14 @@ class ExplanationVisualizer:
             margin=dict(t=70, b=70),
             title_text=title,
             font=dict(
-                size=20,  # Set the font size here
+                size=25,  # Set the font size here
             ),
         )
 
         # enforce the colorscale to be from -1 to 1
-        fig.update_coloraxes(colorscale=COLORSCALE, zmin=0, zmax=1)
+        fig.update_coloraxes(colorscale=COLORSCALE, cmin=0, cmax=1)
 
-        fig.update_annotations(font_size=15)
+        fig.update_annotations(font_size=20)
         return fig
 
     def _create_subplot_titles(
@@ -444,7 +444,32 @@ class ExplanationVisualizer:
                 subplot_titles[row_key][col_key] = f"{attr_name} {label_name}"
         # flatten list
         subplot_titles = [item for sublist in subplot_titles for item in sublist]
-        return subplot_titles
+
+        rename_dict = {
+            "gradcam": "GradCAM",
+            "guided_gradcam": "Guided GradCAM",
+            "lime": "LIME",
+            "deeplift": "DeepLift",
+            "integrated_gradients": "IG",
+            "lrp": "LRP",
+            "occlusion": "Occlusion",
+        }
+        new_titles = []
+        for i, title in enumerate(subplot_titles):
+            if title == "Image" or title == "Segmentation":
+                new_titles.append(title)
+                continue
+            # split at ' '
+            titles = title.split(" ")
+            if len(titles) == 2:
+                method_name, class_name = title.split(" ")
+                method_name = rename_dict.get(method_name, method_name)
+                class_name = class_name.replace("_", " ")
+                new_titles.append(f"{method_name} {class_name}")
+            else:
+                new_titles.append(title)
+
+        return new_titles
 
     def save_last_fig(self, name, format="svg"):
         """

@@ -168,7 +168,7 @@ def expand_metrics_df(df):
     return expanded_df
 
 
-def parse_data(csv_dir, n_classes=6):
+def parse_data_multilabel(csv_dir, n_classes=6):
     """
 
     Returns df like:
@@ -192,6 +192,11 @@ def parse_data(csv_dir, n_classes=6):
     time_dfs = [df.iloc[:min_length] for df in time_dfs]
     labels_dfs = [df.iloc[:min_length] for df in labels_dfs]
 
+    time_dfs = [parse_time_df_single_label(df) for df in time_dfs]
+    keys = [file.split("/")[-1].split("_")[0] for file in time_csvs]
+    for key, df in zip(keys, time_dfs):
+        df["Method"] = key
+
     label_dfs = [parse_labels_df(df) for df in labels_dfs]
 
     label_df = label_dfs[0]
@@ -199,6 +204,8 @@ def parse_data(csv_dir, n_classes=6):
         np.sum(label_df[0].values == label_df[1].values, axis=1) == n_classes
     )
     correct_predictions = pd.Series(correct_predictions_data, name="CorrectPrediction")
+    time_df_long = merge_dataframes_single_label(time_dfs, correct_predictions)
+
     metrics_dfs = [expand_metrics_df(df) for df in metrics_dfs]
 
     # take csv as key
@@ -230,7 +237,7 @@ def parse_data(csv_dir, n_classes=6):
 
     # round to 2 decimal places
     df_long["Value"] = df_long["Value"].round(2)
-    return df_long
+    return df_long, time_df_long
 
 
 def parse_data_df_single_label(df):
@@ -591,10 +598,10 @@ def _load_df(csv_dir, visualization_save_dir, task="multilabel"):
     else:
         # we parse the data and save it
         if task == "multilabel":
-            metrics_df_long = parse_data(csv_dir)
+            metrics_df_long, time_df_long = parse_data_multilabel(csv_dir)
             metrics_df_long.to_csv(data_save_path, index=False, sep=";")
+            time_df_long.to_csv(time_save_path, index=False, sep=";")
 
-            time_df_long = None
         elif task == "singlelabel":
             metrics_df_long, time_df_long = parse_data_single_label(csv_dir)
             metrics_df_long.to_csv(data_save_path, index=False, sep=";")

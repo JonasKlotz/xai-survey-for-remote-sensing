@@ -17,13 +17,9 @@ from visualization.plot_metrics.plot_helpers import (
     plot_best_metric_per_category,
     get_metrics_categories,
     plot_bar_metric_comparison,
-    plot_bar_double_metric,
-    plot_metrics_comparison_scatter,
-    plot_bar_single_metric,
     plot_time_matrix,
     plot_with_correlation,
 )
-from visualization.plot_metrics.stats_analysis import calc_and_plot_correlation
 
 rename_dict = {
     "gradcam": "GradCAM",
@@ -34,7 +30,10 @@ rename_dict = {
     "lrp": "LRP",
     "occlusion": "Occlusion",
 }
-
+rp_renaming_dict = {
+    "Region Segmentation LERF": "Region Perturbation LERF",
+    "Region Segmentation MORF": "Region Perturbation MORF",
+}
 app = typer.Typer(pretty_exceptions_enable=False)
 
 
@@ -44,9 +43,10 @@ def main_multilabel(
 ):
     # csv_dir = "/home/jonasklotz/Studys/MASTERS/Thesis/Final_Results/deepglobe/metrics"
     dataset_name = "deepglobe"
-    metric_to_plot = "IROF"
-    metric_1 = "Region Segmentation LERF"
-    metric_2 = "Region Segmentation MORF"
+    # metric_to_plot = "IROF"
+    # metric_1 = "Region Segmentation LERF"
+    # metric_2 = "Region Segmentation MORF"
+    # region the region segmentation metrics to region perturbation metrics
 
     if not csv_dir:
         csv_dir = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/deepglobe/metrics"
@@ -58,16 +58,26 @@ def main_multilabel(
     # metric_1 = "Region Segmentation LERF"
     # metric_2 = "Region Segmentation MORF"
     df_full, time_df_long = _load_df(csv_dir, visualization_save_dir)
+
     time_df_long["Method"] = time_df_long["Method"].replace(rename_dict)
+    time_df_long["Metric"] = time_df_long["Metric"].replace(rp_renaming_dict)
+
     df_full["Method"] = df_full["Method"].replace(rename_dict)
+    df_full["Metric"] = df_full["Metric"].replace(rp_renaming_dict)
+
+    plot_time_matrix(
+        time_df_long,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Seconds spent per sample for each method and metric",
+    )
 
     # plot_result_distribution(df_full, dataset_name, visualization_save_dir)
 
-    plot_matrix(
-        df_full,
-        visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Unprocessed Metric Matrix",
-    )
+    # plot_matrix(
+    #     df_full,
+    #     visualization_save_dir=visualization_save_dir,
+    #     title_text=f"{dataset_name}: Unprocessed Metric Matrix",
+    # )
     df_preprocessed = preprocess_metrics(df_full)
 
     plot_matrix(
@@ -82,32 +92,41 @@ def main_multilabel(
         df_only_false_grouped,
     ) = extract_correct_and_false_preds(df_preprocessed)
 
+    plot_matrix(
+        df_only_correct,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Metric Matrix for correct predictions",
+    )
+    plot_matrix(
+        df_only_false,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Metric Matrix for wrong predictions",
+    )
+    df_difference = pd.merge(
+        df_only_false_grouped,
+        df_only_correct_grouped,
+        on=["Method", "Metric"],
+        suffixes=("_false", "_correct"),
+        how="inner",
+        validate="many_to_many",
+    )
+    df_difference["Value"] = (
+        df_difference["Value_false"] - df_difference["Value_correct"]
+    )
+    plot_matrix(
+        df_difference,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Difference of Metric Matrices for for correct and wrong predictions",
+    )
+
     categories = get_metrics_categories(df_preprocessed["Metric"].unique())
 
-    rrr_df_path = (
-        "/home/jonasklotz/Studys/MASTERS/Thesis/Final_Results/deepglobe/rrr/rrr_all.csv"
-    )
-    rrr_df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
-    # Rename the Methods
-    rrr_df["Method"] = rrr_df["Method"].replace(rename_dict)
-    for col in rrr_df.columns:
-        if "Method" in col:
-            continue
-
-        calc_and_plot_correlation(
-            df_preprocessed,
-            rrr_df,
-            metric_to_correlate=col,
-            visualization_save_dir=visualization_save_dir,
-            title_prefix=f"{dataset_name}: ",
-        )
-
-    plot_bar_metric_categories(
-        df_preprocessed,
-        categories,
-        visualization_save_dir=visualization_save_dir,
-        title_prefix=f"{dataset_name}: ",
-    )
+    # plot_bar_metric_categories(
+    #     df_preprocessed,
+    #     categories,
+    #     visualization_save_dir=visualization_save_dir,
+    #     title_prefix=f"{dataset_name}: ",
+    # )
     plot_best_metric_per_category(
         df_preprocessed,
         categories,
@@ -122,86 +141,72 @@ def main_multilabel(
         title_text=f"{dataset_name}: Best Overall Method",
     )
 
-    # Merge the two dataframes on 'Method' and 'Metric' to align them
-    df_difference = pd.merge(
-        df_only_false_grouped,
-        df_only_correct_grouped,
-        on=["Method", "Metric"],
-        suffixes=("_false", "_correct"),
-        how="inner",
-        validate="many_to_many",
-    )
-    df_difference["Value_diff"] = (
-        df_difference["Value_false"] - df_difference["Value_correct"]
-    )
+    # plot_bar_metric_comparison(
+    #     df_difference,
+    #     title_text=f"{dataset_name}: Performance Drop in %: Correct vs. False Predictions",
+    #     visualization_save_dir=visualization_save_dir,
+    #     y_axis_unit="%",
+    # )
+    #
+    # plot_best_overall_method(
+    #     df_preprocessed,
+    #     all_methods=df_preprocessed["Method"].unique(),
+    #     visualization_save_dir=visualization_save_dir,
+    #     title_text=f"{dataset_name}: Best Overall Method",
+    # )
+    #
+    # # df without correct prediction column and sample index
+    # df = df_preprocessed.drop(columns=["CorrectPrediction", "SampleIndex"])
+    #
+    # # Plotting all metrics
+    # plot_bar_metric_comparison(
+    #     df,
+    #     title_text=f"{dataset_name}: Comparison of Methods Across all Metrics",
+    #     visualization_save_dir=visualization_save_dir,
+    # )
+    #
+    # # Plotting all metrics for only correct predictions
+    #
+    # plot_bar_metric_comparison(
+    #     df_only_correct,
+    #     title_text=f"{dataset_name}: Comparison of Methods Across all Metrics (Only Correct Predictions)",
+    #     visualization_save_dir=visualization_save_dir,
+    # )
+    #
+    # # Plotting all metrics for only false predictions
+    #
+    # plot_bar_metric_comparison(
+    #     df_only_false,
+    #     title_text=f"{dataset_name}: Comparison of Methods Across all Metrics (Only False Predictions)",
+    #     visualization_save_dir=visualization_save_dir,
+    # )
+    #
+    # plot_bar_single_metric(
+    #     df,
+    #     metric_to_plot,
+    #     title_text=f"{dataset_name}: Comparison of Methods for {metric_to_plot}",
+    #     visualization_save_dir=visualization_save_dir,
+    # )
 
-    df_difference["Value"] = (
-        df_difference["Value_diff"] / df_difference["Value_correct"]
-    ) * 100
-
-    plot_bar_metric_comparison(
-        df_difference,
-        title_text=f"{dataset_name}: Performance Drop in %: Correct vs. False Predictions",
-        visualization_save_dir=visualization_save_dir,
-        y_axis_unit="%",
-    )
-
-    plot_best_overall_method(
-        df_preprocessed,
-        all_methods=df_preprocessed["Method"].unique(),
-        visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Best Overall Method",
-    )
-
-    # df without correct prediction column and sample index
-    df = df_preprocessed.drop(columns=["CorrectPrediction", "SampleIndex"])
-
-    # Plotting all metrics
-    plot_bar_metric_comparison(
-        df,
-        title_text=f"{dataset_name}: Comparison of Methods Across all Metrics",
-        visualization_save_dir=visualization_save_dir,
-    )
-
-    # Plotting all metrics for only correct predictions
-
-    plot_bar_metric_comparison(
-        df_only_correct,
-        title_text=f"{dataset_name}: Comparison of Methods Across all Metrics (Only Correct Predictions)",
-        visualization_save_dir=visualization_save_dir,
-    )
-
-    # Plotting all metrics for only false predictions
-
-    plot_bar_metric_comparison(
-        df_only_false,
-        title_text=f"{dataset_name}: Comparison of Methods Across all Metrics (Only False Predictions)",
-        visualization_save_dir=visualization_save_dir,
-    )
-
-    plot_bar_single_metric(
-        df,
-        metric_to_plot,
-        title_text=f"{dataset_name}: Comparison of Methods for {metric_to_plot}",
-        visualization_save_dir=visualization_save_dir,
-    )
-
-    plot_metrics_comparison_scatter(
-        df,
-        ["Method", "Class"],
-        "Metric",
-        "Value",
-        metric_1,
-        metric_2,
-        visualization_save_dir=visualization_save_dir,
-    )
-
-    plot_bar_double_metric(
-        df,
-        [metric_1, metric_2],
-        title_text=f"DG Comparison of Methods for {metric_to_plot}",
-        visualization_save_dir=visualization_save_dir,
-    )
+    # plot_metrics_comparison_scatter(
+    #     df,
+    #     ["Method", "Class"],
+    #     "Metric",
+    #     "Value",
+    #     metric_1,
+    #     metric_2,
+    #     visualization_save_dir=visualization_save_dir,
+    # )
+    #
+    # plot_bar_double_metric(
+    #     df,
+    #     [metric_1, metric_2],
+    #     title_text=f"DG Comparison of Methods for {metric_to_plot}",
+    #     visualization_save_dir=visualization_save_dir,
+    # )
+    # df_difference["Value_diff"] = (
+    #     df_difference["Value_false"] - df_difference["Value_correct"]
+    # )
 
 
 def preprocess_metrics(df_full):
@@ -212,6 +217,8 @@ def preprocess_metrics(df_full):
     ]
     df_full = log_some_cols(df_full, metrics_to_apply_log=metrics_to_apply_log, base=2)
     df_full = scale_df(df_full, scale="robust")
+
+    df_full["Metric"] = df_full["Metric"].replace(rp_renaming_dict)
     df_full = recalculate_score_direction(df_full)
     # clip data to 0-1
     df_full["Value"] = df_full["Value"].clip(0, 1)
@@ -244,7 +251,7 @@ def extract_correct_and_false_preds(df_full):
 def main_singlelabel(
     csv_dir: Annotated[str, typer.Option()] = None,
 ):
-    dataset_name = "caltech101"
+    dataset_name = "caltech"
     if not csv_dir:
         csv_dir = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/caltech/metrics"
 
@@ -263,17 +270,17 @@ def main_singlelabel(
     )
     time_df_long["Method"] = time_df_long["Method"].replace(rename_dict)
 
-    plot_time_matrix(
-        time_df_long,
-        visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Seconds spent per sample for each method and metric",
-    )
     df_full = preprocess_metrics(df_full)
 
     plot_matrix(
         df_full,
         visualization_save_dir=visualization_save_dir,
         title_text=f"{dataset_name}: Metric Matrix",
+    )
+    plot_time_matrix(
+        time_df_long,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Seconds spent per sample for each method and metric",
     )
 
     # rrr_df_path = (
@@ -423,7 +430,7 @@ def rrr_singlelabel():
         "Metric",
         "Parameter_Value",
         "Parameter",
-        "Caltech 101: Correlational Analysis of xAI Metrics with Test Accuracy in xAI-Guided Training",
+        "Caltech 101: Correlational Analysis of xAI Metrics with Test Accuracy in RRR Training",
         visualization_save_dir,
     )
     plot_with_correlation(
@@ -431,9 +438,148 @@ def rrr_singlelabel():
         "Category",
         "Parameter_Value",
         "Parameter",
-        "Caltech 101: Correlational Analysis of xAI Metric Categories with Test Accuracy in xAI-Guided Training",
+        "Caltech 101: Correlational Analysis of xAI Metric Categories with Test Accuracy in RRR Training",
         visualization_save_dir,
     )
+
+
+@app.command()
+def rrr_multilabel(dataset_name: str = "deepglobe"):
+    csv_dir = (
+        f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/metrics"
+    )
+    visualization_save_dir = f"{csv_dir}/visualizations"
+    os.makedirs(visualization_save_dir, exist_ok=True)
+    rrr_df_path = f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/rrr/{dataset_name}_rrr_cleaned.csv"
+    rrr_df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
+
+    df_full, _ = _load_df(csv_dir, visualization_save_dir, task="multilabel")
+    df_full = preprocess_metrics(df_full)
+    df_full["Method"] = df_full["Method"].replace(rename_dict)
+    # get categories for the metrics
+    # add the categories to the
+    # average
+    # merge on the method column
+    df_full = pd.merge(
+        df_full,
+        rrr_df,
+        on="Method",
+        how="inner",
+        validate="many_to_one",
+    )
+    categories = get_metrics_categories(df_full["Metric"].unique())
+    # add the categories to the df
+    df_full["Category"] = df_full["Metric"].apply(lambda x: categories[x])
+    parameter_columns = [
+        "1.0_distancemse",
+        "10.0_distancemse",
+        "1.0_distanceelementwise",
+        "10.0_distanceelementwise",
+    ]
+    rename_parameter_dict = {
+        "1.0_distancemse": "MSE Distance with  λ = 1",
+        "10.0_distancemse": "MSE Distance with  λ = 10",
+        "1.0_distanceelementwise": "Elementwise Distance with  λ = 1",
+        "10.0_distanceelementwise": "Elementwise Distance with  λ = 10",
+    }
+    id_vars = [col for col in df_full.columns if col not in parameter_columns]
+
+    # Use melt to stack the parameter columns into a single column
+    df_long = df_full.melt(
+        id_vars=id_vars,
+        value_vars=parameter_columns,
+        var_name="Parameter",
+        value_name="Parameter_Value",
+    )
+
+    df = (
+        df_long.groupby(
+            ["Method", "Metric", "Category", "Parameter", "Parameter_Value"]
+        )["Value"]
+        .mean()
+        .reset_index()
+    )
+
+    # remove all rows where Method==  GradCAM and Parameter "1.0_distanceelementwise",
+    # as it is a hard outllier
+    # df = df[
+    #     ~((df["Method"] == "GradCAM") & (df["Parameter"] == "10.0_distanceelementwise"))
+    # ]
+    # df = df[~((df["Method"] == "GradCAM") & (df["Parameter"] == "1.0_distancemse"))]
+    df["Parameter"] = df["Parameter"].replace(rename_parameter_dict)
+
+    plot_with_correlation(
+        df,
+        "Metric",
+        "Parameter_Value",
+        "Parameter",
+        f"{dataset_name}: Correlational Analysis of xAI Metrics with Test mAP in RRR Training",
+        visualization_save_dir,
+    )
+    plot_with_correlation(
+        df,
+        "Category",
+        "Parameter_Value",
+        "Parameter",
+        f"{dataset_name}: Correlational Analysis of xAI Metric Categories with Test mAP in RRR Training",
+        visualization_save_dir,
+    )
+
+
+@app.command()
+def compare_single_and_multi_label(mlc_dataset="deepglobe", slc_dataset="caltech"):
+    slc_metrics_df, slc_time_df = get_dataframes(slc_dataset, slc=True)
+    mlc_metrics_df, mlc_time_df = get_dataframes(mlc_dataset, slc=False)
+
+    grouped_slc = (
+        slc_metrics_df.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    )
+    grouped_mlc = (
+        mlc_metrics_df.groupby(["Method", "Metric"])["Value"].mean().reset_index()
+    )
+
+    diffed = pd.merge(
+        grouped_slc,
+        grouped_mlc,
+        on=["Method", "Metric"],
+        suffixes=("_slc", "_mlc"),
+        how="inner",
+        validate="many_to_many",
+    )
+    diffed["Value"] = diffed["Value_slc"] - diffed["Value_mlc"]
+    diffed["Value"] = diffed["Value"].round(2)
+
+    visualization_save_dir = f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/comparison/{slc_dataset}_{mlc_dataset}/visualizations"
+    os.makedirs(visualization_save_dir, exist_ok=True)
+
+    plot_matrix(
+        diffed,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{slc_dataset} vs. {mlc_dataset}: Difference of Metric Matrices",
+    )
+
+
+def get_dataframes(dataset_name, slc=False):
+    csv_dir = (
+        f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/metrics"
+    )
+    visualization_save_dir = f"{csv_dir}/visualizations"
+    os.makedirs(visualization_save_dir, exist_ok=True)
+    # metric_to_plot = "IROF"
+    # metric_1 = "Region Segmentation LERF"
+    # metric_2 = "Region Segmentation MORF"
+    save_path = f"{visualization_save_dir}/df_full.csv"
+    save_path = os.path.abspath(save_path)
+    # if file does not exist read df
+    df_full, time_df_long = _load_df(
+        csv_dir, visualization_save_dir, task="singlelabel" if slc else "multilabel"
+    )
+    time_df_long["Method"] = time_df_long["Method"].replace(rename_dict)
+
+    df_full["Metric"] = df_full["Metric"].replace(rp_renaming_dict)
+    time_df_long["Metric"] = time_df_long["Metric"].replace(rp_renaming_dict)
+    df_full = preprocess_metrics(df_full)
+    return df_full, time_df_long
 
 
 if __name__ == "__main__":

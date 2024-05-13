@@ -53,7 +53,7 @@ def visualize(cfg: dict, model=None):
             batch_dict = explanation_manager.explain_batch(batch_dict)
 
         explanation_visualizer.visualize_from_batch_dict(
-            batch_dict, show=False, skip_non_multilabel=False
+            batch_dict, show=False, skip_non_multilabel=True
         )
 
         if "index_data" in batch_dict:

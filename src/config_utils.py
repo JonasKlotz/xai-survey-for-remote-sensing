@@ -69,9 +69,9 @@ def add_important_paths_to_cfg(config: dict, project_root: str):
         config["zarr_path"] = os.path.join(project_root, config["zarr_path"])
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     config["timestamp"] = timestamp
-    config["experiment_name"] = (
-        f'{config["dataset_name"]}_{config["model_name"]}_{timestamp}'
-    )
+    config[
+        "experiment_name"
+    ] = f'{config["dataset_name"]}_{config["model_name"]}_{timestamp}'
     config["training_root_path"] = os.path.join(
         config["models_path"], config["experiment_name"]
     )
@@ -151,9 +151,9 @@ def setup_everything(
     if explanation_method is not None:
         logger.debug(f"Explanation methods: {explanation_method}")
         general_config["explanation_methods"] = [explanation_method]
-        general_config["experiment_name"] = (
-            f'{general_config["experiment_name"]}_{explanation_method}'
-        )
+        general_config[
+            "experiment_name"
+        ] = f'{general_config["experiment_name"]}_{explanation_method}'
         general_config["training_root_path"] = os.path.join(
             general_config["models_path"], general_config["experiment_name"]
         )

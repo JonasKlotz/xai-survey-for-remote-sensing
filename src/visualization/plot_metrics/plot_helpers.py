@@ -10,6 +10,7 @@ from quantus import AVAILABLE_METRICS
 from scipy.stats import pearsonr
 
 COLORSCALE = "RdBu_r"
+SHOW = False
 
 
 def get_method_colors(methods):
@@ -104,7 +105,8 @@ def plot_generalized(
     # Update layout
     if y_axis_unit is not None:
         fig.update_yaxes(title_text=y_axis_unit)
-    fig.show()
+    if SHOW:
+        fig.show()
     save_fig(fig, title_text, visualization_save_dir)
     return fig
 
@@ -226,7 +228,8 @@ def plot_metrics_comparison_scatter(
     fig.update_xaxes(title_text=metric_x)
     fig.update_yaxes(title_text=metric_y)
 
-    fig.show()
+    if SHOW:
+        fig.show()
     save_fig(fig, title_text, visualization_save_dir)
     return fig
 
@@ -304,7 +307,8 @@ def plot_best_overall_method(
     # increase fontsize
     fig.update_layout(font=dict(size=20))
     if show:
-        fig.show()
+        if SHOW:
+            fig.show()
     save_fig(fig, title_text, visualization_save_dir)
     return fig
 
@@ -325,11 +329,13 @@ def plot_result_distribution(df, dataset_name, visualization_save_dir):
             visualization_save_dir,
         )
 
-        fig.show()
+        if SHOW:
+            fig.show()
 
 
 def get_metrics_categories(metrics):
     metrics_dict = {k: None for k in metrics}
+    # replace
     # Map metrics to AVAILABLE_METRICS
     for m_name in metrics:
         for category, metric_names in AVAILABLE_METRICS.items():
@@ -470,7 +476,8 @@ def plot_correlation(results, visualization_save_dir=None, title=None):
     )
 
     save_fig(fig, title, visualization_save_dir)
-    fig.show()
+    if SHOW:
+        fig.show()
 
 
 def standart_scale_df(df):
@@ -508,7 +515,8 @@ def barplot_metrics_time(df, visualization_save_dir=None, title_text=None):
         xaxis_title_font_size=18,
         yaxis_title_font_size=18,
     )
-    fig.show()
+    if SHOW:
+        fig.show()
 
     save_fig(fig, title_text, visualization_save_dir)
 
@@ -606,7 +614,8 @@ def plot_time_matrix(df_full, visualization_save_dir=None, title_text=None):
     save_fig(fig, title_text, visualization_save_dir)
 
     # Show the figure
-    fig.show()
+    if SHOW:
+        fig.show()
 
 
 def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
@@ -622,6 +631,10 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
     categories_lists = {k: [] for k in category_names}
     for metric, category in categories.items():
         categories_lists[category].append(metric)
+    # sort each list in the categories_lists
+    for key in categories_lists.keys():
+        categories_lists[key] = sorted(categories_lists[key])
+
     # reorder the columns
     new_columns = [li for sublist in categories_lists.values() for li in sublist]
     df_mean = df_mean[new_columns]
@@ -643,6 +656,25 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
     df_scaled = df_mean  # standart_scale_df(df_grouped)
     # Convert the DataFrame to a 2D array
     matrix = df_scaled.values
+
+    filename = title_text.replace(" ", "_").replace("/", "_").replace("\\", "_")
+    df_scaled_save_path = os.path.join(
+        visualization_save_dir, "matrices", filename + ".csv"
+    )
+    os.makedirs(os.path.dirname(df_scaled_save_path), exist_ok=True)
+    df_scaled.to_csv(df_scaled_save_path)
+
+    # create df with the categories as columns
+    data_dict = {k: [0] * len(df_scaled) for k in set(categories.values())}
+    df_categories = pd.DataFrame(data_dict, index=df_scaled.index)
+    # sum over the categories
+    for category, metrics in categories_lists.items():
+        df_categories[category] = df_scaled[metrics].mean(axis=1)
+
+    # sort colnames
+    df_categories = df_categories[sorted(df_categories.columns)]
+    # sort rownames
+    df_categories = df_categories.loc[row_order]
 
     # Create the heatmap
     fig = go.Figure(
@@ -704,7 +736,8 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
     save_fig(fig, title_text, visualization_save_dir)
 
     # Show the figure
-    fig.show()
+    if SHOW:
+        fig.show()
 
 
 def plot_with_correlation(
@@ -737,7 +770,7 @@ def plot_with_correlation(
     Returns
     -------
     None
-        The function generates a plot and shows it using `fig.show()`. Optionally, saves the plot if a directory is provided.
+        The function generates a plot and shows it using `if SHOW: fig.show()`. Optionally, saves the plot if a directory is provided.
 
     """
     if grouping_column == "Metric":
@@ -819,7 +852,8 @@ def plot_with_correlation(
     fig.update_xaxes(tickmode="auto", showticklabels=True)
     fig.update_yaxes(tickmode="auto", showticklabels=True)
 
-    fig.show()
+    if SHOW:
+        fig.show()
     save_fig(fig, title, visualization_save_dir)
 
 
