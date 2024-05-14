@@ -101,6 +101,7 @@ def get_caltech101_data_module(cfg):
 def get_benv2_data_module(cfg):
     image_lmdb = cfg["data"]["images_lmdb_path"]
     label_file = cfg["data"]["labels_path"]
+    xai_segmentations_lmdb_path = cfg["data"].get("xai_segmentations_lmdb_path", None)
     s2s1_mapping_file = cfg["data"]["s2s1_mapping_file"]
     batchsize = cfg["data"]["batch_size"]
     num_workers = cfg["data"]["num_workers"]
@@ -123,6 +124,7 @@ def get_benv2_data_module(cfg):
         batch_size=batchsize,
         num_workers=num_workers,
         keys=keys,
+        xai_segmentations_lmdb_path=xai_segmentations_lmdb_path
     )
 
     return data_module

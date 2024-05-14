@@ -50,6 +50,7 @@ class BENv2DataModule(pl.LightningDataModule):
             str
         ] = "nearest",  # only used for mean/std retrieval in case no transform is provided
         verbose: bool = False,
+        xai_segmentations_lmdb_path=None,
         **kwargs,
     ):
         """
@@ -87,6 +88,7 @@ class BENv2DataModule(pl.LightningDataModule):
         self.process_bands_fn = process_bands_fn
         self.process_labels_fn = process_labels_fn
         self.verbose = verbose
+        self.xai_segmentations_lmdb_path = xai_segmentations_lmdb_path
         self.kwargs = kwargs
 
         self.task = "multilabel"
@@ -164,6 +166,7 @@ class BENv2DataModule(pl.LightningDataModule):
                 "Please provide a dictionary for splits or the split file so that the split can be retrieved automatically"
             )
 
+
     def _print_info(self, info: str):
         if self.verbose:
             print(info)
@@ -181,6 +184,7 @@ class BENv2DataModule(pl.LightningDataModule):
                 keys=self.keys["train"],
                 return_patchname=False,
                 verbose=self.verbose,
+                xai_segmentations_lmdb_path=self.xai_segmentations_lmdb_path,
                 **self.kwargs,
             )
             self.val_dataset = BENv2DataSet(

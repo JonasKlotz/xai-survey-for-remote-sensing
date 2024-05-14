@@ -366,9 +366,9 @@ class LightningBaseModel(LightningModule):
         wandb.log({"Images": table})
 
     def _on_before_batch_transfer_cutmix(self, batch):
-        if self.training and not self.first_batch_saved:
-            old_labels = batch["targets"].clone().detach()
-            old_images = batch["features"].clone().detach()
+        # if self.training and not self.first_batch_saved:
+        #     old_labels = batch["targets"].clone().detach()
+        #     old_images = batch["features"].clone().detach()
         if self.training:
             if self.generate_explanations:
                 attr = self._generate_explanations_as_masks(batch)
@@ -376,21 +376,21 @@ class LightningBaseModel(LightningModule):
             # else we use what is provided in the batch
             batch = self._augment(batch)
         # checking if first batch should be saved
-        if self.training and not self.first_batch_saved:
-            new_labels = batch["targets"]
-            new_images = batch["features"]
-
-            self._log_labels(
-                new_labels,
-                old_labels,
-                new_images,
-                old_images,
-            )
-            print("Save first batch....")
-
-            self.log_xai_segmentations(batch)
-
-            self.first_batch_saved = True
+        # if self.training and not self.first_batch_saved:
+        #     new_labels = batch["targets"]
+        #     new_images = batch["features"]
+        #
+        #     self._log_labels(
+        #         new_labels,
+        #         old_labels,
+        #         new_images,
+        #         old_images,
+        #     )
+        #     print("Save first batch....")
+        #
+        #     self.log_xai_segmentations(batch)
+        #
+        #     self.first_batch_saved = True
         return batch
 
     def _on_before_batch_transfer_rrr(self, batch):
