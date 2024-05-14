@@ -27,6 +27,7 @@ data:
     val_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/lithuania_val.csv"
     test_csv: "/media/storagecube/jonasklotz/BigEarthNet-V2/benv2_splits/lithuania_test.csv"
     s2s1_mapping_file: "/media/storagecube/jonasklotz/BigEarthNet-V2/new_s2s1_mapping.parquet"
+    lmdb_base_path: '/media/storagecube/jonasklotz/xai_segmentations/ben_vgg_seed_42'
 
     batch_size: 32 #128
     num_workers: 8 # 8
