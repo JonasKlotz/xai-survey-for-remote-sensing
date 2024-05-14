@@ -523,6 +523,28 @@ def get_rrr_df(rrr_df_path):
     return result_df
 
 
+def get_cutmix_df(rrr_df_path):
+    df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
+
+    # Function to get max value and corresponding column name for each row
+    def get_max_value_and_column(row):
+        max_value = row[["0.1-0.5", "0.3-0.7"]].max()
+        max_column = row[["0.1-0.5", "0.3-0.7"]].idxmax()
+        return pd.Series(
+            [max_value, max_column], index=["Parameter_Value", "Parameter"]
+        )
+
+    # Apply the function to each row and concatenate the result to the original dataframe
+    df = df.join(df.apply(get_max_value_and_column, axis=1))
+    # drop [['0.1-0.5', '0.3-0.7']
+    df = df.drop(columns=["0.1-0.5", "0.3-0.7"])
+    rename_parameter_dict = {"0.1-0.5": "Boxsize 0.1-0.5", "0.3-0.7": "Boxsize 0.3-0.7"}
+    df["Parameter"] = df["Parameter"].replace(rename_parameter_dict)
+    df["Method"] = df["Method"].replace(rename_dict)
+
+    return df
+
+
 @app.command()
 def compare_single_and_multi_label(mlc_dataset="deepglobe", slc_dataset="caltech"):
     slc_metrics_df, slc_time_df = get_dataframes(slc_dataset, slc=True)
@@ -553,6 +575,82 @@ def compare_single_and_multi_label(mlc_dataset="deepglobe", slc_dataset="caltech
         diffed,
         visualization_save_dir=visualization_save_dir,
         title_text=f"{slc_dataset} vs. {mlc_dataset}: Difference of Metric Matrices",
+    )
+
+
+@app.command()
+def cutmix_multilabel(dataset_name: str = "deepglobe"):
+    csv_dir = (
+        f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/metrics"
+    )
+    visualization_save_dir = f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/cutmix/visualizations"
+    os.makedirs(visualization_save_dir, exist_ok=True)
+    cutmix_csv_path = f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/cutmix/{dataset_name}_cutmix_cleaned.csv"
+    result_df = get_cutmix_df(cutmix_csv_path)
+    # splitdf on model name
+    # Creating separate DataFrames for resnet and vgg
+    df_resnet = result_df[result_df["Model"] == "resnet"].reset_index(drop=True)
+    df_vgg = result_df[result_df["Model"] == "vgg"].reset_index(drop=True)
+
+    df_full, _ = _load_df(csv_dir, visualization_save_dir, task="multilabel")
+    df_full = preprocess_metrics(df_full)
+    df_full["Method"] = df_full["Method"].replace(rename_dict)
+
+    process_and_plot_cutmix(
+        df_full,
+        df_resnet,
+        visualization_save_dir,
+        model_name="ResNET",
+        dataset_name="DeepGlobe",
+    )
+    process_and_plot_cutmix(
+        df_full,
+        df_vgg,
+        visualization_save_dir,
+        model_name="VGG",
+        dataset_name="DeepGlobe",
+    )
+
+
+def process_and_plot_cutmix(
+    df_full,
+    df_resnet,
+    visualization_save_dir,
+    model_name="resnet",
+    dataset_name="DeepGlobe",
+):
+    df_full = pd.merge(
+        df_full,
+        df_resnet,
+        on="Method",
+        how="inner",
+        validate="many_to_one",
+    )
+    categories = get_metrics_categories(df_full["Metric"].unique())
+    # add the categories to the df
+    df_full["Category"] = df_full["Metric"].apply(lambda x: categories[x])
+    df = (
+        df_full.groupby(
+            ["Method", "Metric", "Category", "Parameter", "Parameter_Value"]
+        )["Value"]
+        .mean()
+        .reset_index()
+    )
+    plot_with_correlation(
+        df,
+        "Metric",
+        "Parameter_Value",
+        "Parameter",
+        f"{dataset_name}: Correlational Analysis of xAI Metrics with Test mAP in CutMix Training for {model_name}",
+        visualization_save_dir,
+    )
+    plot_with_correlation(
+        df,
+        "Category",
+        "Parameter_Value",
+        "Parameter",
+        f"{dataset_name}: Correlational Analysis of xAI Metric Categories with Test mAP in CutMix Training for {model_name}",
+        visualization_save_dir,
     )
 
 

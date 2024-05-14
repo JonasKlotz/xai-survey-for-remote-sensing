@@ -571,7 +571,7 @@ def log_some_cols(df, metrics_to_apply_log=None, base=2):
 
 
 def _load_df(csv_dir, visualization_save_dir, task="multilabel"):
-    data_save_path = f"{visualization_save_dir}/df_full_new.csv"
+    data_save_path = f"{csv_dir}/df_full_new.csv"
     data_save_path = os.path.abspath(data_save_path)
     time_save_path = f"{visualization_save_dir}/time_df_full_new.csv"
     time_save_path = os.path.abspath(time_save_path)
