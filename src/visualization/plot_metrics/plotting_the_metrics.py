@@ -368,7 +368,7 @@ def rrr_singlelabel():
     visualization_save_dir = f"{csv_dir}/visualizations"
     os.makedirs(visualization_save_dir, exist_ok=True)
     rrr_df_path = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/caltech/rrr/explanations/caltech_rrr_cleaned.csv"
-    rrr_df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
+    result_df = get_rrr_df(rrr_df_path)
 
     df_full, _ = _load_df(csv_dir, visualization_save_dir, task="singlelabel")
     df_full = preprocess_metrics(df_full)
@@ -379,7 +379,7 @@ def rrr_singlelabel():
     # merge on the method column
     df_full = pd.merge(
         df_full,
-        rrr_df,
+        result_df,
         on="Method",
         how="inner",
         validate="many_to_one",
@@ -387,30 +387,9 @@ def rrr_singlelabel():
     categories = get_metrics_categories(df_full["Metric"].unique())
     # add the categories to the df
     df_full["Category"] = df_full["Metric"].apply(lambda x: categories[x])
-    parameter_columns = [
-        "1.0_distancemse",
-        "10.0_distancemse",
-        "1.0_distanceelementwise",
-        "10.0_distanceelementwise",
-    ]
-    rename_parameter_dict = {
-        "1.0_distancemse": "MSE Distance with  λ = 1",
-        "10.0_distancemse": "MSE Distance with  λ = 10",
-        "1.0_distanceelementwise": "Elementwise Distance with  λ = 1",
-        "10.0_distanceelementwise": "Elementwise Distance with  λ = 10",
-    }
-    id_vars = [col for col in df_full.columns if col not in parameter_columns]
-
-    # Use melt to stack the parameter columns into a single column
-    df_long = df_full.melt(
-        id_vars=id_vars,
-        value_vars=parameter_columns,
-        var_name="Parameter",
-        value_name="Parameter_Value",
-    )
 
     df = (
-        df_long.groupby(
+        df_full.groupby(
             ["Method", "Metric", "Category", "Parameter", "Parameter_Value"]
         )["Value"]
         .mean()
@@ -423,14 +402,13 @@ def rrr_singlelabel():
         ~((df["Method"] == "GradCAM") & (df["Parameter"] == "10.0_distanceelementwise"))
     ]
     df = df[~((df["Method"] == "GradCAM") & (df["Parameter"] == "1.0_distancemse"))]
-    df["Parameter"] = df["Parameter"].replace(rename_parameter_dict)
 
     plot_with_correlation(
         df,
         "Metric",
         "Parameter_Value",
         "Parameter",
-        "Caltech 101: Correlational Analysis of xAI Metrics with Test Accuracy in RRR Training",
+        "Caltech101: Correlational Analysis of xAI Metrics with Test Accuracy in RRR Training",
         visualization_save_dir,
     )
     plot_with_correlation(
@@ -438,20 +416,20 @@ def rrr_singlelabel():
         "Category",
         "Parameter_Value",
         "Parameter",
-        "Caltech 101: Correlational Analysis of xAI Metric Categories with Test Accuracy in RRR Training",
+        "Caltech101: Correlational Analysis of xAI Metric Categories with Test Accuracy in RRR Training",
         visualization_save_dir,
     )
 
 
 @app.command()
-def rrr_multilabel(dataset_name: str = "deepglobe"):
+def rrr_multilabel(dataset_name: str = "DeepGlobe"):
     csv_dir = (
         f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/metrics"
     )
     visualization_save_dir = f"{csv_dir}/visualizations"
     os.makedirs(visualization_save_dir, exist_ok=True)
     rrr_df_path = f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/rrr/{dataset_name}_rrr_cleaned.csv"
-    rrr_df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
+    result_df = get_rrr_df(rrr_df_path)
 
     df_full, _ = _load_df(csv_dir, visualization_save_dir, task="multilabel")
     df_full = preprocess_metrics(df_full)
@@ -462,7 +440,7 @@ def rrr_multilabel(dataset_name: str = "deepglobe"):
     # merge on the method column
     df_full = pd.merge(
         df_full,
-        rrr_df,
+        result_df,
         on="Method",
         how="inner",
         validate="many_to_one",
@@ -470,30 +448,25 @@ def rrr_multilabel(dataset_name: str = "deepglobe"):
     categories = get_metrics_categories(df_full["Metric"].unique())
     # add the categories to the df
     df_full["Category"] = df_full["Metric"].apply(lambda x: categories[x])
-    parameter_columns = [
-        "1.0_distancemse",
-        "10.0_distancemse",
-        "1.0_distanceelementwise",
-        "10.0_distanceelementwise",
-    ]
-    rename_parameter_dict = {
-        "1.0_distancemse": "MSE Distance with  λ = 1",
-        "10.0_distancemse": "MSE Distance with  λ = 10",
-        "1.0_distanceelementwise": "Elementwise Distance with  λ = 1",
-        "10.0_distanceelementwise": "Elementwise Distance with  λ = 10",
-    }
-    id_vars = [col for col in df_full.columns if col not in parameter_columns]
+    # parameter_columns = [
+    #     "1.0_distancemse",
+    #     "10.0_distancemse",
+    #     "1.0_distanceelementwise",
+    #     "10.0_distanceelementwise",
+    # ]
 
-    # Use melt to stack the parameter columns into a single column
-    df_long = df_full.melt(
-        id_vars=id_vars,
-        value_vars=parameter_columns,
-        var_name="Parameter",
-        value_name="Parameter_Value",
-    )
+    # id_vars = [col for col in df_full.columns if col not in parameter_columns]
+    #
+    # # Use melt to stack the parameter columns into a single column
+    # df_long = df_full.melt(
+    #     id_vars=id_vars,
+    #     value_vars=parameter_columns,
+    #     var_name="Parameter",
+    #     value_name="Parameter_Value",
+    # )
 
     df = (
-        df_long.groupby(
+        df_full.groupby(
             ["Method", "Metric", "Category", "Parameter", "Parameter_Value"]
         )["Value"]
         .mean()
@@ -506,14 +479,13 @@ def rrr_multilabel(dataset_name: str = "deepglobe"):
     #     ~((df["Method"] == "GradCAM") & (df["Parameter"] == "10.0_distanceelementwise"))
     # ]
     # df = df[~((df["Method"] == "GradCAM") & (df["Parameter"] == "1.0_distancemse"))]
-    df["Parameter"] = df["Parameter"].replace(rename_parameter_dict)
 
     plot_with_correlation(
         df,
         "Metric",
         "Parameter_Value",
         "Parameter",
-        f"{dataset_name}: Correlational Analysis of xAI Metrics with Test mAP in RRR Training",
+        "DeepGlobe: Correlational Analysis of xAI Metrics with Test mAP in RRR Training",
         visualization_save_dir,
     )
     plot_with_correlation(
@@ -521,9 +493,34 @@ def rrr_multilabel(dataset_name: str = "deepglobe"):
         "Category",
         "Parameter_Value",
         "Parameter",
-        f"{dataset_name}: Correlational Analysis of xAI Metric Categories with Test mAP in RRR Training",
+        "DeepGlobe: Correlational Analysis of xAI Metric Categories with Test mAP in RRR Training",
         visualization_save_dir,
     )
+
+
+def get_rrr_df(rrr_df_path):
+    rrr_df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
+
+    # Function to get max value and corresponding column name for each method
+    def get_max_value_and_column(row):
+        max_value = row[1:].max()
+        max_column = row[1:].idxmax()
+        return pd.Series(
+            [max_value, max_column], index=["Parameter_Value", "Parameter"]
+        )
+
+    # Apply the function to each row
+    max_values_df = rrr_df.apply(get_max_value_and_column, axis=1)
+    # Combine the original 'Method' column with the new DataFrame
+    result_df = pd.concat([rrr_df["Method"], max_values_df], axis=1)
+    rename_parameter_dict = {
+        "1.0_distancemse": "MSE Distance with  λ = 1",
+        "10.0_distancemse": "MSE Distance with  λ = 10",
+        "1.0_distanceelementwise": "Elementwise Distance with  λ = 1",
+        "10.0_distanceelementwise": "Elementwise Distance with  λ = 10",
+    }
+    result_df["Parameter"] = result_df["Parameter"].replace(rename_parameter_dict)
+    return result_df
 
 
 @app.command()

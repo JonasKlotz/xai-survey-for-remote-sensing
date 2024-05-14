@@ -10,7 +10,7 @@ from quantus import AVAILABLE_METRICS
 from scipy.stats import pearsonr
 
 COLORSCALE = "RdBu_r"
-SHOW = False
+SHOW = True
 
 
 def get_method_colors(methods):

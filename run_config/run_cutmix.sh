@@ -29,7 +29,6 @@ for method in "${methods[@]}"; do
     python3 src/main.py run-training $config_path --explanation-method $method --gpu $gpu --mode cutmix --random-seed $seed --min-aug-area 0.3 --max-aug-area 0.7 --model-name resnet
 done
 
-#  USAGE: ./run_cutmix.sh 0 "method1 method2 method3" 42 config/deepglobe_vgg_config.yml
 
 python3 src/main.py run-training $config_path  --gpu $gpu --mode cutmix --random-seed $seed --min-aug-area 0.1 --max-aug-area 0.5 --model-name resnet --normal-segmentations
 python3 src/main.py run-training $config_path  --gpu $gpu --mode cutmix --random-seed $seed --min-aug-area 0.3 --max-aug-area 0.7 --model-name resnet --normal-segmentations
@@ -42,6 +41,7 @@ python3 src/main.py run-training $config_path  --gpu $gpu --mode cutmix --random
 
 
 
+#  USAGE: ./run_cutmix.sh 0 "method1 method2 method3" 42 config/deepglobe_vgg_config.yml
 
 
 
