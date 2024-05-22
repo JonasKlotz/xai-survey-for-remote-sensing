@@ -12,12 +12,12 @@ pretrained: False
 # Explanation parameters
 explanation_methods:
   - 'lime'
-  - 'lrp'
-  - 'integrated_gradients'
-  - 'deeplift'
-  - 'guided_gradcam'
-  - 'occlusion'
-  - 'gradcam'
+#  - 'lrp'
+#  - 'integrated_gradients'
+#  - 'deeplift'
+#  - 'guided_gradcam'
+#  - 'occlusion'
+#  - 'gradcam'
 
 # Dataset parameters
 data:
@@ -38,9 +38,8 @@ data:
 # Training parameters
 max_epochs: 20
 learning_rate: 0.025
-threshold: 0.5
 momentum: 0.9
-
+threshold: 0.5
 
 # whether to load the batches from a specific path
 zarr_path: '/home/jonasklotz/Studys/MASTERS/results_22_4_final/ben/ben_explanations/ben_vgg_2024-04-20_15-48-28.zarr'

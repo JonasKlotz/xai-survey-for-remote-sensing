@@ -37,8 +37,8 @@ scheduler: 'step'
 threshold: 0.5
 
 # whether to load the batches from a specific path
-zarr_path: '/home/jonasklotz/Studys/MASTERS/results_22_4_final/caltech/caltech101_vgg_with_RRR_GRADCAM/caltech101_vgg_2024-04-16_10-12-02.zarr'
-model_path: 'models_final/caltech101_vgg_final/final_model.pt'
+zarr_path: '/home/jonasklotz/Studys/MASTERS/results_22_4_final/caltech/explanations/caltech101_vgg.zarr'
+model_path: 'models_final/caltech_gradcam_rrr/final_model.pt'
 
 
 

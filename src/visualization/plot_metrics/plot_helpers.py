@@ -540,7 +540,7 @@ def plot_time_matrix(df_full, visualization_save_dir=None, title_text=None):
 
     row_order = [
         "Guided GradCAM",
-        "LIME",
+        # "LIME",
         "DeepLift",
         "Integrated Gradients",
         "LRP",
@@ -775,10 +775,10 @@ def plot_with_correlation(
     """
     if grouping_column == "Metric":
         plots_per_row = 3
-        plot_height = 200
+        plot_height = 300
     else:
         plots_per_row = 2
-        plot_height = 400
+        plot_height = 500
     # Calculate correlation for the specified grouping
     results = df.groupby(grouping_column).apply(
         calculate_correlation_and_significance, col=col

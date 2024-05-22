@@ -53,12 +53,17 @@ def visualize(cfg: dict, model=None):
             batch_dict = explanation_manager.explain_batch(batch_dict)
 
         explanation_visualizer.visualize_from_batch_dict(
-            batch_dict, show=False, skip_non_multilabel=True
+            batch_dict,
+            show=True,
+            skip_non_multilabel=True,
+            skip_wrong_preds=True,
+            title="BEN Explanations",
         )
 
         if "index_data" in batch_dict:
             idx = batch_dict["index_data"]
         else:
             idx = [i]
-
-        explanation_visualizer.save_last_fig(name=f"sample_{idx[0]}", format="png")
+        explanation_visualizer.save_last_fig(
+            name=f"sample_{idx[0]}", format="png", batch_dict=batch_dict
+        )

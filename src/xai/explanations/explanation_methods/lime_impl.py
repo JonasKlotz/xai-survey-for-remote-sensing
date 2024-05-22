@@ -106,10 +106,20 @@ def slic_from_tensor(
 
     img = img_tensor.permute(1, 2, 0).cpu().to(torch.double).numpy()
 
-    segments = slic(img, start_label=0, n_segments=n_segments, sigma=sigma)
+    if img.shape[-1] == 14:
+        c = 0.1
+    else:
+        c = 10
+    segments = slic(
+        img,
+        start_label=0,
+        n_segments=n_segments,
+        sigma=5,
+        slic_zero=True,
+        compactness=c,
+    )
 
     segments = torch.from_numpy(segments)
-
     return segments
 
 

@@ -168,7 +168,7 @@ def expand_metrics_df(df):
     return expanded_df
 
 
-def parse_data_multilabel(csv_dir, n_classes=6):
+def parse_data_multilabel(csv_dir, n_classes=6, cut_to_min_length=False):
     """
 
     Returns df like:
@@ -183,14 +183,14 @@ def parse_data_multilabel(csv_dir, n_classes=6):
     labels_dfs, metrics_dfs, time_dfs = read_into_dfs(
         labels_csvs, metrics_csvs, time_csvs
     )
+    if cut_to_min_length:
+        # get minimal length to cut all dfs to the same length
+        min_length = min([len(df) for df in metrics_dfs])
 
-    # get minimal length to cut all dfs to the same length
-    min_length = min([len(df) for df in metrics_dfs])
-
-    # cut all dfs to the same length
-    metrics_dfs = [df.iloc[:min_length] for df in metrics_dfs]
-    time_dfs = [df.iloc[:min_length] for df in time_dfs]
-    labels_dfs = [df.iloc[:min_length] for df in labels_dfs]
+        # cut all dfs to the same length
+        metrics_dfs = [df.iloc[:min_length] for df in metrics_dfs]
+        time_dfs = [df.iloc[:min_length] for df in time_dfs]
+        labels_dfs = [df.iloc[:min_length] for df in labels_dfs]
 
     time_dfs = [parse_time_df_single_label(df) for df in time_dfs]
     keys = [file.split("/")[-1].split("_")[0] for file in time_csvs]
@@ -571,7 +571,7 @@ def log_some_cols(df, metrics_to_apply_log=None, base=2):
 
 
 def _load_df(csv_dir, visualization_save_dir, task="multilabel"):
-    data_save_path = f"{csv_dir}/df_full_new.csv"
+    data_save_path = f"{visualization_save_dir}/df_full_new.csv"
     data_save_path = os.path.abspath(data_save_path)
     time_save_path = f"{visualization_save_dir}/time_df_full_new.csv"
     time_save_path = os.path.abspath(time_save_path)

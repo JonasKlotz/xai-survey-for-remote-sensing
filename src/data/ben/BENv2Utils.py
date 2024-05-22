@@ -70,7 +70,34 @@ _val2idx_new_labels_original_order = {
     x: NEW_LABELS_ORIGINAL_ORDER.index(x) for x in NEW_LABELS_ORIGINAL_ORDER
 }
 
+NEW_LABELS_ORIGINAL_ORDER_PLOTTING = (
+    "Urban fabric",
+    "Industrial",
+    "Arable",
+    "Permanent crops",
+    "Pastures",
+    "Cultivation patterns",
+    "Agriculture",
+    "Agro-forestry areas",
+    "Broad-leaved forest",
+    "Coniferous forest",
+    "Mixed forest",
+    "Grassland",
+    "Moors",
+    "Transitional woodland",
+    "Beaches, dunes, sands",
+    "Inland wetlands",
+    "Coastal wetlands",
+    "Inland waters",
+    "Marine waters",
+)
+NEW_LABELS_PLOTTING = sorted(NEW_LABELS_ORIGINAL_ORDER_PLOTTING)
+
+
 BEN_IDX2NAME = {i: name for i, name in enumerate(NEW_LABELS)}
+BEN_IDX2NAME_PLOTTING = {
+    i: f"{i} {name}" for i, name in enumerate(NEW_LABELS_ORIGINAL_ORDER_PLOTTING)
+}
 
 
 def ben_19_labels_to_multi_hot(

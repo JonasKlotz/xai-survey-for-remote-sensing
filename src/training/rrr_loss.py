@@ -108,6 +108,8 @@ class RightForRightReasonsLoss(torch.nn.Module):
         elif self.norm == "mse":
             mse = torch.nn.MSELoss()
             # for MSE we want to invert the relevancy map
+            # clip attrs to max 1
+            attrs = torch.clamp(attrs, max=1)
             relevancy_map = torch.where(relevancy_map == 0, 1.0, 0.0).to(x_batch.device)
             rrr_loss = mse(attrs, relevancy_map)
 

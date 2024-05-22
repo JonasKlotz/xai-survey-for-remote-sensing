@@ -8,7 +8,7 @@ from pytorch_lightning import LightningDataModule
 from torchvision import transforms
 
 from data.ben.BENv2DataModule import BENv2DataModule
-from data.ben.BENv2Utils import BEN_IDX2NAME
+from data.ben.BENv2Utils import BEN_IDX2NAME_PLOTTING
 from data.constants import DEEPGLOBE_IDX2NAME
 from data.datamodule import DeepGlobeDataModule
 from data.torch_vis.torch_vis_datamodules import Caltech101DataModule, MNISTDataModule
@@ -124,7 +124,7 @@ def get_benv2_data_module(cfg):
         batch_size=batchsize,
         num_workers=num_workers,
         keys=keys,
-        xai_segmentations_lmdb_path=xai_segmentations_lmdb_path
+        xai_segmentations_lmdb_path=xai_segmentations_lmdb_path,
     )
 
     return data_module
@@ -193,7 +193,7 @@ def get_index_to_name(cfg):
         "deepglobe": DEEPGLOBE_IDX2NAME,
         "caltech101": CALTECH101_IDX2NAME,
         "mnist": MNIST_IDX2NAME,
-        "ben": BEN_IDX2NAME,
+        "ben": BEN_IDX2NAME_PLOTTING,
     }
 
     if cfg["dataset_name"] not in dataset_name_to_idx_name:

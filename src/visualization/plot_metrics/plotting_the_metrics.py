@@ -34,22 +34,32 @@ rp_renaming_dict = {
     "Region Segmentation LERF": "Region Perturbation LERF",
     "Region Segmentation MORF": "Region Perturbation MORF",
 }
+dataset_rename_dict = {
+    "deepglobe": "DeepGlobe",
+    "caltech": "Caltech101",
+    "ben": "BEN",
+}
+
 app = typer.Typer(pretty_exceptions_enable=False)
 
 
 @app.command()
 def main_multilabel(
-    csv_dir: Annotated[str, typer.Option()] = None,
+    csv_dir: Annotated[str, typer.Option()] = None, dataset_name="deepglobe"
 ):
     # csv_dir = "/home/jonasklotz/Studys/MASTERS/Thesis/Final_Results/deepglobe/metrics"
-    dataset_name = "deepglobe"
+
     # metric_to_plot = "IROF"
     # metric_1 = "Region Segmentation LERF"
     # metric_2 = "Region Segmentation MORF"
     # region the region segmentation metrics to region perturbation metrics
 
     if not csv_dir:
-        csv_dir = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/deepglobe/metrics"
+        csv_dir = (
+            f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/{dataset_name}/metrics"
+        )
+
+    dataset_name = dataset_rename_dict[dataset_name]
 
     visualization_save_dir = f"{csv_dir}/visualizations"
     os.makedirs(visualization_save_dir, exist_ok=True)
@@ -73,11 +83,11 @@ def main_multilabel(
 
     # plot_result_distribution(df_full, dataset_name, visualization_save_dir)
 
-    # plot_matrix(
-    #     df_full,
-    #     visualization_save_dir=visualization_save_dir,
-    #     title_text=f"{dataset_name}: Unprocessed Metric Matrix",
-    # )
+    plot_matrix(
+        df_full,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Unprocessed Metric Matrix",
+    )
     df_preprocessed = preprocess_metrics(df_full)
 
     plot_matrix(
@@ -91,33 +101,34 @@ def main_multilabel(
         df_only_false,
         df_only_false_grouped,
     ) = extract_correct_and_false_preds(df_preprocessed)
-
-    plot_matrix(
-        df_only_correct,
-        visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Metric Matrix for correct predictions",
-    )
-    plot_matrix(
-        df_only_false,
-        visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Metric Matrix for wrong predictions",
-    )
-    df_difference = pd.merge(
-        df_only_false_grouped,
-        df_only_correct_grouped,
-        on=["Method", "Metric"],
-        suffixes=("_false", "_correct"),
-        how="inner",
-        validate="many_to_many",
-    )
-    df_difference["Value"] = (
-        df_difference["Value_false"] - df_difference["Value_correct"]
-    )
-    plot_matrix(
-        df_difference,
-        visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Difference of Metric Matrices for for correct and wrong predictions",
-    )
+    if dataset_name == "deepglobe":
+        # BEN HAS NO CORRECT PREDS
+        plot_matrix(
+            df_only_correct,
+            visualization_save_dir=visualization_save_dir,
+            title_text=f"{dataset_name}: Metric Matrix for correct predictions",
+        )
+        plot_matrix(
+            df_only_false,
+            visualization_save_dir=visualization_save_dir,
+            title_text=f"{dataset_name}: Metric Matrix for wrong predictions",
+        )
+        df_difference = pd.merge(
+            df_only_false_grouped,
+            df_only_correct_grouped,
+            on=["Method", "Metric"],
+            suffixes=("_false", "_correct"),
+            how="inner",
+            validate="many_to_many",
+        )
+        df_difference["Value"] = (
+            df_difference["Value_false"] - df_difference["Value_correct"]
+        )
+        plot_matrix(
+            df_difference,
+            visualization_save_dir=visualization_save_dir,
+            title_text=f"{dataset_name}: Difference of Metric Matrices for for correct and wrong predictions",
+        )
 
     categories = get_metrics_categories(df_preprocessed["Metric"].unique())
 
@@ -269,6 +280,13 @@ def main_singlelabel(
         csv_dir, visualization_save_dir, task="singlelabel"
     )
     time_df_long["Method"] = time_df_long["Method"].replace(rename_dict)
+
+    df_full["Method"] = df_full["Method"].replace(rename_dict)
+    plot_matrix(
+        df_full,
+        visualization_save_dir=visualization_save_dir,
+        title_text=f"{dataset_name}: Unprocessed Metric Matrix",
+    )
 
     df_full = preprocess_metrics(df_full)
 
@@ -596,19 +614,20 @@ def cutmix_multilabel(dataset_name: str = "deepglobe"):
     df_full = preprocess_metrics(df_full)
     df_full["Method"] = df_full["Method"].replace(rename_dict)
 
+    dataset_name = dataset_rename_dict[dataset_name]
     process_and_plot_cutmix(
         df_full,
         df_resnet,
         visualization_save_dir,
         model_name="ResNET",
-        dataset_name="DeepGlobe",
+        dataset_name=dataset_name,
     )
     process_and_plot_cutmix(
         df_full,
         df_vgg,
         visualization_save_dir,
         model_name="VGG",
-        dataset_name="DeepGlobe",
+        dataset_name=dataset_name,
     )
 
 

@@ -1,4 +1,3 @@
-import copy
 import os
 from typing import Union
 
@@ -9,12 +8,12 @@ import torchvision
 from plotly.subplots import make_subplots
 from scipy.spatial import cKDTree
 from skimage import exposure
+from sklearn.metrics import auc
 
 from data.data_utils import parse_batch
 from data.ben.BENv2Stats import means as all_mean
 from data.ben.BENv2Stats import stds as all_std
 from utility.cluster_logging import logger
-
 
 rename_dict = {
     "gradcam": "GradCAM",
@@ -138,7 +137,7 @@ class ExplanationVisualizer:
 
         torch.set_printoptions(sci_mode=False)
 
-        self.size = 400
+        self.size = 700
 
     def visualize(
         self,
@@ -244,7 +243,12 @@ class ExplanationVisualizer:
             fig.show()
 
     def _create_data_for_dict_plot(
-        self, attrs_dict: dict, image_tensor, segmentations, normalize=True
+        self,
+        attrs_dict: dict,
+        image_tensor,
+        segmentations,
+        normalize=True,
+        masked_image_dict=None,
     ):
         """
         Create data for dictionary plot.
@@ -268,6 +272,14 @@ class ExplanationVisualizer:
         image = self._preprocess_image(image_tensor)
         # Add Image and flip to fix orientation
         data["Image"] = go.Image(z=np.flipud(image))
+
+        if masked_image_dict:
+            for key, masked_image_list in masked_image_dict.items():
+                temp = []
+                for i, masked_image in enumerate(masked_image_list):
+                    # preprocessing is done bef
+                    temp.append(go.Image(z=np.flipud(masked_image)))
+                data[key] = temp
 
         # Add Segmentation
         if segmentations is not None:
@@ -393,17 +405,20 @@ class ExplanationVisualizer:
         fig.update_layout(
             height=self.size * rows,
             width=self.size * cols,
-            margin=dict(t=70, b=70),
+            margin=dict(t=120, b=70),
             title_text=title,
             font=dict(
-                size=25,  # Set the font size here
+                size=30,  # Set the font size here
             ),
         )
+        # Update the font size of the annotations (subtitles)
+        for annotation in fig["layout"]["annotations"]:
+            annotation["font"] = dict(size=40)  # Change the font size as needed
 
         # enforce the colorscale to be from -1 to 1
         fig.update_coloraxes(colorscale=COLORSCALE, cmin=0, cmax=1)
 
-        fig.update_annotations(font_size=20)
+        fig.update_annotations(font_size=40)
         return fig
 
     def _create_subplot_titles(
@@ -447,7 +462,7 @@ class ExplanationVisualizer:
 
         rename_dict = {
             "gradcam": "GradCAM",
-            "guided_gradcam": "Guided GradCAM",
+            "guided_gradcam": "G. GradCAM",
             "lime": "LIME",
             "deeplift": "DeepLift",
             "integrated_gradients": "IG",
@@ -461,17 +476,18 @@ class ExplanationVisualizer:
                 continue
             # split at ' '
             titles = title.split(" ")
-            if len(titles) == 2:
-                method_name, class_name = title.split(" ")
+            if len(titles) >= 2:
+                method_name = titles[0]
+                class_name = " ".join(titles[1:])
                 method_name = rename_dict.get(method_name, method_name)
                 class_name = class_name.replace("_", " ")
-                new_titles.append(f"{method_name} {class_name}")
+                new_titles.append(f"{method_name}; {class_name}")
             else:
                 new_titles.append(title)
 
         return new_titles
 
-    def save_last_fig(self, name, format="svg"):
+    def save_last_fig(self, name, format="svg", batch_dict=None):
         """
         Save the last figure.
 
@@ -485,10 +501,12 @@ class ExplanationVisualizer:
         # create save path if it does not exist
         os.makedirs(self.output_path, exist_ok=True)
         if self.last_fig is None:
-            logger.error("No figure to save.")
             return
         # print(f"Saving figure to {self.save_path}/{name}.{format}")
         self.last_fig.write_image(f"{self.output_path}/{name}.{format}", format=format)
+        self.last_fig = None
+        if batch_dict is not None:
+            torch.save(batch_dict, f"{self.output_path}/batch_dict_{name}.pt")
 
     def _preprocess_image(self, image: Union[torch.Tensor, np.ndarray]) -> np.ndarray:
         """
@@ -777,12 +795,16 @@ class ExplanationVisualizer:
         fig.update_layout(
             height=self.size * rows,
             width=self.size * cols,
-            margin=dict(t=60, b=60),
+            margin=dict(t=100, b=60),
             title_text=title,
+            font=dict(
+                size=30,  # Set the font size here
+            ),
         )
 
         # enforce the colorscale to be from -1 to 1
         fig.update_coloraxes(colorscale=COLORSCALE, cmin=0, cmax=1)
+        fig.update_annotations(font_size=30)
 
         self.last_fig = fig
 
@@ -791,63 +813,6 @@ class ExplanationVisualizer:
             fig.show()
 
         return fig
-
-    def visualize_top_k_attributions(
-        self,
-        attribution_dict: Union[torch.Tensor, dict[torch.Tensor]],
-        image_tensor: torch.Tensor,
-        k: Union[int, float] = 0.1,
-        segmentation_tensor: torch.Tensor = None,
-        label_tensor: torch.Tensor = None,
-        predictions_tensor: torch.Tensor = None,
-        show=True,
-        task: str = "multilabel",
-        largest=True,
-    ):
-        k_image = self._get_image_k(image_tensor, k, largest)
-
-        tmp_attribution_dict = copy.deepcopy(attribution_dict)
-
-        for attr_name, attributions in tmp_attribution_dict.items():
-            for index, attr in enumerate(attributions):
-                # if all attributions are 0, continue
-                if torch.all(attributions[index] == 0):
-                    continue
-
-                # here normalization has to happen before masking
-                # todo
-                attr = scale_tensor(attr)
-                # attr = _min_max_normalize(attr)
-
-                mask = self.get_top_k_mask(attr, k_image, largest)
-                # multiply the attributions with the mask
-
-                masked_attr = attr * mask
-                # add the masked attributions to the dictionary
-                tmp_attribution_dict[attr_name][index] = masked_attr
-
-        for attr_name, attributions in tmp_attribution_dict.items():
-            for index, attr in enumerate(attributions):
-                # if all attributions are 0, continue
-                if torch.all(attr == 0):
-                    continue
-                # calculate the average point density
-                avg_point_density = calculate_avg_point_density(attr)
-                print(
-                    f"Average point density for {attr_name} {index}: {avg_point_density}"
-                )
-
-        self.visualize(
-            attribution_dict=tmp_attribution_dict,
-            image_tensor=image_tensor,
-            label_tensor=label_tensor,
-            segmentation_tensor=segmentation_tensor,
-            predictions_tensor=predictions_tensor,
-            show=show,
-            task=task,
-            normalize=False,
-        )
-        print("Visualized top k attributions")
 
     def visualize_top_k_attributions_with_predictions(
         self,
@@ -859,7 +824,7 @@ class ExplanationVisualizer:
         predictions_tensor: torch.Tensor = None,
         show=True,
         model=None,
-        remove_top_k_features=True,
+        removal_strategy="MORF",
         title="Top k attributions",
         save_name="",
     ):
@@ -867,18 +832,25 @@ class ExplanationVisualizer:
             raise ValueError("Model has to be supplied for this visualization")
 
         for attr_name, attributions in attribution_dict.items():
-            print(attr_name)
-            masked_predictions_list, tmp_attribution_dict = self._generate_k_attr_dict(
+            (
+                masked_predictions_list,
+                masked_image_dict,
+                attributions_dict,
+            ) = self._generate_k_attr_dict(
                 attr_name,
                 attributions,
                 image_tensor,
                 k_list,
                 model,
-                remove_top_k_features,
+                removal_strategy=removal_strategy,
             )
 
             data = self._create_data_for_dict_plot(
-                tmp_attribution_dict, image_tensor, segmentation_tensor, normalize=False
+                attributions_dict,
+                image_tensor,
+                segmentation_tensor,
+                masked_image_dict=masked_image_dict,
+                normalize=False,
             )
             fig = self._create_fig_from_dict_data(
                 data,
@@ -930,19 +902,10 @@ class ExplanationVisualizer:
             return fig
 
     def _generate_k_attr_dict(
-        self,
-        attr_name,
-        attributions,
-        image_tensor,
-        k_list,
-        model,
-        remove_top_k_features,
+        self, attr_name, attributions, image_tensor, k_list, model, removal_strategy
     ):
-        tmp_attribution_dict = {attr_name: torch.zeros(attributions.shape)}
-        # populate dictionary with zeros
-        for k in k_list:
-            top_k_key = f"a_k = {k}_data"
-            tmp_attribution_dict[top_k_key] = torch.zeros(attributions.shape)
+        masked_image_dict = {f"a_k = {k}_data": [] for k in k_list}
+        attributions_dict = {attr_name: torch.zeros(attributions.shape)}
 
         new_titles_list = []
         for index, attr in enumerate(attributions):
@@ -954,16 +917,18 @@ class ExplanationVisualizer:
             # here normalization has to happen before masking
             # todo: attr = _min_max_normalize(attr)
             attr = scale_tensor(attr)
-            tmp_attribution_dict[attr_name][index] = attr
+            attributions_dict[attr_name][index] = attr
 
             for k_index, k in enumerate(k_list):
                 top_k_key = f"a_k = {k}_data"
-                image_k = self._get_image_k(image_tensor, k, remove_top_k_features)
-                mask = self.get_top_k_mask(attr, image_k, remove_top_k_features)
+                image_k = self._get_image_k(
+                    image_tensor, k, removal_strategy=removal_strategy
+                )
+                mask = self.get_top_k_mask(
+                    attr, image_k, removal_strategy=removal_strategy
+                )
 
                 # multiply the attributions with the mask
-                masked_attr = attr * mask
-
                 masked_image = image_tensor.clone() * mask
                 masked_predictions, logits = model.prediction_step(
                     masked_image.unsqueeze(0).float()
@@ -974,21 +939,22 @@ class ExplanationVisualizer:
                 )
 
                 # add the masked attributions to the dictionary
-                tmp_attribution_dict[top_k_key][index] = masked_attr
+                preprocessed_image = self._preprocess_image(image_tensor.clone())
+                permuted_mask = mask.permute(1, 2, 0).numpy(force=True)
+                masked_image = preprocessed_image * permuted_mask
+                masked_image_dict[top_k_key].append(masked_image)
 
             new_titles_list.append(tmp_new_titles)
-        return new_titles_list, tmp_attribution_dict
+        return new_titles_list, masked_image_dict, attributions_dict
 
-    def _get_image_k(self, image_tensor, k, reverse=False):
-        if isinstance(k, float):
-            if reverse:
-                k = 1 - k
-            image_k = int(k * image_tensor.shape[1] * image_tensor.shape[2])
-        else:
-            image_k = k
+    def _get_image_k(self, image_tensor, k, removal_strategy=None):
+        if removal_strategy == "MORF" or removal_strategy == "LERF":
+            k = 1 - k
+        image_k = int(k * image_tensor.shape[1] * image_tensor.shape[2])
+
         return image_k
 
-    def get_top_k_mask(self, attr, k, remove_top_k_features):
+    def get_top_k_mask(self, attr, k, removal_strategy="MORF"):
         """Get the mask for the top k attributions.
 
         Parameters
@@ -1010,7 +976,15 @@ class ExplanationVisualizer:
         attr = attr.flatten()
 
         # get the top k attributions
-        top_k_indices = torch.topk(attr, k=k, largest=not remove_top_k_features).indices
+
+        if removal_strategy == "MORF":
+            top_k_indices = torch.topk(attr, k=k, largest=False).indices
+        elif removal_strategy == "LERF":
+            top_k_indices = torch.topk(attr, k=k, largest=True).indices
+        elif removal_strategy == "MORF_BASELINE":
+            top_k_indices = torch.topk(attr, k=k, largest=True).indices
+        else:
+            raise ValueError(f"Removal strategy {removal_strategy} not recognized")
         # create a mask for the top k attributions
         mask = torch.zeros(attr_shape)
         mask = mask.flatten()
@@ -1019,7 +993,12 @@ class ExplanationVisualizer:
         return mask
 
     def visualize_from_batch_dict(
-        self, batch_dict, show=True, skip_non_multilabel=True
+        self,
+        batch_dict,
+        show=True,
+        skip_non_multilabel=True,
+        skip_wrong_preds=True,
+        title=None,
     ):
         """
 
@@ -1058,6 +1037,9 @@ class ExplanationVisualizer:
         if skip_non_multilabel and torch.sum(predicted_label_tensor) <= 1:
             logger.debug(f"Skipping {indices} as it is not multilabel")
             return
+        if skip_wrong_preds and not torch.all(predicted_label_tensor == true_labels):
+            logger.debug(f"Skipping {indices} as it is a wrong prediction")
+            return
 
         self.visualize(
             attribution_dict=attributions_dict,
@@ -1068,6 +1050,7 @@ class ExplanationVisualizer:
             show=show,
             task=self.cfg["task"],
             normalize=True,
+            title=title,
         )
 
     def visualize_image(self, batch_dict, show=True):
@@ -1095,6 +1078,114 @@ class ExplanationVisualizer:
             if show:
                 fig.show()
             self.last_fig = fig
+
+    def visualize_top_k_predictions_function(
+        self,
+        attribution_dict: Union[torch.Tensor, dict[torch.Tensor]],
+        image_tensor: torch.Tensor,
+        label_tensor: torch.Tensor,
+        k_list: list,
+        model=None,
+        removal_strategy="MORF",
+        title="Top k attributions",
+        save_name="",
+        show=True,
+    ):
+        if model is None:
+            raise ValueError("Model has to be supplied for this visualization")
+        label_names = [
+            self.index_to_name[label.item()]
+            for label in torch.nonzero(label_tensor, as_tuple=True)[0]
+        ]
+        for attr_name, attributions in attribution_dict.items():
+            k_prediction_dict_dict = {}
+
+            for index, attr in enumerate(attributions):
+                # if all attributions are 0, continue
+                if torch.all(attributions[index] == 0):
+                    continue
+                k_prediction_dict = {}
+                label = label_names[index]
+
+                attr = scale_tensor(attr)
+
+                for k_index, k in enumerate(k_list):
+                    image_k = self._get_image_k(
+                        image_tensor, k, removal_strategy=removal_strategy
+                    )
+                    mask = self.get_top_k_mask(
+                        attr, image_k, removal_strategy=removal_strategy
+                    )
+                    # calculate how many pixels are removed
+                    # sum mask
+                    masked_image = image_tensor.clone() * mask
+                    masked_predictions, logits = model.prediction_step(
+                        masked_image.unsqueeze(0).float()
+                    )
+                    pred = round(logits.squeeze()[index].item(), 2)
+                    k_prediction_dict[k] = pred
+                k_prediction_dict_dict[f"{label}"] = k_prediction_dict
+
+            self.plot_predictions(k_prediction_dict_dict, title, save_name, show=show)
+
+    def plot_predictions(self, k_prediction_dict_dict, title, save_name, show=True):
+        # Number of subplots
+        num_plots = len(k_prediction_dict_dict)
+
+        # Create a subplot figure
+        fig = make_subplots(
+            rows=1, cols=num_plots, subplot_titles=list(k_prediction_dict_dict.keys())
+        )
+
+        for i, (subplot_title, k_prediction_dict) in enumerate(
+            k_prediction_dict_dict.items()
+        ):
+            # Create lists for x and y axis
+            x = list(k_prediction_dict.keys())
+            y = list(k_prediction_dict.values())
+
+            # Calculate the AUC
+            auc_value = auc(x, y)
+            subplot_title_with_auc = f"{subplot_title} (AUC = {auc_value:.2f})"
+
+            # Create the line plot
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=y,
+                    mode="lines+markers",
+                    line=dict(color="royalblue", width=2),
+                    marker=dict(color="red", size=4),
+                    showlegend=False,
+                ),
+                row=1,
+                col=i + 1,
+            )
+
+            # Update the subplot title with AUC
+            fig.update_xaxes(
+                title_text="K Pixels after removal", row=1, col=i + 1, range=[0, 1]
+            )
+            fig.update_yaxes(
+                title_text="Prediction Confidence", row=1, col=i + 1, range=[0, 1]
+            )
+            fig.layout.annotations[i].update(text=subplot_title_with_auc)
+
+        # Set the overall title and improve layout
+        fig.update_layout(
+            title=title,
+            title_font=dict(size=24, family="Arial, bold", color="black"),
+            plot_bgcolor="white",
+            margin=dict(l=40, r=40, t=100, b=40),
+            width=500 * num_plots,
+            height=500,
+        )
+
+        self.last_fig = fig
+        if show:
+            fig.show()
+        if save_name:
+            self.save_last_fig(name=save_name + title, format="png")
 
 
 class NormalizeInverse(torchvision.transforms.Normalize):
