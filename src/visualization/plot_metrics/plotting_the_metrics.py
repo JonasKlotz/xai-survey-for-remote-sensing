@@ -289,35 +289,24 @@ def main_singlelabel(
     )
 
     df_full = preprocess_metrics(df_full)
+    dataset_name = dataset_rename_dict[dataset_name]
 
     plot_matrix(
         df_full,
         visualization_save_dir=visualization_save_dir,
         title_text=f"{dataset_name}: Metric Matrix",
     )
+    # plot_matrix(
+    #     df_full,
+    #     visualization_save_dir=visualization_save_dir,
+    #     title_text=f"{dataset_name}: Localisation Metric Matrix for RRR GradCAM trained model",
+    # )
+
     plot_time_matrix(
         time_df_long,
         visualization_save_dir=visualization_save_dir,
         title_text=f"{dataset_name}: Seconds spent per sample for each method and metric",
     )
-
-    # rrr_df_path = (
-    #     "/home/jonasklotz/Studys/MASTERS/Final_Results/caltech101/rrr/rrr_all.csv"
-    # )
-    # rrr_df = pd.read_csv(rrr_df_path, sep=",", index_col=None, header=0)
-    # # Rename the Methods
-    # rrr_df["Method"] = rrr_df["Method"].replace(rename_dict)
-    # for col in rrr_df.columns:
-    #     if "Method" in col:
-    #         continue
-    #
-    #     calc_and_plot_correlation(
-    #         df_full,
-    #         rrr_df,
-    #         metric_to_correlate=col,
-    #         visualization_save_dir=visualization_save_dir,
-    #         title_prefix=f"{dataset_name}: ",
-    #     )
 
     plot_best_overall_method(
         df_full,
@@ -375,7 +364,7 @@ def run_plot_cutmix_thresh_matrices(csv_dir: Annotated[str, typer.Option()] = No
         acc_dfs,
         acc_filenames,
         save_dir,
-        title="DeepGlobe: Accuracy for different CutMix and Segmentation Thresholds",
+        title="DeepGlobe: Accuracy for different t_map and t_cam Thresholds",
     )
 
 
@@ -564,9 +553,13 @@ def get_cutmix_df(rrr_df_path):
 
 
 @app.command()
-def compare_single_and_multi_label(mlc_dataset="deepglobe", slc_dataset="caltech"):
-    slc_metrics_df, slc_time_df = get_dataframes(slc_dataset, slc=True)
-    mlc_metrics_df, mlc_time_df = get_dataframes(mlc_dataset, slc=False)
+def compare_single_and_multi_label(mlc_dataset="deepglobe", slc_dataset="ben"):
+    slc_metrics_df, slc_time_df = get_dataframes(
+        slc_dataset, slc=slc_dataset == "caltech"
+    )
+    mlc_metrics_df, mlc_time_df = get_dataframes(
+        mlc_dataset, slc=mlc_dataset == "caltech"
+    )
 
     grouped_slc = (
         slc_metrics_df.groupby(["Method", "Metric"])["Value"].mean().reset_index()

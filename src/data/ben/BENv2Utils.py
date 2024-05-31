@@ -76,18 +76,18 @@ NEW_LABELS_ORIGINAL_ORDER_PLOTTING = (
     "Arable",
     "Permanent crops",
     "Pastures",
-    "Cultivation patterns",
+    "Cultivation",
     "Agriculture",
     "Agro-forestry areas",
-    "Broad-leaved forest",
+    "BL forest",
     "Coniferous forest",
     "Mixed forest",
     "Grassland",
     "Moors",
     "Transitional woodland",
     "Beaches, dunes, sands",
-    "Inland wetlands",
-    "Coastal wetlands",
+    "Inland wetland",
+    "Coastal wetland",
     "Inland waters",
     "Marine waters",
 )
@@ -96,7 +96,7 @@ NEW_LABELS_PLOTTING = sorted(NEW_LABELS_ORIGINAL_ORDER_PLOTTING)
 
 BEN_IDX2NAME = {i: name for i, name in enumerate(NEW_LABELS)}
 BEN_IDX2NAME_PLOTTING = {
-    i: f"{i} {name}" for i, name in enumerate(NEW_LABELS_ORIGINAL_ORDER_PLOTTING)
+    i: f"{name}" for i, name in enumerate(NEW_LABELS_ORIGINAL_ORDER_PLOTTING)
 }
 
 

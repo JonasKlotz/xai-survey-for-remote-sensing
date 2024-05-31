@@ -54,10 +54,9 @@ def visualize(cfg: dict, model=None):
 
         explanation_visualizer.visualize_from_batch_dict(
             batch_dict,
-            show=True,
+            show=False,
             skip_non_multilabel=True,
-            skip_wrong_preds=True,
-            title="BEN Explanations",
+            skip_wrong_preds=False,
         )
 
         if "index_data" in batch_dict:

@@ -14,6 +14,7 @@ def plot_cutmix_thresh_matrices(
     rows = total_plots // cols + 1
     subplot_height = 500  # You can adjust this as needed
     subplot_width = 500  # You can adjust this as needed
+    titles = [t.replace("_", " ") for t in titles]
     fig = make_subplots(
         rows=rows,
         cols=cols,
@@ -56,18 +57,16 @@ def plot_cutmix_thresh_matrices(
         title_text=title,
         height=fig_height,
         width=fig_width,
-        title_font_size=20,
-        font=dict(size=15),  # Adjust font size for better readability
+        title_font_size=25,
     )
-
     # Updating axis titles
     for i in range(total_plots):
-        row = (i // cols) + 1
-        col = (i % cols) + 1
-        fig["layout"][f'xaxis{"" if i == 0 else i + 1}'].title = "CutMix Thresholds"
-        fig["layout"][
-            f'yaxis{"" if i == 0 else i + 1}'
-        ].title = "Segmentation Thresholds"
+        fig["layout"][f'xaxis{"" if i == 0 else i + 1}'].title = "t map Threshold"
+        fig["layout"][f'yaxis{"" if i == 0 else i + 1}'].title = "t cam Threshold"
+        # update the font size of the axis titles
+        fig["layout"][f'xaxis{"" if i == 0 else i + 1}'].titlefont = dict(size=20)
+        fig["layout"][f'yaxis{"" if i == 0 else i + 1}'].titlefont = dict(size=20)
+    fig.update_layout(font=dict(size=20))
 
     fig.show()
 

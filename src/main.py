@@ -262,5 +262,28 @@ def run_sanity_check_augmentation_thresholds(
     sanity_check_augmentation_thresholds(general_config)
 
 
+@app.command()
+def run_dataset_distribution(
+    config_path: str,
+    random_seed: Annotated[int, typer.Option()] = 42,
+    debug: Annotated[bool, typer.Option()] = False,
+    gpu: Annotated[int, typer.Option()] = 3,
+):
+    from config_utils import setup_everything
+
+    general_config = setup_everything(
+        config_path=config_path,
+        random_seed=random_seed,
+        project_root=project_root,
+        debug=debug,
+        explanation_method=None,
+        gpu=gpu,
+    )
+
+    from visualization.dataset_visualizations import plot_datamodule_distribution
+
+    plot_datamodule_distribution(general_config)
+
+
 if __name__ == "__main__":
     app()

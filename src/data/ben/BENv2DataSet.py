@@ -16,7 +16,7 @@ class BENv2DataSet(Dataset):
         label_file: Union[str, Path],
         s2s1_mapping_file: Optional[Union[str, Path]] = None,
         bands: Optional[Iterable[str]] = None,
-    process_bands_fn: Optional[
+        process_bands_fn: Optional[
             Callable[[Dict[str, np.ndarray], List[str]], Any]
         ] = None,
         process_labels_fn: Optional[Callable[[List[str]], Any]] = None,
@@ -24,7 +24,7 @@ class BENv2DataSet(Dataset):
         keys: Optional[List[str]] = None,
         return_patchname: bool = False,
         verbose: bool = False,
-        xai_segmentations_lmdb_path:str=None,
+        xai_segmentations_lmdb_path: str = None,
     ):
         """
         :param image_lmdb_file: path to the lmdb file containing the images as safetensors in numpy format
@@ -98,7 +98,6 @@ class BENv2DataSet(Dataset):
             "xai_segmentations": xai_segmentation_patch,
         }
 
-
     def _extract_patch_from_lmdb(self, idx, env, lmdb_path):
         """Extract patch from LMDB."""
         if env is None:
@@ -120,4 +119,3 @@ class BENv2DataSet(Dataset):
         patch = pickle.loads(byte_flow)
 
         return patch, env
-

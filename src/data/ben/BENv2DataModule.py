@@ -166,7 +166,6 @@ class BENv2DataModule(pl.LightningDataModule):
                 "Please provide a dictionary for splits or the split file so that the split can be retrieved automatically"
             )
 
-
     def _print_info(self, info: str):
         if self.verbose:
             print(info)

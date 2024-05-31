@@ -27,7 +27,6 @@ def train(cfg: dict, tune=False):
             "xai_segmentations_lmdb_path"
         ] = f"{cfg["data"]["lmdb_base_path"]}/{cfg["explanation_methods"][0]}.lmdb"
 
-
     # load datamodule
     data_module, cfg = load_data_module(cfg)
     logger.debug(f"General config: {pprint.pformat(cfg)}")

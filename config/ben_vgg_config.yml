@@ -11,12 +11,12 @@ pretrained: False
 
 # Explanation parameters
 explanation_methods:
-  - 'lime'
+#  - 'lime'
 #  - 'lrp'
 #  - 'integrated_gradients'
 #  - 'deeplift'
 #  - 'guided_gradcam'
-#  - 'occlusion'
+  - 'occlusion'
 #  - 'gradcam'
 
 # Dataset parameters

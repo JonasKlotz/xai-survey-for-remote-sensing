@@ -405,10 +405,10 @@ class ExplanationVisualizer:
         fig.update_layout(
             height=self.size * rows,
             width=self.size * cols,
-            margin=dict(t=120, b=70),
+            margin=dict(t=150, b=70),
             title_text=title,
             font=dict(
-                size=30,  # Set the font size here
+                size=35,  # Set the font size here
             ),
         )
         # Update the font size of the annotations (subtitles)
@@ -418,7 +418,7 @@ class ExplanationVisualizer:
         # enforce the colorscale to be from -1 to 1
         fig.update_coloraxes(colorscale=COLORSCALE, cmin=0, cmax=1)
 
-        fig.update_annotations(font_size=40)
+        fig.update_annotations(font_size=48)
         return fig
 
     def _create_subplot_titles(
@@ -462,7 +462,7 @@ class ExplanationVisualizer:
 
         rename_dict = {
             "gradcam": "GradCAM",
-            "guided_gradcam": "G. GradCAM",
+            "guided_gradcam": "G-GradCAM",
             "lime": "LIME",
             "deeplift": "DeepLift",
             "integrated_gradients": "IG",
@@ -476,14 +476,14 @@ class ExplanationVisualizer:
                 continue
             # split at ' '
             titles = title.split(" ")
-            if len(titles) >= 2:
+            if len(titles) >= 2 and not titles[0] == "k":
                 method_name = titles[0]
                 class_name = " ".join(titles[1:])
                 method_name = rename_dict.get(method_name, method_name)
                 class_name = class_name.replace("_", " ")
                 new_titles.append(f"{method_name}; {class_name}")
             else:
-                new_titles.append(title)
+                new_titles.append(title.replace("_land", ""))
 
         return new_titles
 
@@ -869,10 +869,12 @@ class ExplanationVisualizer:
                 if not fig.layout.annotations[i].text.startswith("k = "):
                     continue
 
-                fig.layout.annotations[i].update(text=masked_predictions_list[mp_index])
+                fig.layout.annotations[i].update(
+                    text=masked_predictions_list[mp_index].replace("_land", "")
+                )
                 mp_index += 1
 
-            fig.update_annotations(font_size=18)
+            fig.update_annotations(font_size=40)
             fig.update_layout(
                 title=dict(
                     x=0.5,
@@ -884,13 +886,13 @@ class ExplanationVisualizer:
                         b=0,
                     ),
                     font=dict(
-                        size=25,
+                        size=40,
                         # color='#000000'
                     ),
                 )
             )
 
-            fig.update_layout(margin=dict(l=50, r=50, t=80, b=50))
+            fig.update_layout(margin=dict(l=50, r=50, t=150, b=50))
 
             # Show the figure
             self.last_fig = fig
@@ -1174,12 +1176,13 @@ class ExplanationVisualizer:
         # Set the overall title and improve layout
         fig.update_layout(
             title=title,
-            title_font=dict(size=24, family="Arial, bold", color="black"),
+            title_font=dict(size=25, family="Arial, bold", color="black"),
             plot_bgcolor="white",
-            margin=dict(l=40, r=40, t=100, b=40),
+            margin=dict(l=40, r=40, t=120, b=40),
             width=500 * num_plots,
             height=500,
         )
+        fig.update_annotations(font_size=22)
 
         self.last_fig = fig
         if show:

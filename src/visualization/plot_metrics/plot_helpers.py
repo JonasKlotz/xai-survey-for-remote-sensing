@@ -10,7 +10,7 @@ from quantus import AVAILABLE_METRICS
 from scipy.stats import pearsonr
 
 COLORSCALE = "RdBu_r"
-SHOW = True
+SHOW = False
 
 
 def get_method_colors(methods):
@@ -540,7 +540,7 @@ def plot_time_matrix(df_full, visualization_save_dir=None, title_text=None):
 
     row_order = [
         "Guided GradCAM",
-        # "LIME",
+        "LIME",
         "DeepLift",
         "Integrated Gradients",
         "LRP",
@@ -716,22 +716,22 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
             yref="paper",
             text=category,
             showarrow=False,
-            font=dict(family="Arial", size=20, color="black"),
+            font=dict(family="Arial", size=28, color="black"),
             align="center",
         )
 
     # Adjust layout to ensure annotations are visible
-    fig.update_layout(margin=dict(t=100))
+    fig.update_layout(margin=dict(t=150))
 
     # set figure size
     fig.update_layout(
         autosize=False,
-        width=2500,
-        height=1000,
+        width=3300,
+        height=1600,
     )
 
     # increase fontsize
-    fig.update_layout(font=dict(size=20))
+    fig.update_layout(font=dict(size=30))
 
     save_fig(fig, title_text, visualization_save_dir)
 
@@ -775,10 +775,10 @@ def plot_with_correlation(
     """
     if grouping_column == "Metric":
         plots_per_row = 3
-        plot_height = 300
+        plot_height = 700
     else:
         plots_per_row = 2
-        plot_height = 500
+        plot_height = 700
     # Calculate correlation for the specified grouping
     results = df.groupby(grouping_column).apply(
         calculate_correlation_and_significance, col=col
@@ -816,7 +816,7 @@ def plot_with_correlation(
             grouping_column: sorted_groups
         },  # Use sorted order for plotting
         height=height,
-        width=height,
+        width=height + 500,  # for legens
     )  # Dynamic height based on the number of plots
 
     # Update subplot titles with correlation values and adjust layout for better readability
@@ -830,15 +830,16 @@ def plot_with_correlation(
             else ()
         )
 
+    all_fontsize = 25
     # Update layout settings to improve readability and spacing
     fig.update_layout(
-        title_font_size=18,
-        font_size=12,
-        legend_title_font_size=12,
-        legend_font_size=10,
+        title_font_size=all_fontsize,
+        font_size=all_fontsize,
+        legend_title_font_size=all_fontsize,
+        legend_font_size=all_fontsize,
         # Adjusting margins and spacing between plots
         margin=dict(
-            l=50, r=50, t=80, b=50
+            l=80, r=80, t=80, b=80
         ),  # Adjust left, right, top, bottom margins as needed
         grid={
             "rows": (num_facets + 1) // 2,
