@@ -5,13 +5,13 @@ import plotly.express as px
 def get_data():
     # Creating dataframes for each dataset
     data_caltech101 = {
-        "Guided GradCAM": [1.83, 2.17, 3.04, 0.11, 1.97],
-        "LIME": [1.01, 2.53, 3.41, 0.56, 1.88],
-        "DeepLift": [1.61, 2.25, 2.95, 0.27, 1.77],
-        "Integrated Gradients": [1.64, 2.60, 3.25, 0.24, 1.74],
-        "LRP": [1.62, 2.57, 3.14, 0.26, 1.64],
-        "GradCAM": [1.01, 2.45, 2.86, 0.55, 2.07],
-        "Occlusion": [0.94, 2.58, 3.13, 0.56, 2.36],
+        "Guided GradCAM": [1.83, 2.62, 3.04, 0.11, 1.97],
+        "LIME": [1.01, 3.28, 3.41, 0.56, 1.88],
+        "DeepLift": [1.61, 2.52, 2.95, 0.27, 1.77],
+        "Integrated Gradients": [1.64, 2.98, 3.25, 0.24, 1.74],
+        "LRP": [1.62, 2.87, 3.14, 0.26, 1.64],
+        "GradCAM": [1.01, 3.23, 2.86, 0.55, 2.07],
+        "Occlusion": [0.94, 3.38, 3.13, 0.56, 2.36],
     }
     df_caltech101 = pd.DataFrame(
         data_caltech101,
@@ -26,7 +26,7 @@ def get_data():
     # Dictionary of maximum values
     max_values = {
         "Complexity": 2,
-        "Faithfulness": 3,
+        "Faithfulness": 5,
         "Localisation": 5,
         "Randomisation": 1,
         "Robustness": 3,
@@ -66,13 +66,13 @@ def get_data():
     df_deepglobe = df_deepglobe.divide(pd.Series(max_values), axis="index")
 
     data_bigearthnet = {
-        "Guided GradCAM": [1.78, 2.22, 0, 0.17, 2.3],
-        "LIME": [1.14, 2.44, 0, 0.45, 2.31],
-        "DeepLift": [1.57, 2.21, 0, 0.29, 2.26],
-        "Integrated Gradients": [1.57, 2.39, 0, 0.3, 2.27],
-        "LRP": [1.59, 2.27, 0, 0.29, 2.25],
-        "GradCAM": [1.04, 2.49, 0, 0.58, 2.34],
-        "Occlusion": [0.99, 2.44, 0, 0.57, 2.38],
+        "Guided GradCAM": [1.78, 2.22, 0, 0.17, 2.27],
+        "LIME": [1.14, 2.44, 0, 0.45, 2.14],
+        "DeepLift": [1.57, 2.21, 0, 0.29, 2.22],
+        "Integrated Gradients": [1.57, 2.39, 0, 0.30, 2.23],
+        "LRP": [1.59, 2.27, 0, 0.29, 2.19],
+        "GradCAM": [1.04, 2.49, 0, 0.58, 2.33],
+        "Occlusion": [0.99, 2.44, 0, 0.57, 2.37],
     }
     df_bigearthnet = pd.DataFrame(
         data_bigearthnet,
@@ -130,9 +130,9 @@ def main():
             height=1500,  # Set height to 1000 pixels
             font=dict(size=25),  # Increase font size
             xaxis_title="Explanation Methods",
-            yaxis_title="Sum of the normalised xAI Metrics",
+            yaxis_title="Mean Sum of the normalised xAI Metrics",
         )
-        save_path = f"new_plots/barplot_{category}.pdf"
+        save_path = f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/new_plots/barplot_{category}.pdf"
         fig.write_image(save_path)
         fig.show()
 

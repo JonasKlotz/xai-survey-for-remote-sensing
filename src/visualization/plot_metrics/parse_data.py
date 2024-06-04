@@ -395,7 +395,7 @@ def _z_score_scale(df, group_col, to_scale_metrics, value_col):
 
 
 def _robust_scale(
-    df, group_col, to_scale_metrics, value_col, quantile_range=(0.25, 0.75)
+    df, group_col, to_scale_metrics, value_col, quantile_range=(0.0, 0.75)
 ):
     from sklearn.preprocessing import RobustScaler, MinMaxScaler
 
@@ -458,6 +458,8 @@ def scale_df(df, group_col: str = "Metric", value_col: str = "Value", scale="min
     to_scale_metrics = [
         metric for metric in all_group_col_entries if metric not in not_to_scale_metrics
     ]
+    # remove 'Max-Sensitivity' values higher than 10000
+    df = df[~((df["Metric"] == "Max-Sensitivity") & (df["Value"] > 10000))]
 
     if scale == "min_max":
         df = _min_max_scale(df, group_col, to_scale_metrics, value_col)

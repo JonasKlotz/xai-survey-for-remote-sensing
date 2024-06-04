@@ -75,11 +75,11 @@ def main_multilabel(
     df_full["Method"] = df_full["Method"].replace(rename_dict)
     df_full["Metric"] = df_full["Metric"].replace(rp_renaming_dict)
 
-    plot_time_matrix(
-        time_df_long,
-        visualization_save_dir=visualization_save_dir,
-        title_text=f"{dataset_name}: Seconds spent per sample for each method and metric",
-    )
+    # plot_time_matrix(
+    #     time_df_long,
+    #     visualization_save_dir=visualization_save_dir,
+    #     title_text=f"{dataset_name}: Seconds spent per sample for each method and metric",
+    # )
 
     # plot_result_distribution(df_full, dataset_name, visualization_save_dir)
 
@@ -89,12 +89,14 @@ def main_multilabel(
         title_text=f"{dataset_name}: Unprocessed Metric Matrix",
     )
     df_preprocessed = preprocess_metrics(df_full)
+    # plot_result_distribution(df_full, dataset_name, visualization_save_dir)
 
     plot_matrix(
         df_preprocessed,
         visualization_save_dir=visualization_save_dir,
         title_text=f"{dataset_name}: Metric Matrix",
     )
+
     (
         df_only_correct,
         df_only_correct_grouped,
@@ -265,6 +267,7 @@ def main_singlelabel(
     dataset_name = "caltech"
     if not csv_dir:
         csv_dir = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/caltech/metrics"
+        # csv_dir= "/home/jonasklotz/Studys/MASTERS/results_22_4_final/caltech/metrics/region_pertur_metrics"
 
     visualization_save_dir = f"{csv_dir}/visualizations"
     os.makedirs(visualization_save_dir, exist_ok=True)
@@ -282,6 +285,7 @@ def main_singlelabel(
     time_df_long["Method"] = time_df_long["Method"].replace(rename_dict)
 
     df_full["Method"] = df_full["Method"].replace(rename_dict)
+    df_full["Metric"] = df_full["Metric"].replace(rp_renaming_dict)
     plot_matrix(
         df_full,
         visualization_save_dir=visualization_save_dir,
@@ -418,14 +422,14 @@ def rrr_singlelabel():
         "Caltech101: Correlational Analysis of xAI Metrics with Test Accuracy in RRR Training",
         visualization_save_dir,
     )
-    plot_with_correlation(
-        df,
-        "Category",
-        "Parameter_Value",
-        "Parameter",
-        "Caltech101: Correlational Analysis of xAI Metric Categories with Test Accuracy in RRR Training",
-        visualization_save_dir,
-    )
+    # plot_with_correlation(
+    #     df,
+    #     "Category",
+    #     "Parameter_Value",
+    #     "Parameter",
+    #     "Caltech101: Correlational Analysis of xAI Metric Categories with Test Accuracy in RRR Training",
+    #     visualization_save_dir,
+    # )
 
 
 @app.command()
@@ -495,14 +499,14 @@ def rrr_multilabel(dataset_name: str = "DeepGlobe"):
         "DeepGlobe: Correlational Analysis of xAI Metrics with Test mAP in RRR Training",
         visualization_save_dir,
     )
-    plot_with_correlation(
-        df,
-        "Category",
-        "Parameter_Value",
-        "Parameter",
-        "DeepGlobe: Correlational Analysis of xAI Metric Categories with Test mAP in RRR Training",
-        visualization_save_dir,
-    )
+    # plot_with_correlation(
+    #     df,
+    #     "Category",
+    #     "Parameter_Value",
+    #     "Parameter",
+    #     "DeepGlobe: Correlational Analysis of xAI Metric Categories with Test mAP in RRR Training",
+    #     visualization_save_dir,
+    # )
 
 
 def get_rrr_df(rrr_df_path):
@@ -656,14 +660,14 @@ def process_and_plot_cutmix(
         f"{dataset_name}: Correlational Analysis of xAI Metrics with Test mAP in CutMix Training for {model_name}",
         visualization_save_dir,
     )
-    plot_with_correlation(
-        df,
-        "Category",
-        "Parameter_Value",
-        "Parameter",
-        f"{dataset_name}: Correlational Analysis of xAI Metric Categories with Test mAP in CutMix Training for {model_name}",
-        visualization_save_dir,
-    )
+    # plot_with_correlation(
+    #     df,
+    #     "Category",
+    #     "Parameter_Value",
+    #     "Parameter",
+    #     f"{dataset_name}: Correlational Analysis of xAI Metric Categories with Test mAP in CutMix Training for {model_name}",
+    #     visualization_save_dir,
+    # )
 
 
 def get_dataframes(dataset_name, slc=False):

@@ -31,11 +31,13 @@ def barplot(values, techniques, dataset_name="BEN"):
         yaxis=dict(range=[min(sorted_values) - 0.1, max(sorted_values) + 0.1]),
         width=1000,  # Set width to 1000 pixels
         height=1000,  # Set height to 1000 pixels
-        font=dict(size=25),  # Increase font size
+        font=dict(size=20),  # Increase font size
     )
 
     # Save the plot as a PDF
-    fig.write_image(f"new_plots/barplot_{dataset_name}.pdf")
+    fig.write_image(
+        f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/new_plots/barplot_{dataset_name}.pdf"
+    )
 
     # Show the plot (optional)
     fig.show()
@@ -52,15 +54,8 @@ if __name__ == "__main__":
         "GradCAM",
         "Occlusion",
     ]
-    values = [
-        9.12,
-        9.39,
-        8.85,
-        9.47,
-        9.23,
-        8.94,
-        9.57,
-    ]
+    values = [9.66, 10.21, 9.2, 10, 9.7, 9.75, 10.42]
+
     data_set = "Caltech101"
     barplot(values, techniques, data_set)
 
@@ -68,6 +63,6 @@ if __name__ == "__main__":
     data_set = "DeepGlobe"
     barplot(values, techniques, data_set)
 
-    values = [6.47, 6.34, 6.33, 6.53, 6.4, 6.45, 6.38]
+    values = [6.44, 6.17, 6.29, 6.49, 6.34, 6.44, 6.37]
     data_set = "BEN"
     barplot(values, techniques, data_set)

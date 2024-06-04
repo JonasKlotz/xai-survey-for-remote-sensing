@@ -65,7 +65,6 @@ class MetricsManager:
         self.height = image_shape[1]
         self.width = image_shape[2]
 
-        # todo: make this configurable? Also this can lead to errors?
         self.patch_size = int(self.height / 4)
         self.features_in_step = int(self.height / 4)
         self.num_samples = 5
@@ -313,7 +312,9 @@ class MetricsManager:
                 **self.general_args,
             ),
             "IROF": quantus.IROF(
-                segmentation_method="slic", perturb_baseline="mean", **self.general_args
+                segmentation_method="slic",
+                perturb_baseline="black",
+                **self.general_args,
             ),
             "Infidelity": quantus.Infidelity(
                 perturb_baseline="uniform",

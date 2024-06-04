@@ -367,6 +367,7 @@ class ExplanationVisualizer:
         cols = num_attrs + 1
         rows = max(plots_per_attr, 2)  # at least 2 rows for segmentation
         titles = list(attrs.keys())
+
         # titles = [title[2:-5] if title.startswith("a_") and title.endswith("_data") else title for title in titles]
         subplot_titles = self._create_subplot_titles(
             titles, cols, predictions_tensor, rows, segmentations is not None
@@ -472,6 +473,8 @@ class ExplanationVisualizer:
         new_titles = []
         for i, title in enumerate(subplot_titles):
             if title == "Image" or title == "Segmentation":
+                if title == "Segmentation":
+                    title = "Reference Map"
                 new_titles.append(title)
                 continue
             # split at ' '
@@ -507,6 +510,7 @@ class ExplanationVisualizer:
         self.last_fig = None
         if batch_dict is not None:
             torch.save(batch_dict, f"{self.output_path}/batch_dict_{name}.pt")
+        print(f"Saved figure to {self.output_path}/{name}.{format}")
 
     def _preprocess_image(self, image: Union[torch.Tensor, np.ndarray]) -> np.ndarray:
         """
@@ -1148,16 +1152,18 @@ class ExplanationVisualizer:
 
             # Calculate the AUC
             auc_value = auc(x, y)
-            subplot_title_with_auc = f"{subplot_title} (AUC = {auc_value:.2f})"
-
+            subplot_title_with_auc = (
+                f"{subplot_title.replace("_"," ")} (AUC = {auc_value:.2f})"
+            )
+            k_value_in_percent = [int(k * 100) for k in x]
             # Create the line plot
             fig.add_trace(
                 go.Scatter(
-                    x=x,
+                    x=k_value_in_percent,
                     y=y,
                     mode="lines+markers",
                     line=dict(color="royalblue", width=2),
-                    marker=dict(color="red", size=4),
+                    marker=dict(color="red", size=5),
                     showlegend=False,
                 ),
                 row=1,
@@ -1166,19 +1172,31 @@ class ExplanationVisualizer:
 
             # Update the subplot title with AUC
             fig.update_xaxes(
-                title_text="K Pixels after removal", row=1, col=i + 1, range=[0, 1]
+                title_text="K Pixels affected in %",
+                row=1,
+                col=i + 1,
+                range=[0, 100],
+                showline=True,
+                linecolor="black",
+                mirror=True,
             )
             fig.update_yaxes(
-                title_text="Prediction Confidence", row=1, col=i + 1, range=[0, 1]
+                title_text="Prediction Confidence",
+                row=1,
+                col=i + 1,
+                range=[0, 1],
+                showline=True,
+                linecolor="black",
+                mirror=True,
             )
-            fig.layout.annotations[i].update(text=subplot_title_with_auc)
+            fig.layout.annotations[i].update(text=subplot_title_with_auc, yshift=10)
 
         # Set the overall title and improve layout
         fig.update_layout(
-            title=title,
-            title_font=dict(size=25, family="Arial, bold", color="black"),
+            title="",
+            title_font=dict(size=22, family="Arial, bold", color="black"),
             plot_bgcolor="white",
-            margin=dict(l=40, r=40, t=120, b=40),
+            margin=dict(l=40, r=40, t=40, b=40),
             width=500 * num_plots,
             height=500,
         )

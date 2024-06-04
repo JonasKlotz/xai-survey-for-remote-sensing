@@ -5,6 +5,9 @@ from config_utils import parse_config
 from visualization.explanation_visualizer import ExplanationVisualizer
 from data.data_utils import get_index_to_name
 from models.get_models import get_model
+import pytorch_lightning
+
+pytorch_lightning.seed_everything(42)
 
 
 def main():
@@ -33,67 +36,62 @@ def main():
         "/home/jonasklotz/Studys/MASTERS/results_22_4_final/perturbation"
     )
     save_path = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/perturbation"
-    batch_path = save_path + "/batch_dict_sample_2094.pt"
-    if cfg["dataset_name"] == "ben":
-        save_path = (
-            "/home/jonasklotz/Studys/MASTERS/results_22_4_final/ben/FINAL_IMAGES/"
-        )
-        explanation_visualizer.output_path = save_path
-        name = "batch_dict_sample_S2A_MSIL2A_20180413T095031_N9999_R079_T34UEG_35_60"
-        batch_path = save_path + name + ".pt"
-    batch_dict = torch.load(batch_path, map_location=torch.device("cpu"))
-    # explanation_manager = ExplanationsManager(cfg, model)
-    # #batch_dict = explanation_manager.explain_batch(batch_dict, explain_true_labels=True)
-    # explanation_visualizer.visualize_from_batch_dict(batch_dict, show=True, title="")
-    # explanation_visualizer.save_last_fig(name, format="png")
-    # return
-    # batch_dict = torch.save(batch_dict, save_path)
 
-    batch_dict = {k: torch.tensor(v) for k, v in batch_dict.items()}
-    image_tensor = batch_dict.pop("x_data")[0]
-    true_labels = batch_dict.pop("y_data")[0]
-    # predicted_label_tensor = batch_dict.pop("y_pred_data")[0]
-    segments_tensor = batch_dict.pop("s_data")[0]
-    index_tensor = batch_dict.pop("index_data")[0]
-
-    attributions_dict = batch_dict
-    # only take a_gradcam_data from attribution dict
-
-    # attributions_dict = {
-    #     k: v[0] for k, v in attributions_dict.items() if k == "a_deeplift_data"
-    # }
-    # #filter the attribution by only taking the predicted label
-
-    # filter the attribution by only taking the predicted label
-    method = "GradCAM"
-    # method = "DeepLIFT"
-    key = f"a_{method.lower()}_data"
-    attributions_dict = {k: v[0] for k, v in attributions_dict.items() if k == key}
+    methods = ["GradCAM", "DeepLIFT"]
+    # samples = ["2039", "2094"]
+    samples = ["2094"]
     show = False
+    for method in methods:
+        for sample_name in samples:
+            explanation_visualizer.output_path = f"/home/jonasklotz/Studys/MASTERS/results_22_4_final/perturbation/{sample_name}"
 
-    # explanation_visualizer.visualize(
-    #     attribution_dict=attributions_dict,
-    #     image_tensor=image_tensor,
-    #     label_tensor=true_labels,
-    #     segmentation_tensor=segments_tensor,
-    #     predictions_tensor=true_labels,
-    #     show=True,
-    #     title="GradCAM batch",
-    # )
-    # explanation_visualizer.save_last_fig("lime", format="png")
+            batch_path = save_path + f"/batch_dict_sample_{sample_name}.pt"
 
-    k_list = (
-        [
-            0.05,
-            0.1,
-            # 0.15,
-            0.2,
-            0.5,
-            0.9,
-        ]
-        if method == "GradCAM"
-        else [0.05, 0.1, 0.2, 0.5, 0.9, 1.0]
-    )
+            (
+                attributions_dict,
+                image_tensor,
+                index_tensor,
+                true_labels,
+                segments_tensor,
+            ) = load_batch_dict(batch_path, method)
+
+            k_list = (
+                [
+                    0.05,
+                    0.1,
+                    0.2,
+                    0.5,
+                    0.9,
+                ]
+                if method == "GradCAM"
+                else [0.05, 0.1, 0.2, 0.5, 0.9, 1.0]
+            )
+            plot_all(
+                attributions_dict,
+                explanation_visualizer,
+                image_tensor,
+                index_tensor,
+                k_list,
+                method,
+                model,
+                segments_tensor,
+                show,
+                true_labels,
+            )
+
+
+def plot_all(
+    attributions_dict,
+    explanation_visualizer,
+    image_tensor,
+    index_tensor,
+    k_list,
+    method,
+    model,
+    segments_tensor,
+    show,
+    true_labels,
+):
     explanation_visualizer.visualize_top_k_attributions_with_predictions(
         attribution_dict=attributions_dict,
         image_tensor=image_tensor,
@@ -120,7 +118,6 @@ def main():
         title=f"Only Top k attributions present in the Image (MORF with baseline) ({method})",
         save_name=f"Sample {index_tensor}: ",
     )
-
     explanation_visualizer.visualize_top_k_attributions_with_predictions(
         attribution_dict=attributions_dict,
         image_tensor=image_tensor,
@@ -167,6 +164,27 @@ def main():
         save_name=f"Sample {index_tensor}: ",
         show=show,
     )
+
+
+def load_batch_dict(batch_path, method):
+    batch_dict = torch.load(batch_path, map_location=torch.device("cpu"))
+    batch_dict = {k: torch.tensor(v) for k, v in batch_dict.items()}
+    image_tensor = batch_dict.pop("x_data")[0]
+    true_labels = batch_dict.pop("y_data")[0]
+    # predicted_label_tensor = batch_dict.pop("y_pred_data")[0]
+    segments_tensor = batch_dict.pop("s_data")[0]
+    index_tensor = batch_dict.pop("index_data")[0]
+    attributions_dict = batch_dict
+    # only take a_gradcam_data from attribution dict
+    # attributions_dict = {
+    #     k: v[0] for k, v in attributions_dict.items() if k == "a_deeplift_data"
+    # }
+    # #filter the attribution by only taking the predicted label
+    # filter the attribution by only taking the predicted label
+    # method = "DeepLIFT"
+    key = f"a_{method.lower()}_data"
+    attributions_dict = {k: v[0] for k, v in attributions_dict.items() if k == key}
+    return attributions_dict, image_tensor, index_tensor, true_labels, segments_tensor
 
 
 if __name__ == "__main__":

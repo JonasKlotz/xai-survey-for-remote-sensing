@@ -723,15 +723,20 @@ def plot_matrix(df_full, visualization_save_dir=None, title_text=None):
     # Adjust layout to ensure annotations are visible
     fig.update_layout(margin=dict(t=150))
 
-    # set figure size
     fig.update_layout(
         autosize=False,
         width=3300,
         height=1600,
+        font=dict(size=40),
+        title=dict(
+            font=dict(size=50)  # Adjust the subtitle font size as needed
+        ),
+        legend=dict(
+            font=dict(size=40)  # Adjust the legend font size as needed
+        ),
     )
-
     # increase fontsize
-    fig.update_layout(font=dict(size=30))
+    fig.update_layout(font=dict(size=40))
 
     save_fig(fig, title_text, visualization_save_dir)
 
@@ -783,6 +788,12 @@ def plot_with_correlation(
     results = df.groupby(grouping_column).apply(
         calculate_correlation_and_significance, col=col
     )
+    results_save_path = (
+        "/home/jonasklotz/Studys/MASTERS/results_22_4_final/new_correlations/data"
+    )
+    filename = title.replace(" ", "_").replace("/", "_").replace("\\", "_")
+    results.to_csv(os.path.join(results_save_path, filename + ".csv"))
+    print(f"Saved the results to {results_save_path}")
     corr_dict = results["Correlation"].to_dict()
     p_value_dict = results["P-value"].to_dict()
     # Sort the correlations, and extract the index (group names) in the order of correlation
@@ -818,7 +829,7 @@ def plot_with_correlation(
         height=height,
         width=height + 500,  # for legens
     )  # Dynamic height based on the number of plots
-
+    fig.update_traces(marker=dict(size=25))  # Adjust the size value as needed
     # Update subplot titles with correlation values and adjust layout for better readability
     for key, corr in corr_dict.items():
         fig.for_each_annotation(
@@ -830,7 +841,7 @@ def plot_with_correlation(
             else ()
         )
 
-    all_fontsize = 25
+    all_fontsize = 38
     # Update layout settings to improve readability and spacing
     fig.update_layout(
         title_font_size=all_fontsize,
@@ -839,7 +850,7 @@ def plot_with_correlation(
         legend_font_size=all_fontsize,
         # Adjusting margins and spacing between plots
         margin=dict(
-            l=80, r=80, t=80, b=80
+            l=100, r=100, t=100, b=100
         ),  # Adjust left, right, top, bottom margins as needed
         grid={
             "rows": (num_facets + 1) // 2,
@@ -855,7 +866,8 @@ def plot_with_correlation(
 
     if SHOW:
         fig.show()
-    save_fig(fig, title, visualization_save_dir)
+    corr_dir = "/home/jonasklotz/Studys/MASTERS/results_22_4_final/new_correlations/plots/metric_scatter"
+    save_fig(fig, title, corr_dir)
 
 
 def calculate_correlation_and_significance(x, col):

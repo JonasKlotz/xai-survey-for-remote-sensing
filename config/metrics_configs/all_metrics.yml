@@ -5,7 +5,6 @@ Faithfulness:
     Pixel-Flipping:
     Region Segmentation:
     Monotonicity-Arya:
-    Monotonicity-Nguyen:
     Selectivity:
     SensitivityN:
     IROF:
@@ -38,8 +37,6 @@ Complexity:
 
 Randomisation:
     MPRT:
-    Smooth MPRT:
-    Efficient MPRT:
     Random Logit:
 
 Axiomatic:
